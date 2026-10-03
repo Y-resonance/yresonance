@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { test } from './support/ui-test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { mockRundownApi } from './support/rundown-api';
 
 test.use({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
