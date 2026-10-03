@@ -31,6 +31,7 @@ async function convertExample(
   const csv = await source.text();
   expect(csv).toContain('Date,Advertiser,Campaign,Market,Platform');
   expect(csv).toContain('Acme Media,Spring Launch DE');
+  expect(csv).toContain(`\n${new Date().toISOString().slice(0, 10)},Acme Media,`);
   const converted = 'PAR1';
   const stored = await handleInternalR2Request(
     new Request(request.destinationUrl, {
@@ -80,8 +81,13 @@ describe('preview example datasource', () => {
     bindings.APP_ENV = 'preview';
     answerSeedRequests();
     await withR2Storage(async () => {
-      const [first, second] = await Promise.all([bootstrap(), bootstrap()]);
+      const [first, second, listing] = await Promise.all([
+        bootstrap(),
+        bootstrap(),
+        callService({ action: 'listDataSources' }),
+      ]);
       expect(first.dataSources).toEqual(second.dataSources);
+      expect(listing).toEqual([expect.objectContaining(first.dataSources[0]!)]);
       expect(first.dataSources).toHaveLength(1);
       const source = first.dataSources[0]!;
       expect(source.name).toBe('Example campaign data');

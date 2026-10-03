@@ -102,11 +102,16 @@ const targetings = ['Broad', 'Interest', 'Retargeting', 'Lookalike'];
 /** Video formats carry the completion metric and cost more per thousand impressions. */
 const isVideoFormat = (format: string) => format === 'Video' || format === 'Spark Ad';
 
-export function exampleCampaignCsv() {
+// Screenshots use the fixed quarter; previews shift the same delivery pattern to recent dates.
+export function exampleCampaignCsv(endDate = '2026-03-31') {
   const random = mulberry32(0x5eed_1234);
   const rows: string[] = [columns.join(',')];
+  const dateOffset = dayIndex(endDate, '2026-03-31');
 
   for (const date of dateRange('2026-01-01', '2026-03-31')) {
+    const displayDate = new Date(Date.parse(`${date}T00:00:00Z`) + dateOffset * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
     const day = new Date(`${date}T00:00:00Z`).getUTCDay();
     const weekend = day === 0 || day === 6 ? 0.68 : 1;
     // Easter week pulls retail budgets forward, which gives the trend line a real peak.
@@ -142,7 +147,7 @@ export function exampleCampaignCsv() {
 
           rows.push(
             [
-              date,
+              displayDate,
               'Acme Media',
               campaign.name,
               campaign.market,

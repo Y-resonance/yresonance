@@ -707,6 +707,7 @@ async function getControlOptions(
 
 async function listDataSources() {
   const session = await requireSession();
+  await seedPreviewWorkspace(session);
   const db = database();
   const workspace = eq(dataSources.workspaceId, session.workspace.id);
   const [sourceRows, rawCounts, calculatedCounts] = await Promise.all([
@@ -1062,7 +1063,7 @@ async function importPreviewExample(session: SessionContext) {
   const destinationKey = sourceKey.replace(/\.csv$/u, '.parquet');
   const startedAt = Date.now();
   try {
-    await env.DATA.put(sourceKey, exampleCampaignCsv(), {
+    await env.DATA.put(sourceKey, exampleCampaignCsv(new Date().toISOString().slice(0, 10)), {
       httpMetadata: { contentType: 'text/csv' },
     });
     const converted = await ingestManagedCsvUpload(session, sourceKey);
