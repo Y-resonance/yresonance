@@ -5,11 +5,13 @@
     "container/**/*.ts",
     "dev/**/*.ts",
     "tests/**/*.ts",
+    "tests/**/*.tsx",
     "scripts/pr-preview.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.ui.config.ts"
   ],
   "compilerOptions": {
     "target": "ES2022",

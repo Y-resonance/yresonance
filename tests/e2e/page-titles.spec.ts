@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test } from './support/ui-test';
+import { expect } from '@playwright/test';
 import { mockRundownApi } from './support/rundown-api';
 
 test('pages use their content in the browser title', async ({ page }) => {

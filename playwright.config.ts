@@ -34,12 +34,12 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop',
-      testIgnore: authenticatedTests,
+      testMatch: '**/public-shell.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'mobile',
-      testIgnore: authenticatedTests,
+      testMatch: '**/public-shell.spec.ts',
       use: { ...devices['Pixel 7'] },
     },
     {
