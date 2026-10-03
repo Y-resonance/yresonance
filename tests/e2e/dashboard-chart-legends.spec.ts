@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test } from './support/ui-test';
+import { expect } from '@playwright/test';
 import { mockYresonanceApi } from './support/yresonance-api';
 
 test('charts show legends without widget configuration', async ({ page }) => {

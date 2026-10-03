@@ -23,5 +23,6 @@ export default async function globalSetup(config: FullConfig) {
         'Set YRESONANCE_E2E_PORT to a free port, or stop the process using this one.',
     );
 
-  if (clerkCredentials()) await clerkSetup();
+  if (config.projects.some((project) => project.name === 'authenticated') && clerkCredentials())
+    await clerkSetup();
 }

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
@@ -19,12 +20,31 @@ function resolveDevPort(value: string | undefined) {
   return port;
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
   build: {
     minify: 'oxc',
   },
   resolve: {
     tsconfigPaths: true,
+    // UI tests replace Clerk at the module boundary. Never alias auth in a deployable build.
+    ...(command === 'serve' && mode === 'e2e-ui'
+      ? {
+          alias: [
+            {
+              find: /^@clerk\/tanstack-react-start\/server$/,
+              replacement: fileURLToPath(
+                new URL('./tests/e2e/support/clerk-server.ts', import.meta.url),
+              ),
+            },
+            {
+              find: /^@clerk\/tanstack-react-start$/,
+              replacement: fileURLToPath(
+                new URL('./tests/e2e/support/clerk-ui.tsx', import.meta.url),
+              ),
+            },
+          ],
+        }
+      : {}),
   },
   server: {
     port: devPort,

@@ -160,14 +160,23 @@ bun run test:e2e         # browser tests
 bindings. Clerk and the DuckDB query container are replaced at their network boundaries; tenancy,
 grants, share links, control validation, and query caching all run for real.
 
-`bun run test:e2e` starts its own dev server on port `3140`. Set `YRESONANCE_E2E_PORT` to change it, and
-`YRESONANCE_E2E_REUSE_SERVER=1` to attach to a server you already started. Reuse is off by default
-because attaching to an unrelated process on the port produced misleading runs; the suite also
-refuses to start when the port does not answer as yresonance.
+`bun run test:e2e` runs two browser suites in order, each starting its own dev server on port
+`3140`. Set `YRESONANCE_E2E_PORT` to change the port.
 
-Local browser tests execute the container's DuckDB query handler inside Vite because Cloudflare's
-amd64 development container is not reliable under Apple Silicon emulation. Linux CI starts the
-real query container and uses local R2 for uploaded test data.
+- `bun run test:e2e:ui` exercises the builder, datasource screens, and WebMCP with mocked API
+  responses and a ready Clerk session double. It needs no Clerk credentials, rejects external
+  browser requests, and never reuses an existing server. The auth doubles are Vite aliases enabled
+  only by `vite dev --mode e2e-ui`; builds and normal development use real Clerk. Fixed-desktop
+  specs run only in the desktop project, and the fixed mobile row spec runs only on mobile.
+- `bun run test:e2e:clerk` exercises the public shell, auth modal, and authenticated dashboard
+  flows with real Clerk. Set `YRESONANCE_E2E_REUSE_SERVER=1` to attach to an existing normal dev server.
+  Reuse is off by default because an unrelated process on the port produced misleading runs;
+  setup also verifies the server's yresonance health response.
+
+The real Clerk suite executes the container's DuckDB query handler inside Vite locally because
+Cloudflare's amd64 development container is not reliable under Apple Silicon emulation. Linux CI
+starts the real query container and uses local R2 for uploaded test data. The mocked UI suite does
+not start query containers or need database migrations.
 
 The `authenticated` Playwright project signs a real Clerk user in with
 [Clerk testing tokens](https://clerk.com/docs/testing/overview). It is skipped unless the
@@ -201,8 +210,7 @@ bun run db:migrate:production
 
 ## Cloudflare deployment
 
-The configured app domain is `yresonance.com`. The [rename rollout](docs/project-rename.md)
-must be completed before merging this configuration into `main`.
+The configured app domain is `yresonance.com`. Complete [the rename rollout](docs/project-rename.md) before merging.
 Cloudflare deploys every push to `main`. The Worker deployment also builds and uploads the query
 container image.
 
@@ -272,9 +280,11 @@ using it for acceptance testing. See [Cloudflare resource isolation and containe
 
 ### GitHub Actions
 
-The `Check` workflow runs three jobs: lint, types, unit tests, and a Wrangler deployment dry run;
-Worker integration tests; and browser tests. The browser job needs a Clerk development instance and
-fails with a list of what is missing until it is configured:
+The `Check` workflow runs lint, types, unit tests, and a Wrangler deployment dry run; Worker
+integration tests; two parallel UI-test shards; and the real Clerk browser suite. Each UI shard
+uses two workers and runs without secrets, including on fork pull requests. The real Clerk job
+keeps its two-worker limit to avoid development-instance rate limiting, is skipped for forks,
+and fails with a list of missing configuration until the following are configured:
 
 | Name                         | Kind                | Purpose                           |
 | ---------------------------- | ------------------- | --------------------------------- |
