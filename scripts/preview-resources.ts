@@ -58,27 +58,25 @@ async function run(command: string[]) {
   if ((await child.exited) !== 0) throw new Error(`Command failed: ${command[0]}`);
 }
 
-// Cloudflare builds run outside GitHub's concurrency group. Wait for this branch's
-// in-flight builds before deleting data that they may still use or recreate.
-// Active builds without branch metadata also block cleanup until they stop.
+// Native Preview builds have their own history, separate from production builds.
+// Wait for every build of this branch before deleting resources it can still use.
 if (action === 'cleanup') {
   const tag = z.string().min(1).parse(process.env.CLOUDFLARE_WORKER_TAG);
-  const buildSchema = z.object({
-    status: z.string(),
-    build_trigger_metadata: z.object({ branch: z.string().optional() }).nullish(),
-  });
-  while (true) {
-    const builds = await list(`/builds/workers/${tag}/builds`, buildSchema);
-    if (
-      !builds.some(
-        (build) =>
-          build.status !== 'stopped' &&
-          (!build.build_trigger_metadata?.branch || build.build_trigger_metadata.branch === branch),
-      )
-    )
-      break;
-    console.log(`Waiting for Cloudflare builds on ${branch} before cleanup.`);
-    await Bun.sleep(10_000);
+  const previews = await list(
+    `/builds/workers/${tag}/previews`,
+    z.object({ preview_id: z.string(), branch: z.string() }),
+  );
+  const preview = previews.find((item) => item.branch === branch);
+  if (preview) {
+    while (true) {
+      const builds = await list(
+        `/builds/workers/${tag}/previews/${preview.preview_id}/builds`,
+        z.object({ status: z.string() }),
+      );
+      if (builds.every((build) => build.status === 'stopped')) break;
+      console.log(`Waiting for Cloudflare builds on ${branch} before cleanup.`);
+      await Bun.sleep(10_000);
+    }
   }
 }
 
