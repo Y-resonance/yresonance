@@ -60,17 +60,20 @@ async function run(command: string[]) {
 
 // Cloudflare builds run outside GitHub's concurrency group. Wait for this branch's
 // in-flight builds before deleting data that they may still use or recreate.
+// Active builds without branch metadata also block cleanup until they stop.
 if (action === 'cleanup') {
   const tag = z.string().min(1).parse(process.env.CLOUDFLARE_WORKER_TAG);
   const buildSchema = z.object({
     status: z.string(),
-    build_trigger_metadata: z.object({ branch: z.string() }).nullable(),
+    build_trigger_metadata: z.object({ branch: z.string().optional() }).nullish(),
   });
   while (true) {
     const builds = await list(`/builds/workers/${tag}/builds`, buildSchema);
     if (
       !builds.some(
-        (build) => build.status !== 'stopped' && build.build_trigger_metadata?.branch === branch,
+        (build) =>
+          build.status !== 'stopped' &&
+          (!build.build_trigger_metadata?.branch || build.build_trigger_metadata.branch === branch),
       )
     )
       break;
