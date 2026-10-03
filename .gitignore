@@ -16,3 +16,5 @@ dev-data/*
 
 .dev.vars*
 !.dev.vars.example
+
+.wrangler-pr.json

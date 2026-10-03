@@ -5,6 +5,7 @@
     "container/**/*.ts",
     "dev/**/*.ts",
     "tests/**/*.ts",
+    "scripts/pr-preview.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
