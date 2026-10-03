@@ -30,7 +30,10 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Query engine listening on port ${server.port}`);
+console.info('yresonance.query_engine_ready', {
+  port: server.port,
+  processStartupMs: performance.now(),
+});
 
 function timeoutStatus(error: unknown) {
   return error instanceof DOMException && ['AbortError', 'TimeoutError'].includes(error.name)

@@ -74,7 +74,10 @@ async function manageResources(workerName: string) {
 
   if (action === 'prepare') {
     const db =
-      database ?? databaseSchema.parse(await api('/d1/database', 'POST', { name: resourceName }));
+      database ??
+      databaseSchema.parse(
+        await api('/d1/database', 'POST', { name: resourceName, primary_location_hint: 'weur' }),
+      );
     const kv =
       namespace ??
       namespaceSchema.parse(await api('/storage/kv/namespaces', 'POST', { title: resourceName }));
@@ -82,7 +85,7 @@ async function manageResources(workerName: string) {
       .object({ buckets: z.array(z.object({ name: z.string() })) })
       .parse(await api('/r2/buckets'));
     if (!buckets.buckets.some((bucket) => bucket.name === resourceName)) {
-      await api('/r2/buckets', 'POST', { name: resourceName });
+      await api('/r2/buckets', 'POST', { name: resourceName, locationHint: 'weur' });
     }
     const bindings = {
       vars: {
