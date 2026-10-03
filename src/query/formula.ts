@@ -1,3 +1,4 @@
+import { sqlLiteral, type SqlDialect } from './dialect';
 export type FormulaMode = 'row' | 'aggregate';
 export type FormulaType = 'number' | 'text' | 'date' | 'boolean' | 'null' | 'unknown';
 
@@ -72,7 +73,7 @@ const binaryPrecedence = new Map([
 
 export function compileFormula(
   source: string,
-  options: { mode: FormulaMode; fields: FormulaField[] },
+  options: { mode: FormulaMode; fields: FormulaField[]; dialect?: SqlDialect },
 ): CompiledFormula {
   const parser = new FormulaParser(tokenize(source));
   const node = parser.parse();
@@ -88,7 +89,7 @@ export function compileFormula(
     current: FormulaNode,
     aggregateDepth = 0,
   ): { sql: string; type: FormulaType } => {
-    if (current.kind === 'literal') return compileLiteral(current.value);
+    if (current.kind === 'literal') return compileLiteral(current.value, options.dialect);
     if (current.kind === 'identifier') {
       const field = fields.get(current.name.toLocaleLowerCase('en-US'));
       if (!field) throw new Error(`Unknown formula field ${current.name}.`);
@@ -138,7 +139,7 @@ export function compileFormula(
     const compiledArguments = current.arguments.map((argument) =>
       compile(argument, aggregate ? aggregateDepth + 1 : aggregateDepth),
     );
-    return compileCall(name, compiledArguments);
+    return compileCall(name, compiledArguments, options.dialect);
   };
 
   const result = compile(node);
@@ -179,6 +180,7 @@ export function formulaTypeForSemanticType(semanticType: string): FormulaType {
 function compileCall(
   name: string,
   args: Array<{ sql: string; type: FormulaType }>,
+  dialect?: SqlDialect,
 ): { sql: string; type: FormulaType } {
   if (name === 'sum' || name === 'avg') {
     requireArgumentCount(name, args, 1);
@@ -215,12 +217,22 @@ function compileCall(
   if (name === 'length') {
     requireArgumentCount(name, args, 1);
     requireType(args[0].type, 'text', name);
-    return { sql: `LENGTH(${args[0].sql})`, type: 'number' };
+    return {
+      sql: `${dialect === 'clickhouse' ? 'lengthUTF8' : 'LENGTH'}(${args[0].sql})`,
+      type: 'number',
+    };
   }
   if (name === 'contains' || name === 'starts_with' || name === 'ends_with') {
     requireArgumentCount(name, args, 2);
     requireType(args[0].type, 'text', name);
     requireType(args[1].type, 'text', name);
+    if (dialect === 'clickhouse') {
+      const sql =
+        name === 'contains'
+          ? `(position(${args[0].sql}, ${args[1].sql}) > 0)`
+          : `${name === 'starts_with' ? 'startsWith' : 'endsWith'}(${args[0].sql}, ${args[1].sql})`;
+      return { sql, type: 'boolean' };
+    }
     const sqlName: Record<string, string> = {
       contains: 'CONTAINS',
       starts_with: 'STARTS_WITH',
@@ -256,12 +268,12 @@ function compileCall(
   throw new Error(`Formula function ${name} is not allowed.`);
 }
 
-function compileLiteral(value: string | number | boolean | null) {
+function compileLiteral(value: string | number | boolean | null, dialect?: SqlDialect) {
   if (value === null) return { sql: 'NULL', type: 'null' as const };
   if (typeof value === 'boolean')
     return { sql: value ? 'TRUE' : 'FALSE', type: 'boolean' as const };
   if (typeof value === 'number') return { sql: String(value), type: 'number' as const };
-  return { sql: `'${value.replaceAll("'", "''")}'`, type: 'text' as const };
+  return { sql: sqlLiteral(value, dialect), type: 'text' as const };
 }
 
 function requireArgumentCount(name: string, args: unknown[], expected: number) {

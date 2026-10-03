@@ -131,6 +131,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   datasourceUploadEventSchema.extend({ action: z.literal('trackDatasourceUpload') }),
   z.object({
     action: z.literal('registerDatasource'),
+    backend: z.enum(['duckdb', 'clickhouse']).optional(),
     name: z.string().trim().min(1),
     location: dataSourceLocationSchema,
     cleanupToken: z.string().min(1).optional(),

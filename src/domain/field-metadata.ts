@@ -24,7 +24,7 @@ export interface DetectedFieldSemantics {
 }
 
 /**
- * Derives field defaults from a DuckDB column description at registration time.
+ * Derives field defaults from a backend column description at registration time.
  * Roles are only dimension or metric, so id-like and date-like columns become
  * dimensions and keep their nature in the semantic type.
  */
@@ -33,8 +33,8 @@ export function detectFieldSemantics(
   columnType: string,
 ): DetectedFieldSemantics {
   const idLike = /id$/iu.test(columnName);
-  const dateLike = /DATE|TIMESTAMP/u.test(columnType);
-  const numeric = /INT|DECIMAL|DOUBLE|FLOAT|REAL|HUGE/u.test(columnType);
+  const dateLike = /DATE|TIMESTAMP/iu.test(columnType);
+  const numeric = /INT|DECIMAL|DOUBLE|FLOAT|REAL|HUGE/iu.test(columnType);
   return {
     role: numeric && !idLike ? 'metric' : 'dimension',
     semanticType: idLike ? 'id' : dateLike ? 'date' : numeric ? 'count' : 'text',

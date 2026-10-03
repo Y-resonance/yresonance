@@ -1,0 +1,84 @@
+# ClickHouse analytics
+
+Choose an analytics backend when registering a datasource. DuckDB remains the default.
+Existing file datasources stay on DuckDB. Choosing ClickHouse for an upload creates a new
+managed table; it does not migrate any existing datasource.
+
+Managed CSV uploads still use the existing CSV-to-Parquet conversion. The Worker inspects
+that Parquet file, creates a nullable scalar schema, and streams the file into ClickHouse.
+The table is registered only after insertion succeeds. An import or registration failure
+removes the new table where the server remains reachable, and keeps the original upload
+available for retry. Supported import types are text, booleans, integers, floats, decimals,
+dates, and timestamps. Nested file types fail before a table is created.
+
+## Server configuration
+
+Configure these Worker secrets in each environment that should offer ClickHouse:
+
+- `CLICKHOUSE_URL`: the HTTPS HTTP endpoint.
+- `CLICKHOUSE_USER` and `CLICKHOUSE_PASSWORD`: the restricted app account.
+- `CLICKHOUSE_ACCESS_CLIENT_ID` and `CLICKHOUSE_ACCESS_CLIENT_SECRET`: required when the endpoint
+  is protected by Cloudflare Access. Use a Service Auth policy for the service token.
+- `CLICKHOUSE_EXTERNAL_TABLES`: optional JSON array of exact workspace/table access mappings.
+
+Keep these values in ignored `.dev.vars` for local development. Configure preview runtime
+secrets separately from production. Cloudflare's Previews Base does not inherit production
+secrets. Do not make ClickHouse secrets required for starting the app: DuckDB-only environments
+continue to work without them. HTTP is accepted only for loopback conformance tests.
+
+The provisioned psimms instance is reached through `https://clickhouse-yresonance.psimms.de`.
+A dedicated `yresonance_analytics` user and an Access service token were created for this change.
+Local connection configuration is stored in `~/.config/yresonance/clickhouse-backend.json`;
+the Access token record is in `~/.config/yresonance/clickhouse-access.json`. Both files are
+private and outside the repository. No external workspace mappings have been provisioned;
+configure `CLICKHOUSE_EXTERNAL_TABLES` and the matching SQL grants before using external tables.
+The ClickHouse container has
+`CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1` so its administrator can manage SQL users. The app
+account has no user-management privileges.
+
+The restricted account's managed-data grants are:
+
+```sql
+GRANT SELECT, INSERT, CREATE DATABASE, CREATE TABLE, DROP TABLE
+ON yresonance_*.* TO yresonance_analytics;
+```
+
+Managed database names contain a SHA-256 digest of the workspace id and the environment's
+R2/KV names. Every workspace gets its own database. Distinct branch-preview resource names
+also isolate their ClickHouse databases. Managed table names derive from server-generated
+datasource ids. Clients cannot register arbitrary managed table references.
+
+External mappings use this shape:
+
+```json
+[
+  { "workspaceId": "ws_example", "database": "reporting", "table": "campaigns" }
+]
+```
+
+An administrator must also grant the app account `SELECT` on each listed external table.
+The app never grants itself permissions. A mapping cannot expose a `yresonance_` managed
+database as external data. Empty or absent mappings deny all external tables. Inspection,
+query execution, and cache hits check the mapping, so removing it revokes access immediately.
+Credentials and access mappings are never part of datasource definitions or WebMCP responses.
+
+## Freshness
+
+The shared Worker cache includes backend, workspace, datasource, table/file identity, metadata,
+widget definition, and resolved controls. Managed uploads are immutable and use their upload
+revision with a 24-hour cache lifetime. External inspection fingerprints the schema, not the
+contents: external rows may change without a new version.
+
+External tables default to a five-minute TTL. Set `location.cacheTtlSeconds` during registration
+to configure it from 0 to 86400 seconds. Zero bypasses KV. A timestamp in the cache entry enforces
+TTLs shorter than KV's minimum expiration of 60 seconds. Old results become unreachable after
+changes to source configuration, and backend authorization runs before cache lookup.
+
+## Verification
+
+`bun run test:clickhouse` runs identical queries against native DuckDB and a real ClickHouse
+HTTP server. CI starts a pinned ClickHouse service for this suite. Locally, set the connection
+variables above before running it. The suite creates temporary managed tables and removes them;
+it never reads existing application tables. Empty workspace databases remain after tests.
+Worker integration tests cover registration, workspace authorization, cache expiry and bypass,
+and access revocation. Browser tests cover desktop/mobile registration.

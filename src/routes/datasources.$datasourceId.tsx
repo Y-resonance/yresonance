@@ -191,8 +191,9 @@ function DatasourceContent() {
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight">{description.name}</h1>
                 <p className="mt-1 font-mono text-xs text-muted-foreground">
-                  {description.location.kind === 'prefix' ? 'Prefix' : 'Object'}{' '}
-                  {description.location.key} · {description.location.format.toUpperCase()}
+                  {description.location.kind === 'clickhouse'
+                    ? `ClickHouse · ${description.location.database}.${description.location.table}`
+                    : `${description.location.kind === 'prefix' ? 'Prefix' : 'Object'} ${description.location.key} · ${description.location.format.toUpperCase()}`}
                 </p>
               </div>
               {isAdmin ? (

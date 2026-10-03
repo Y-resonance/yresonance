@@ -1,3 +1,4 @@
+import { ingestClickhouseUpload, removeClickhouseUpload } from '#/data/clickhouse-ingestion.server';
 import { clerkClient } from '@clerk/tanstack-react-start/server';
 import { and, count, eq, getTableColumns, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { env } from 'cloudflare:workers';
@@ -558,7 +559,16 @@ async function queryWidget(
     widget.definition.type === 'table' && widget.definition.resultLimit.mode === 'pagination'
       ? widget.definition.resultLimit.amount
       : undefined;
+  const datasourceIdentity = await datasourceOperation(() => connector.cacheIdentity(dataSource));
+  const ttlSeconds =
+    dataSource.location.kind === 'clickhouse' && dataSource.location.ownership === 'external'
+      ? dataSource.location.cacheTtlSeconds
+      : 86_400;
   const cacheKey = await hashJson({
+    workspaceId: dataSource.workspaceId,
+    datasourceId: dataSource.id,
+    datasourceIdentity,
+    cacheTtlSeconds: ttlSeconds,
     ...queryCacheState({
       definitionHash: currentDefinitionHash,
       requestedDateRange: dateRange,
@@ -571,10 +581,16 @@ async function queryWidget(
     }),
     page: pageSize === undefined ? 0 : page,
   });
-  const cached = await env.QUERY_CACHE.get(cacheKey, 'json');
-  if (cached) {
+  const cached =
+    ttlSeconds > 0
+      ? await env.QUERY_CACHE.get<{ cachedAt: number; result: Record<string, unknown> }>(
+          cacheKey,
+          'json',
+        )
+      : null;
+  if (cached && Date.now() - cached.cachedAt < ttlSeconds * 1000) {
     console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'hit' });
-    return { ...(cached as object), columns, cache: 'hit' };
+    return { ...cached.result, columns, cache: 'hit' };
   }
   console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'miss' });
   const run = (
@@ -639,7 +655,10 @@ async function queryWidget(
     cache: 'miss',
     ...(pageSize === undefined ? {} : { page, hasMore }),
   };
-  await env.QUERY_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 86_400 });
+  if (ttlSeconds > 0)
+    await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
+      expirationTtl: Math.max(60, ttlSeconds),
+    });
   return result;
 }
 
@@ -889,6 +908,40 @@ async function trackDatasourceUpload(
 
 async function registerDatasource(request: Extract<ApiRequest, { action: 'registerDatasource' }>) {
   const session = await requireSession();
+  if (request.location.kind === 'clickhouse') {
+    if (
+      request.location.ownership !== 'external' ||
+      request.cleanupToken ||
+      request.backend === 'duckdb'
+    )
+      throw new ApiError(
+        400,
+        'invalid_datasource_location',
+        'Register an external table or upload a file for managed ClickHouse data.',
+      );
+    const connector = connectorFor('clickhouse');
+    const pending = {
+      id: `ds_${crypto.randomUUID()}`,
+      workspaceId: session.workspace.id,
+      name: request.name,
+      connectorType: connector.type,
+      location: request.location,
+    };
+    const inspection = await datasourceOperation(() => connector.inspect(pending));
+    const source = { ...pending, version: inspection.version };
+    const discovered = inspection.description.map((column) =>
+      seedField(source.id, column, inspection.samples),
+    );
+    const now = new Date().toISOString();
+    const db = database();
+    await db.batch([
+      db.insert(dataSources).values({ ...source, createdAt: now, updatedAt: now }),
+      ...discovered.map((field) =>
+        db.insert(fields).values({ ...field, workspaceId: session.workspace.id }),
+      ),
+    ]);
+    return { ...source, fields: discovered };
+  }
   if (!isWorkspaceR2Key(session.workspace.r2Prefix, request.location.key))
     throw new ApiError(
       400,
@@ -918,10 +971,17 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
       'invalid_upload_format',
       `Managed ${request.location.format} uploads need a .${request.location.format} key.`,
     );
+  if (request.backend === 'clickhouse' && !managedUploadKey)
+    throw new ApiError(
+      400,
+      'managed_upload_required',
+      'Upload a file or register an authorized external table for ClickHouse.',
+    );
   const claimId = managedUploadKey
     ? await claimPendingUpload(session, managedUploadKey, request.cleanupToken)
     : undefined;
   let convertedKey: string | undefined;
+  let importedLocation: Extract<DataSourceRecord['location'], { kind: 'clickhouse' }> | undefined;
   try {
     const connector = connectorFor(DUCKDB_FILE_CONNECTOR);
     const location =
@@ -943,8 +1003,19 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
         ...(managedUploadKey ? { maximumObjectBytes: MAX_DATASOURCE_FILE_BYTES } : {}),
       }),
     );
+    if (request.backend === 'clickhouse') {
+      importedLocation = await datasourceOperation(() =>
+        ingestClickhouseUpload(
+          session.workspace.id,
+          pendingDataSource.id,
+          location.key,
+          inspection,
+        ),
+      );
+    }
     const dataSource: DataSourceRecord = {
       ...pendingDataSource,
+      ...(importedLocation ? { connectorType: 'clickhouse', location: importedLocation } : {}),
       version: inspection.version,
     };
     const discovered = inspection.description.map((column) =>
@@ -984,7 +1055,9 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
       ),
       ...uploadCompletion,
     ]);
-    if (convertedKey && managedUploadKey)
+    if (importedLocation && convertedKey)
+      await deleteSourceObject(convertedKey).catch(() => undefined);
+    if ((convertedKey || importedLocation) && managedUploadKey)
       await deleteSourceObject(managedUploadKey).catch((error: unknown) => {
         console.warn('yresonance.datasource_ingestion_cleanup_failed', {
           workspaceId: session.workspace.id,
@@ -994,6 +1067,12 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
       });
     return { ...dataSource, fields: discovered };
   } catch (error) {
+    if (importedLocation)
+      await removeClickhouseUpload(
+        session.workspace.id,
+        importedLocation.database,
+        importedLocation.table,
+      ).catch(() => undefined);
     if (convertedKey) await deleteSourceObject(convertedKey).catch(() => undefined);
     if (managedUploadKey && claimId)
       await restorePendingUpload(session, managedUploadKey, 'registering', claimId);
@@ -2311,6 +2390,7 @@ async function libraryMetricApplies(
 function throwDatasourceError(error: unknown): never {
   if (!(error instanceof DatasourceError)) throw error;
   const status = {
+    datasource_access_denied: 403,
     datasource_source_not_found: 404,
     datasource_source_too_large: 413,
     datasource_inspection_failed: 422,
