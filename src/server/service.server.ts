@@ -323,9 +323,9 @@ async function updateDashboard(request: Extract<ApiRequest, { action: 'updateDas
     name: request.name ?? access.document.name,
     timezone: request.timezone ?? access.document.timezone,
     defaultDateRange: request.defaultDateRange ?? access.document.defaultDateRange,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updated;
 }
 
@@ -362,9 +362,9 @@ async function addWidget(request: Extract<ApiRequest, { action: 'addWidget' }>) 
     ...access.document,
     widgets: [...access.document.widgets, widget],
     canvasRows: Math.max(access.document.canvasRows, widget.layout.y + widget.layout.height + 2),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return { widget, compiledSql: await compiledSql(updated, widget) };
 }
 
@@ -382,25 +382,17 @@ async function updateWidget(request: Extract<ApiRequest, { action: 'updateWidget
   const updated = {
     ...access.document,
     widgets: access.document.widgets.map((item) => (item.id === widget.id ? widget : item)),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   const sql = await compiledSql(updated, widget);
   if (!request.libraryMetric) {
-    await persistDashboard(updated);
+    await persistDashboard(updated, access.row.updatedAt);
     return { widget, compiledSql: sql };
   }
 
   await validateLibraryMetricInput(request.libraryMetric, access.session!);
   const libraryMetric = newLibraryMetricValues(request.libraryMetric, access.document.workspaceId);
-  dashboardDocumentSchema.parse(updated);
-  const db = database();
-  await db.batch([
-    db
-      .update(dashboards)
-      .set({ name: updated.name, document: updated, updatedAt: updated.updatedAt })
-      .where(eq(dashboards.id, updated.id)),
-    db.insert(libraryMetrics).values(libraryMetric),
-  ]);
+  await persistDashboard(updated, access.row.updatedAt, libraryMetric);
   return { widget, libraryMetric, compiledSql: sql };
 }
 
@@ -410,9 +402,9 @@ async function removeWidget(request: Extract<ApiRequest, { action: 'removeWidget
   const updated = {
     ...access.document,
     widgets: access.document.widgets.filter((item) => item.id !== request.widgetId),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updated;
 }
 
@@ -437,9 +429,9 @@ async function moveWidget(request: Extract<ApiRequest, { action: 'moveWidget' }>
       access.document.canvasRows,
       request.placement.y + request.placement.height,
     ),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updatedWidget;
 }
 
@@ -465,9 +457,9 @@ async function updateLayout(request: Extract<ApiRequest, { action: 'updateLayout
     ...access.document,
     widgets,
     canvasRows: request.canvasRows,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updated;
 }
 
@@ -1813,12 +1805,58 @@ function defaultControlState(dashboard: DashboardDocument): ControlState {
   };
 }
 
-async function persistDashboard(document: DashboardDocument) {
+// updated_at doubles as a version, so successful writes must advance it even in one millisecond.
+function nextDashboardTimestamp(previous: string) {
+  return new Date(Math.max(Date.now(), Date.parse(previous) + 1)).toISOString();
+}
+
+async function persistDashboard(
+  document: DashboardDocument,
+  expectedUpdatedAt: string,
+  libraryMetric?: ReturnType<typeof newLibraryMetricValues>,
+) {
   dashboardDocumentSchema.parse(document);
-  await database()
+  const db = database();
+  const expectedVersion = and(
+    eq(dashboards.id, document.id),
+    eq(dashboards.updatedAt, expectedUpdatedAt),
+  );
+  const update = db
     .update(dashboards)
     .set({ name: document.name, document, updatedAt: document.updatedAt })
-    .where(eq(dashboards.id, document.id));
+    .where(expectedVersion)
+    .returning({ id: dashboards.id });
+  let saved;
+  if (libraryMetric) {
+    // Both statements run atomically. A stale snapshot inserts no metric and updates no dashboard.
+    const [, updated] = await db.batch([
+      db.insert(libraryMetrics).select(
+        db
+          .select({
+            id: sql<string>`${libraryMetric.id}`.as('id'),
+            workspaceId: sql<string>`${libraryMetric.workspaceId}`.as('workspaceId'),
+            name: sql<string>`${libraryMetric.name}`.as('name'),
+            canonicalName: sql<string>`${libraryMetric.canonicalName}`.as('canonicalName'),
+            expression: sql<string>`${libraryMetric.expression}`.as('expression'),
+            semanticType: sql<string>`${libraryMetric.semanticType}`.as('semanticType'),
+            description: sql<string | null>`${libraryMetric.description}`.as('description'),
+            updatedAt: sql<string>`${libraryMetric.updatedAt}`.as('updatedAt'),
+          })
+          .from(dashboards)
+          .where(expectedVersion),
+      ),
+      update,
+    ]);
+    saved = updated;
+  } else {
+    saved = await update;
+  }
+  if (!saved.length)
+    throw new ApiError(
+      409,
+      'dashboard_conflict',
+      'This dashboard changed while saving. Reload it and retry your edit.',
+    );
 }
 
 function widgetById(document: DashboardDocument, widgetId: string) {
