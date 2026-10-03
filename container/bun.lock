@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "rundown-query-engine",
+      "name": "yresonance-query-engine",
       "dependencies": {
         "@duckdb/node-api": "^1.5.5-r.4",
         "zod": "^4.5.2",

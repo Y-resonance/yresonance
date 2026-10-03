@@ -74,7 +74,7 @@ export const duckdbFileConnector: DatasourceConnector = {
 
   async validateQuery(dataSource, query) {
     try {
-      compileWidget(dataSource, query, quoteIdentifier('rundown_source'));
+      compileWidget(dataSource, query, quoteIdentifier('yresonance_source'));
     } catch (error) {
       throw connectorError(error, 'invalid_query');
     }
@@ -82,7 +82,7 @@ export const duckdbFileConnector: DatasourceConnector = {
 
   explainQuery(dataSource, query) {
     try {
-      const compiled = compileWidget(dataSource, query, quoteIdentifier('rundown_source'));
+      const compiled = compileWidget(dataSource, query, quoteIdentifier('yresonance_source'));
       return { sql: compiled.sql, definitions: compiled.definitions };
     } catch (error) {
       throw connectorError(error, 'invalid_query');

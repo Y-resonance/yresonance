@@ -134,7 +134,7 @@ function serverTheme() {
   return false;
 }
 
-/** Code editor for a Rundown formula. `validation` drives the inline error underline. */
+/** Code editor for a yresonance formula. `validation` drives the inline error underline. */
 export function FormulaInput({
   editorRef,
   datasource,

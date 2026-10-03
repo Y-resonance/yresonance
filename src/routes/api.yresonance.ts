@@ -5,7 +5,7 @@ import { apiRequestSchema, type ApiResponse } from '#/api/contracts';
 import { ApiError } from '#/server/errors';
 import { executeRequest } from '#/server/service.server';
 
-export const Route = createFileRoute('/api/rundown')({
+export const Route = createFileRoute('/api/yresonance')({
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -30,7 +30,7 @@ export const Route = createFileRoute('/api/rundown')({
                   ? error.message
                   : error instanceof ZodError
                     ? 'The request is invalid.'
-                    : 'Rundown could not complete the request.',
+                    : 'yresonance could not complete the request.',
               issues: error instanceof ZodError ? error.issues : undefined,
             },
           };

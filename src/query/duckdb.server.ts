@@ -41,7 +41,7 @@ export async function runPreparedQuery<T extends Record<string, unknown>>(
   } finally {
     scannedBytes = await finishSourceRead(source.queryBudgetId, queryId, dataSource.workspaceId);
   }
-  console.info('rundown.query_execution', {
+  console.info('yresonance.query_execution', {
     queryId,
     workspaceId: dataSource.workspaceId,
     sourceBytes: source.sourceBytes,
@@ -91,7 +91,7 @@ export async function ingestCsv(
     tokenId,
     { operation: 'ingestCsv', sourceUrl, destinationUrl },
   );
-  console.info('rundown.datasource_ingestion', {
+  console.info('yresonance.datasource_ingestion', {
     workspaceId,
     tokenId,
     outputBytes: result.data.size,
@@ -113,8 +113,8 @@ async function queryEngineRequest<T>(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-rundown-query-id': queryId,
-        'x-rundown-query-deadline': String(deadlineAt),
+        'x-yresonance-query-id': queryId,
+        'x-yresonance-query-deadline': String(deadlineAt),
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(QUERY_ENGINE_REQUEST_TIMEOUT_MS),
@@ -131,7 +131,7 @@ async function queryEngineRequest<T>(
   } catch (error) {
     const totalDurationMs = performance.now() - startedAt;
     const timedOut = request.signal.aborted;
-    console.warn('rundown.query_failure', {
+    console.warn('yresonance.query_failure', {
       queryId,
       workspaceId,
       totalDurationMs,
@@ -161,7 +161,7 @@ async function queryEngineRequest<T>(
     );
   }
   if (!response.ok || !result.ok) {
-    console.warn('rundown.query_failure', {
+    console.warn('yresonance.query_failure', {
       queryId,
       workspaceId,
       totalDurationMs,
@@ -203,14 +203,14 @@ async function finishSourceRead(
   if (!budgetId) return 0;
   try {
     const scannedBytes = await finishQueryReadBudget(budgetId, env);
-    console.info('rundown.query_scanned_bytes', { queryId, workspaceId, scannedBytes });
+    console.info('yresonance.query_scanned_bytes', { queryId, workspaceId, scannedBytes });
     recordProductMetric('query_scanned_bytes', {
       numbers: [scannedBytes],
       index: workspaceId,
     });
     return scannedBytes;
   } catch (error) {
-    console.warn('rundown.query_budget_cleanup_failed', {
+    console.warn('yresonance.query_budget_cleanup_failed', {
       queryId,
       workspaceId,
       error: error instanceof Error ? error.message : 'Unknown cleanup error.',

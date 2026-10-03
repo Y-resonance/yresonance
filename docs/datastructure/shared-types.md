@@ -36,7 +36,7 @@ MetricSource:
     - kind: library
       libraryMetricId: string
     - kind: expression
-      expression: string # Rundown aggregate formula over canonical field names
+      expression: string # yresonance aggregate formula over canonical field names
 
 Aggregation: sum | average | count | countDistinct | min | max | median | standardDeviation | variance
 
@@ -47,7 +47,7 @@ DisplayFormat:
 ```
 
 `kind: field` uses a stored aggregation. `kind: library` reuses a workspace metric.
-`kind: expression` stores a one-off Rundown formula. `dataType` defaults from the field's or library
+`kind: expression` stores a one-off yresonance formula. `dataType` defaults from the field's or library
 metric's `semanticType` and can be overridden.
 
 ## Dimension

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "rundown",
+      "name": "yresonance",
       "dependencies": {
         "@base-ui/react": "^1.7.0",
         "@clerk/tanstack-react-start": "^1.5.9",

@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
 test('mobile widget settings remove an empty desktop layout row', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   state.dashboard.canvasRows = 11;
   state.dashboard.widgets = state.dashboard.widgets.map((widget) =>
     widget.layout.y >= 2

@@ -44,7 +44,7 @@ export async function executeQueryEngineRequest(input: unknown) {
     }
 
     if (request.operation === 'ingestCsv') {
-      const directory = await mkdtemp(join(tmpdir(), 'rundown-ingest-'));
+      const directory = await mkdtemp(join(tmpdir(), 'yresonance-ingest-'));
       const destination = join(directory, 'datasource.parquet');
       try {
         await runWithTimeout(connection, async () => {

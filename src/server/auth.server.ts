@@ -21,7 +21,7 @@ export async function requireSession(): Promise<SessionContext> {
     throw new ApiError(
       409,
       'organization_required',
-      'Select or create a Clerk organization to use Rundown.',
+      'Select or create a Clerk organization to use yresonance.',
     );
   const db = createDatabase(env.DB);
   let workspace = await db.query.workspaces.findFirst({

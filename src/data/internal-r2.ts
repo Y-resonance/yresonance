@@ -3,7 +3,7 @@ import { MAX_DATASOURCE_FILE_BYTES } from '#/domain/datasource-upload';
 import { isWorkspaceR2Key } from '#/domain/tenancy';
 import { recordProductMetric } from '#/observability';
 
-export const INTERNAL_R2_HOST = 'r2.rundown.internal';
+export const INTERNAL_R2_HOST = 'r2.yresonance.internal';
 export const MAX_QUERY_SOURCE_BYTES = 500 * 1024 * 1024;
 export const MAX_INGESTED_FILE_BYTES = 150 * 1024 * 1024;
 const CAPABILITY_LIFETIME_SECONDS = 5 * 60;
@@ -148,7 +148,7 @@ export async function handleInternalR2Request(request: Request, environment: Clo
         .bind(capability.tokenId, claimedAt)
         .run();
     } catch (releaseError) {
-      console.warn('rundown.ingestion_token_release_failed', {
+      console.warn('yresonance.ingestion_token_release_failed', {
         tokenId: capability.tokenId,
         error: releaseError instanceof Error ? releaseError.message : 'Unknown release error.',
       });
@@ -215,7 +215,7 @@ async function serveObject(
   if (enforceBudget && !(await claimQueryReadBytes(environment.DB, queryId, scannedBytes)))
     return new Response('Query scanned-byte limit exceeded.', { status: 413 });
   headers.set('content-length', String(scannedBytes));
-  console.info('rundown.datasource_read', { queryId, key, scannedBytes });
+  console.info('yresonance.datasource_read', { queryId, key, scannedBytes });
   recordProductMetric('datasource_read', {
     labels: [queryId],
     numbers: [scannedBytes],

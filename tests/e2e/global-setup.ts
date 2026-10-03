@@ -15,12 +15,12 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error(`Could not reach ${health.href}: ${String(error)}`);
   });
   if (!response.ok)
-    throw new Error(`${health.href} answered HTTP ${response.status}, so this is not Rundown.`);
+    throw new Error(`${health.href} answered HTTP ${response.status}, so this is not yresonance.`);
   const body = (await response.json()) as { service?: string };
-  if (body.service !== 'rundown')
+  if (body.service !== 'yresonance')
     throw new Error(
-      `${health.href} is served by "${body.service ?? 'an unknown service'}" rather than Rundown. ` +
-        'Set RUNDOWN_E2E_PORT to a free port, or stop the process using this one.',
+      `${health.href} is served by "${body.service ?? 'an unknown service'}" rather than yresonance. ` +
+        'Set YRESONANCE_E2E_PORT to a free port, or stop the process using this one.',
     );
 
   if (clerkCredentials()) await clerkSetup();

@@ -12,11 +12,11 @@ const server = Bun.serve({
       return Response.json({ ok: false, error: 'Not found.' }, { status: 404 });
 
     try {
-      const queryId = request.headers.get('x-rundown-query-id') ?? crypto.randomUUID();
+      const queryId = request.headers.get('x-yresonance-query-id') ?? crypto.randomUUID();
       const result = await executeQuery(await request.json(), {
         queryId,
         signal: request.signal,
-        deadlineAt: queryDeadline(request.headers.get('x-rundown-query-deadline')),
+        deadlineAt: queryDeadline(request.headers.get('x-yresonance-query-deadline')),
       });
       return Response.json({
         ok: true,

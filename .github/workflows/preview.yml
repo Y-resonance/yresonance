@@ -28,7 +28,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 17c619232f5d84567cd69896e892f326
       VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
-      RUNDOWN_PR_CONFIG: .wrangler-pr.json
+      YRESONANCE_PR_CONFIG: .wrangler-pr.json
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v4

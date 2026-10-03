@@ -12,7 +12,7 @@ function Imprint() {
       <main className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
         <article className="max-w-2xl">
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Imprint</h1>
-          <p className="mt-4 text-base text-muted-foreground">Imprint of Rundown</p>
+          <p className="mt-4 text-base text-muted-foreground">Imprint of yresonance</p>
 
           <section className="mt-12">
             <h2 className="text-xl font-semibold tracking-tight">Service provider</h2>

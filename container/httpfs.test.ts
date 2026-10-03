@@ -18,7 +18,7 @@ describe('DuckDB HTTPFS through an internal-style endpoint', () => {
   });
 
   beforeAll(async () => {
-    directory = await mkdtemp(join(tmpdir(), 'rundown-httpfs-'));
+    directory = await mkdtemp(join(tmpdir(), 'yresonance-httpfs-'));
     const instance = await DuckDBInstance.create(':memory:');
     const connection = await instance.connect();
     try {
@@ -27,7 +27,7 @@ describe('DuckDB HTTPFS through an internal-style endpoint', () => {
         ['b', 100_000],
       ] as const)
         await connection.run(
-          `COPY (SELECT range + ${offset} AS id, repeat('rundown', 20) AS value FROM range(100000)) TO '${join(directory, `${name}.parquet`).replaceAll("'", "''")}' (FORMAT PARQUET, ROW_GROUP_SIZE 10000)`,
+          `COPY (SELECT range + ${offset} AS id, repeat('yresonance', 20) AS value FROM range(100000)) TO '${join(directory, `${name}.parquet`).replaceAll("'", "''")}' (FORMAT PARQUET, ROW_GROUP_SIZE 10000)`,
         );
     } finally {
       connection.closeSync();

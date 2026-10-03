@@ -63,7 +63,7 @@ function WorkspaceSetup() {
       await operation();
     } catch (error) {
       setActionError(
-        error instanceof Error ? error.message : 'Rundown could not update the workspace.',
+        error instanceof Error ? error.message : 'yresonance could not update the workspace.',
       );
       setPendingAction(undefined);
     }

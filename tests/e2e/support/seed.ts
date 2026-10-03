@@ -30,7 +30,7 @@ const reportCsv = [
 
 /** Calls the API with the signed-in browser context, so tenancy is resolved the real way. */
 export async function callApi<T>(page: Page, body: Record<string, unknown>): Promise<T> {
-  const response = await page.request.post('/api/rundown', { data: body });
+  const response = await page.request.post('/api/yresonance', { data: body });
   const envelope = (await response.json()) as ApiEnvelope;
   if (!envelope.ok)
     throw new Error(

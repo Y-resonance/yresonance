@@ -11,12 +11,12 @@ if (!token) {
 }
 
 const endpoint = {
-  development: process.env.RUNDOWN_DEVELOPMENT_URL ?? 'http://localhost:3000',
-  preview: process.env.RUNDOWN_PREVIEW_URL,
-  production: process.env.RUNDOWN_PRODUCTION_URL ?? 'https://rundown-app.dev',
+  development: process.env.YRESONANCE_DEVELOPMENT_URL ?? 'http://localhost:3000',
+  preview: process.env.YRESONANCE_PREVIEW_URL,
+  production: process.env.YRESONANCE_PRODUCTION_URL ?? 'https://yresonance.com',
 }[environment!];
 if (!endpoint) {
-  console.error(`Set RUNDOWN_${environment!.toUpperCase()}_URL before running this reset.`);
+  console.error(`Set YRESONANCE_${environment!.toUpperCase()}_URL before running this reset.`);
   process.exit(1);
 }
 

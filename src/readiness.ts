@@ -37,7 +37,7 @@ export async function checkReadiness(
 export function createReadinessResponse(result: ReadinessResult) {
   return Response.json(
     {
-      service: 'rundown',
+      service: 'yresonance',
       status: result.ready ? 'ready' : 'not_ready',
       dependencies: result.dependencies,
     },

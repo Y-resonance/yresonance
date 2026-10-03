@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 375, height: 780 } });
 
@@ -9,7 +9,7 @@ const documentOverflow = () =>
 test('a phone viewer reaches the controls from a sticky bar and never scrolls sideways', async ({
   page,
 }) => {
-  await mockRundownApi(page, { role: 'viewer' });
+  await mockYresonanceApi(page, { role: 'viewer' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
 
@@ -51,7 +51,7 @@ test('a phone viewer reaches the controls from a sticky bar and never scrolls si
 });
 
 test('a phone editor edits a widget in a sheet that closes on Escape', async ({ page }) => {
-  await mockRundownApi(page, { role: 'editor' });
+  await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
 
@@ -74,7 +74,7 @@ test('a phone editor edits a widget in a sheet that closes on Escape', async ({ 
 });
 
 test('changing the date control default applies it to the dashboard', async ({ page }) => {
-  await mockRundownApi(page, { role: 'editor' });
+  await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
 
   await page.getByRole('button', { name: 'Edit Date range' }).click();

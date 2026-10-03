@@ -114,7 +114,7 @@ function compileScorecard(
     libraryMetrics,
     controlState: {},
     bucketName: 'bucket',
-    sourceSql: '"rundown_source"',
+    sourceSql: '"yresonance_source"',
   });
 }
 
@@ -212,10 +212,10 @@ describe('query compiler', () => {
       libraryMetrics: [],
       controlState: {},
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
       resolvedControls: [{ fieldId: 'campaign', values: ['Alpha'] }],
     });
-    expect(result.sql).toContain('FROM "rundown_source"');
+    expect(result.sql).toContain('FROM "yresonance_source"');
     expect(result.sql).toContain('"Campaign" IN (?)');
     expect(result.sql).toContain('GROUP BY 1 ORDER BY 2 DESC, 1 ASC LIMIT 20');
     expect(result.parameters.at(-1)).toBe('Alpha');
@@ -241,7 +241,7 @@ describe('query compiler', () => {
       libraryMetrics: [],
       controlState: {},
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
       offset: 40,
     });
     expect(result.sql).toContain('LIMIT 21 OFFSET 40');
@@ -272,7 +272,7 @@ describe('query compiler', () => {
         },
       },
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
       dateBucketTarget: 30,
     });
 
@@ -301,7 +301,7 @@ describe('query compiler', () => {
       libraryMetrics: [],
       controlState: {},
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
     });
 
     expect(result.sql).toContain('GROUPING("Platform", "Campaign") AS "__grouping"');
@@ -331,7 +331,7 @@ describe('query compiler', () => {
       libraryMetrics: [],
       controlState: {},
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
     });
 
     expect(result.sql).toContain('GROUPING("Platform", "Campaign") AS "__grouping"');
@@ -367,7 +367,7 @@ describe('query compiler', () => {
       ],
       controlState: {},
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
     });
     expect(result.sql).toContain('1000 AS "upper_limit"');
   });
@@ -500,7 +500,7 @@ describe('query compiler', () => {
       ],
       controlState: {},
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
     });
     expect(result.sql).toContain('SELECT SUM("MediaCost") AS "metric_1"');
   });
@@ -528,7 +528,7 @@ describe('query compiler', () => {
       libraryMetrics: [],
       controlState: {},
       bucketName: 'bucket',
-      sourceSql: '"rundown_source"',
+      sourceSql: '"yresonance_source"',
     });
 
     expect(result.sql).toContain('"Campaign" AS "dimension_1"');

@@ -48,7 +48,7 @@ export function AppShell({
             <MobileNavigation />
           </Show>
           <Link className="font-semibold tracking-tight" to="/">
-            Rundown
+            yresonance
           </Link>
           {/* Links collapse into the sheet below sm so the bar still fits a 320 px screen. */}
           <nav

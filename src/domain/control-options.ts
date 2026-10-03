@@ -2,7 +2,7 @@ export function controlOptionsQuery(
   expression: string,
   search: string | undefined,
   direction: string,
-  sourceTable = 'rundown_source',
+  sourceTable = 'yresonance_source',
 ) {
   const parameters: unknown[] = [];
   const where = search

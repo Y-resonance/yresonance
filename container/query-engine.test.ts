@@ -77,7 +77,7 @@ describe('native query engine', () => {
     const address = server.address();
     if (!address || typeof address === 'string')
       throw new Error('Ingestion test server did not bind.');
-    const directory = await mkdtemp(join(tmpdir(), 'rundown-ingestion-proof-'));
+    const directory = await mkdtemp(join(tmpdir(), 'yresonance-ingestion-proof-'));
     const timeout = vi.spyOn(AbortSignal, 'timeout');
     try {
       const result = await executeQueryEngineRequest({

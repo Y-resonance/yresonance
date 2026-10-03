@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 export function pageTitle(page?: string) {
-  return page ? `${page} | Rundown` : 'Rundown';
+  return page ? `${page} | yresonance` : 'yresonance';
 }
 
 // Detail page names arrive through the existing client-side requests, after

@@ -8,7 +8,7 @@ const route = '/__query-engine';
 export function queryEnginePlugin(): Plugin {
   const executeQuery = createQueryExecutor(executeQueryEngineRequest);
   return {
-    name: 'rundown-query-engine',
+    name: 'yresonance-query-engine',
     apply: 'serve',
     enforce: 'pre',
     configureServer(server) {
@@ -26,7 +26,7 @@ export function queryEnginePlugin(): Plugin {
 
         try {
           const input: unknown = await json(request);
-          const deadlineHeader = request.headers['x-rundown-query-deadline'];
+          const deadlineHeader = request.headers['x-yresonance-query-deadline'];
           const deadline = Number(
             Array.isArray(deadlineHeader) ? deadlineHeader[0] : deadlineHeader,
           );

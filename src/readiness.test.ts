@@ -24,7 +24,7 @@ describe('readiness', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('no-store');
     await expect(response.json()).resolves.toEqual({
-      service: 'rundown',
+      service: 'yresonance',
       status: 'ready',
       dependencies: {
         d1: 'ok',
@@ -47,7 +47,7 @@ describe('readiness', () => {
     expect(response.status).toBe(503);
     expect(body).not.toContain(failure.message);
     expect(JSON.parse(body)).toEqual({
-      service: 'rundown',
+      service: 'yresonance',
       status: 'not_ready',
       dependencies: {
         d1: 'ok',

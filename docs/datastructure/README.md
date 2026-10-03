@@ -1,4 +1,4 @@
-# Rundown data model
+# yresonance data model
 
 This folder defines the stored documents behind dashboards, datasources, and sharing. It reflects the decisions in [../plan.md](../plan.md). Query definitions (metrics, dimensions, filters) are separated from the widgets that render them.
 
@@ -57,7 +57,7 @@ flowchart TD
 - IDs are opaque strings. Every top-level document carries a `workspaceId`.
 - A `fieldId` refers to either a column in the datasource's lookup table or a calculated field of the same datasource. Both share one namespace per datasource.
 - A `canonicalName` is a stable, workspace-wide name for a field. Library metrics and cross-datasource controls match on it.
-- Formulas use Rundown's allowlisted text syntax. Row formulas live on calculated fields. Aggregate
+- Formulas use yresonance's allowlisted text syntax. Row formulas live on calculated fields. Aggregate
   formulas live on metrics and library metrics. The server parses, type-checks, and compiles them;
   clients never send SQL.
 - `styling` is an open object. Each renderer owns its supported keys.

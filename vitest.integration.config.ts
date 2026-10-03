@@ -27,12 +27,12 @@ export default defineConfig({
         bindings: {
           TEST_MIGRATIONS: migrations,
           CLOUDFLARE_ACCOUNT_ID: 'test-account',
-          R2_BUCKET_NAME: 'rundown-data-test',
+          R2_BUCKET_NAME: 'yresonance-data-test',
           // Local mode keeps queries on the HTTP boundary the query-engine double owns.
           DATA_SOURCE_BASE_URL: 'http://query-engine.test/__dev-data',
           QUERY_DATA_SOURCE_BASE_URL: 'http://query-engine.test/__dev-data',
           APP_ENV: 'development',
-          QUERY_CACHE_NAME: 'rundown-query-cache-test',
+          QUERY_CACHE_NAME: 'yresonance-query-cache-test',
           CLERK_SECRET_KEY: 'sk_test_integration',
           INTERNAL_R2_SIGNING_SECRET: 'test-internal-r2-signing-secret',
           UPLOAD_SIGNING_SECRET: 'test-upload-signing-secret',

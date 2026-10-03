@@ -75,8 +75,8 @@ export function LandingPage() {
             Describe the report. Fine-tune in the editor.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
-            Rundown turns reporting intent into query-backed dashboards while keeping every formula,
-            filter, and access rule inspectable.
+            yresonance turns reporting intent into query-backed dashboards while keeping every
+            formula, filter, and access rule inspectable.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <SignUpAction>
@@ -90,12 +90,12 @@ export function LandingPage() {
           </div>
         </div>
         <BrowserFrame
-          url="rundown.workers.dev/dashboards/q1-delivery"
+          url="yresonance.com/dashboards/q1-delivery"
           className="reveal-on-scroll mt-14"
         >
           <Screenshot
             name="dashboard"
-            alt="A Rundown dashboard with a date range and two filter controls, impressions, clicks, media spend and click-through rate against the previous period, a chart pairing impressions with click-through rate, a gauge for media spend against plan and a written note."
+            alt="A yresonance dashboard with a date range and two filter controls, impressions, clicks, media spend and click-through rate against the previous period, a chart pairing impressions with click-through rate, a gauge for media spend against plan and a written note."
             width={2880}
             height={1632}
             priority
@@ -146,12 +146,12 @@ export function LandingPage() {
           </p>
         </div>
         <BrowserFrame
-          url="rundown.workers.dev/datasources/campaign-delivery"
+          url="yresonance.com/datasources/campaign-delivery"
           className="reveal-on-scroll mt-10"
         >
           <Screenshot
             name="field-metadata"
-            alt="The Rundown datasource screen listing each column of a registered file with its label, source, role, type and description, ending with a calculated field."
+            alt="The yresonance datasource screen listing each column of a registered file with its label, source, role, type and description, ending with a calculated field."
             width={2880}
             height={1960}
             className="h-auto max-h-[32rem] w-full object-cover object-top"
@@ -162,7 +162,7 @@ export function LandingPage() {
       <section className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6">
         <div className="reveal-on-scroll">
           <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-            Point Rundown at a file you already have and see the first dashboard.
+            Point yresonance at a file you already have and see the first dashboard.
           </h2>
           <div className="mt-7">
             <SignUpAction>
@@ -175,7 +175,7 @@ export function LandingPage() {
         className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 py-8 text-sm text-muted-foreground sm:px-6"
         role="contentinfo"
       >
-        <span>Rundown</span>
+        <span>yresonance</span>
         <span aria-hidden="true">·</span>
         <Link className="hover:text-foreground hover:underline" to="/imprint">
           Imprint

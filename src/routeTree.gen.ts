@@ -14,7 +14,7 @@ import { Route as HealthRouteImport } from './routes/health'
 import { Route as ImprintRouteImport } from './routes/imprint'
 import { Route as MetricsRouteImport } from './routes/metrics'
 import { Route as ReadyRouteImport } from './routes/ready'
-import { Route as ApiRundownRouteImport } from './routes/api.rundown'
+import { Route as ApiYresonanceRouteImport } from './routes/api.yresonance'
 import { Route as DashboardsDashboardIdRouteImport } from './routes/dashboards.$dashboardId'
 import { Route as DatasourcesIndexRouteImport } from './routes/datasources.index'
 import { Route as DatasourcesDatasourceIdRouteImport } from './routes/datasources.$datasourceId'
@@ -48,9 +48,9 @@ const ReadyRoute = ReadyRouteImport.update({
   path: '/ready',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiRundownRoute = ApiRundownRouteImport.update({
-  id: '/api/rundown',
-  path: '/api/rundown',
+const ApiYresonanceRoute = ApiYresonanceRouteImport.update({
+  id: '/api/yresonance',
+  path: '/api/yresonance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardsDashboardIdRoute = DashboardsDashboardIdRouteImport.update({
@@ -96,7 +96,7 @@ export interface FileRoutesByFullPath {
   '/imprint': typeof ImprintRoute
   '/metrics': typeof MetricsRoute
   '/ready': typeof ReadyRoute
-  '/api/rundown': typeof ApiRundownRoute
+  '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
   '/share/$token': typeof ShareTokenRoute
@@ -111,7 +111,7 @@ export interface FileRoutesByTo {
   '/imprint': typeof ImprintRoute
   '/metrics': typeof MetricsRoute
   '/ready': typeof ReadyRoute
-  '/api/rundown': typeof ApiRundownRoute
+  '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
   '/share/$token': typeof ShareTokenRoute
@@ -127,7 +127,7 @@ export interface FileRoutesById {
   '/imprint': typeof ImprintRoute
   '/metrics': typeof MetricsRoute
   '/ready': typeof ReadyRoute
-  '/api/rundown': typeof ApiRundownRoute
+  '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
   '/share/$token': typeof ShareTokenRoute
@@ -144,7 +144,7 @@ export interface FileRouteTypes {
     | '/imprint'
     | '/metrics'
     | '/ready'
-    | '/api/rundown'
+    | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
     | '/share/$token'
@@ -159,7 +159,7 @@ export interface FileRouteTypes {
     | '/imprint'
     | '/metrics'
     | '/ready'
-    | '/api/rundown'
+    | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
     | '/share/$token'
@@ -174,7 +174,7 @@ export interface FileRouteTypes {
     | '/imprint'
     | '/metrics'
     | '/ready'
-    | '/api/rundown'
+    | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
     | '/share/$token'
@@ -190,7 +190,7 @@ export interface RootRouteChildren {
   ImprintRoute: typeof ImprintRoute
   MetricsRoute: typeof MetricsRoute
   ReadyRoute: typeof ReadyRoute
-  ApiRundownRoute: typeof ApiRundownRoute
+  ApiYresonanceRoute: typeof ApiYresonanceRoute
   DashboardsDashboardIdRoute: typeof DashboardsDashboardIdRoute
   DatasourcesDatasourceIdRoute: typeof DatasourcesDatasourceIdRoute
   ShareTokenRoute: typeof ShareTokenRoute
@@ -237,11 +237,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReadyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/rundown': {
-      id: '/api/rundown'
-      path: '/api/rundown'
-      fullPath: '/api/rundown'
-      preLoaderRoute: typeof ApiRundownRouteImport
+    '/api/yresonance': {
+      id: '/api/yresonance'
+      path: '/api/yresonance'
+      fullPath: '/api/yresonance'
+      preLoaderRoute: typeof ApiYresonanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboards/$dashboardId': {
@@ -302,7 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImprintRoute: ImprintRoute,
   MetricsRoute: MetricsRoute,
   ReadyRoute: ReadyRoute,
-  ApiRundownRoute: ApiRundownRoute,
+  ApiYresonanceRoute: ApiYresonanceRoute,
   DashboardsDashboardIdRoute: DashboardsDashboardIdRoute,
   DatasourcesDatasourceIdRoute: DatasourcesDatasourceIdRoute,
   ShareTokenRoute: ShareTokenRoute,

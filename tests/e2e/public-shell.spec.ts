@@ -26,7 +26,7 @@ test('the footer links to the imprint', async ({ page }) => {
   await page.getByRole('contentinfo').getByRole('link', { name: 'Imprint' }).click();
 
   await expect(page).toHaveURL('/imprint');
-  await expect(page).toHaveTitle('Imprint | Rundown');
+  await expect(page).toHaveTitle('Imprint | yresonance');
   await expect(page.getByRole('heading', { level: 1, name: 'Imprint' })).toBeVisible();
   await expect(page.getByText('Patrik Simms')).toBeVisible();
   await expect(page.getByRole('link', { name: 'patriksimms@outlook.de' })).toHaveAttribute(
@@ -58,7 +58,7 @@ test('authentication opens in place and closing it preserves the URL', async ({ 
 test('the landing page serves both product screenshots', async ({ page }) => {
   await page.goto('/');
 
-  for (const name of [/Rundown dashboard/, /Rundown datasource screen/]) {
+  for (const name of [/yresonance dashboard/, /yresonance datasource screen/]) {
     const screenshot = page.getByRole('img', { name });
     await expect(screenshot).toBeAttached();
     await expect
@@ -72,7 +72,7 @@ test('sections below the fold reveal once they are scrolled into view', async ({
 
   const cta = page
     .locator('.reveal-on-scroll')
-    .filter({ hasText: 'Point Rundown at a file you already have' });
+    .filter({ hasText: 'Point yresonance at a file you already have' });
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect.poll(() => opacityOf(cta)).toBeGreaterThan(0.95);
   await expect(cta.getByRole('button', { name: 'Create account' })).toBeVisible();

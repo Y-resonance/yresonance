@@ -14,7 +14,7 @@ export function LoadingState() {
 export function ErrorState({ error }: { error: string }) {
   return (
     <Alert variant="destructive">
-      <AlertTitle>Could not load Rundown</AlertTitle>
+      <AlertTitle>Could not load yresonance</AlertTitle>
       <AlertDescription>{error}</AlertDescription>
     </Alert>
   );

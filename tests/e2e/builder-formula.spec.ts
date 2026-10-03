@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
 
 test('a calculated field reads as fx and opens the formula editor from the inspector', async ({
   page,
 }) => {
-  await mockRundownApi(page, { role: 'editor' });
+  await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -37,7 +37,7 @@ test('a calculated field reads as fx and opens the formula editor from the inspe
 test('a custom metric is written and re-opened in the aggregate formula editor', async ({
   page,
 }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -77,7 +77,7 @@ test('a custom metric is written and re-opened in the aggregate formula editor',
 
 test('formula text stays readable across dark and light theme changes', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
-  await mockRundownApi(page, { role: 'editor' });
+  await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await page.getByRole('button', { name: 'Edit Campaigns' }).click();
   await page.getByRole('complementary').getByRole('button', { name: 'Media cost' }).click();
