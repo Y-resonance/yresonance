@@ -104,7 +104,7 @@ renaming the datasource does not create another example. Failed imports retry on
 concurrent requests wait up to two minutes for another Worker isolate to finish. An interrupted
 import's claim expires after one hour.
 
-More detail: [docs/plan.md](./docs/plan.md) and [docs/datastructure](./docs/datastructure).
+More detail: [docs/decisions.md](./docs/decisions.md).
 
 ## Local development
 
