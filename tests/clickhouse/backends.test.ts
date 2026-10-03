@@ -122,12 +122,12 @@ afterAll(async () => {
   vi.unstubAllGlobals();
 });
 
-async function expectParity(query: DatasourceQuery) {
-  const compiled = compileDatasourceQuery(source, query, 'source');
+async function expectParity(query: DatasourceQuery, dataSource = source, duckSource = 'source') {
+  const compiled = compileDatasourceQuery(dataSource, query, duckSource);
   const prepared = await connection.prepare(compiled.sql);
   prepared.bind(compiled.parameters as DuckDBValue[]);
   const expected = (await prepared.runAndReadAll()).getRowObjectsJson();
-  const actual = await clickhouseBackend.executeQuery(source, query);
+  const actual = await clickhouseBackend.executeQuery(dataSource, query);
   expect(actual).toEqual(expected);
   return actual;
 }
@@ -330,5 +330,83 @@ test('decimal and integer aggregates preserve numeric JSON types', async () => {
         controlState: {},
       });
     }
+  }
+});
+
+// oxlint-disable-next-line vitest/expect-expect -- expectParity compares real engine results.
+test('Unicode formulas and rounding preserve DuckDB behavior', async () => {
+  for (const expression of [
+    "sum(if(upper(name) = 'ÄTEST', amount, 0))",
+    "sum(if(lower('ÄTEST') = name, amount, 0))",
+    'sum(round(amount / 4))',
+    'sum(round(-amount / 4))',
+    'round(sum(amount) / 12)',
+    'sum(round(amount / 8, 1))',
+    'sum(round(-amount / 8, 1))',
+    'sum(round(amount * 2.5, -1))',
+    'sum(round(money, 1))',
+    'round(sum(money), 1)',
+    'sum(round(impressions, -2))',
+  ]) {
+    await expectParity({
+      kind: 'widget',
+      dashboard,
+      definition: {
+        ...definition(),
+        metric: { source: { kind: 'expression', expression }, dataType: 'number' },
+      },
+      metadata,
+      controlState: {},
+    });
+  }
+});
+
+// oxlint-disable-next-line vitest/expect-expect -- expectParity compares real engine results.
+test('large integer medians and closely spaced large values retain precision', async () => {
+  if (source.location.kind !== 'clickhouse') throw new Error('ClickHouse fixture required.');
+  const edgeId = `ds_${crypto.randomUUID()}`;
+  const edgeSource = {
+    ...source,
+    id: edgeId,
+    location: { ...source.location, table: managedTableName(edgeId) },
+  };
+  const edgeSql = clickhouseTableSql(edgeSource.location.database, edgeSource.location.table);
+  const rows =
+    "('2026-08-01', 'A', 1000000000, 5000000000000000000, NULL), ('2026-08-02', 'B', 1000000001, 6000000000000000000, NULL), ('2026-08-02', 'C', NULL, NULL, NULL)";
+  await connection.run('CREATE TABLE edge_source AS SELECT * FROM source WHERE false');
+  await connection.run(`INSERT INTO edge_source VALUES ${rows}`);
+  await clickhouseRequest(workspaceId, `CREATE TABLE ${edgeSql} AS ${sqlSource}`, [], {
+    readonly: false,
+  });
+  try {
+    await clickhouseRequest(workspaceId, `INSERT INTO ${edgeSql} VALUES ${rows}`, [], {
+      readonly: false,
+    });
+    for (const [fieldId, aggregation] of [
+      ['impressions', 'median'],
+      ['amount', 'variance'],
+      ['amount', 'standardDeviation'],
+    ] as const) {
+      await expectParity(
+        {
+          kind: 'widget',
+          dashboard,
+          definition: {
+            ...definition(),
+            dataSourceId: edgeId,
+            metric: { source: { kind: 'field', fieldId, aggregation }, dataType: 'number' },
+          },
+          metadata,
+          controlState: {},
+        },
+        edgeSource,
+        'edge_source',
+      );
+    }
+  } finally {
+    await clickhouseRequest(workspaceId, `DROP TABLE IF EXISTS ${edgeSql}`, [], {
+      readonly: false,
+    });
+    await connection.run('DROP TABLE edge_source');
   }
 });

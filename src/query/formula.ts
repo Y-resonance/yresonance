@@ -207,12 +207,26 @@ function compileCall(
     if (args.length < 1 || args.length > 2) throw new Error('round expects one or two arguments.');
     requireType(args[0].type, 'number', name);
     if (args[1]) requireType(args[1].type, 'number', name);
+    if (dialect === 'clickhouse') {
+      const precision = args[1] ? `toInt32(round(${args[1].sql}))` : '0';
+      // Float ties round away from zero in DuckDB. The lambda preserves the input SQL type,
+      // including decimals, even when the input is an aggregate expression.
+      const scaled = 'abs(toFloat64(value)) * pow(10, precision)';
+      const decimalScale =
+        "toInt32OrZero(extract(toTypeName(value), 'Decimal[(][0-9]+, ([0-9]+)[)]'))";
+      const roundedType = `if(position(toTypeName(value), 'Decimal') > 0, replaceRegexpOne(toTypeName(value), '(Decimal[(][0-9]+, )[0-9]+[)]', concat('\\\\1', toString(greatest(0, least(${precision}, ${decimalScale}))), ')')), toTypeName(value))`;
+      return {
+        sql: `arrayMap((value, precision) -> CAST(if(position(toTypeName(value), 'Float') > 0 AND (${scaled} - floor(${scaled})) = 0.5, CAST(sign(value) * ceil(${scaled}) / pow(10, precision), toTypeName(value)), round(value, precision)), ${roundedType}), [${args[0].sql}], [${precision}])[1]`,
+        type: 'number',
+      };
+    }
     return { sql: `ROUND(${args.map((argument) => argument.sql).join(', ')})`, type: 'number' };
   }
   if (name === 'lower' || name === 'upper') {
     requireArgumentCount(name, args, 1);
     requireType(args[0].type, 'text', name);
-    return { sql: `${name.toUpperCase()}(${args[0].sql})`, type: 'text' };
+    const functionName = dialect === 'clickhouse' ? `${name}UTF8` : name.toUpperCase();
+    return { sql: `${functionName}(${args[0].sql})`, type: 'text' };
   }
   if (name === 'length') {
     requireArgumentCount(name, args, 1);

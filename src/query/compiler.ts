@@ -199,7 +199,8 @@ function metricExpression(
     assertAggregationType(metric.source.aggregation, metric.source.fieldId, context);
     const expression = fieldExpression(metric.source.fieldId, context);
     if (metric.source.aggregation === 'median' && context.dialect === 'clickhouse') {
-      return `((quantileExactLow(0.5)(${expression}) + quantileExactHigh(0.5)(${expression})) / 2)`;
+      // Widen integer operands before addition. Keep decimal scale and empty-result nulls.
+      return `arrayReduce('sumOrNull', arrayMap(value -> CAST(value, replaceRegexpOne(toTypeName(value), 'U?Int[0-9]+', 'Float64')), [quantileExactLow(0.5)(${expression}), quantileExactHigh(0.5)(${expression})])) / 2`;
     }
     const aggregation = {
       sum: 'SUM',
@@ -209,8 +210,8 @@ function metricExpression(
       min: 'MIN',
       max: 'MAX',
       median: 'MEDIAN',
-      standardDeviation: context.dialect === 'clickhouse' ? 'stddevSamp' : 'STDDEV_SAMP',
-      variance: context.dialect === 'clickhouse' ? 'varSamp' : 'VAR_SAMP',
+      standardDeviation: context.dialect === 'clickhouse' ? 'stddevSampStable' : 'STDDEV_SAMP',
+      variance: context.dialect === 'clickhouse' ? 'varSampStable' : 'VAR_SAMP',
     }[metric.source.aggregation];
     return metric.source.aggregation === 'countDistinct'
       ? `COUNT(DISTINCT ${expression})`
