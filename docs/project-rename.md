@@ -21,12 +21,16 @@ live resources. Complete the rollout below before merging, because pushes to
 | Preview analytics | `rundown_product_preview` | `yresonance_product_preview` |
 | Custom domain | `rundown-app.dev` | `yresonance.com` |
 
-The D1 database and KV namespace IDs in `wrangler.jsonc` still identify the
-existing resources. They are not IDs for newly provisioned databases. Cloudflare's
-D1 update API does not expose a name field. Create the renamed databases, export
-and restore their data, verify their contents, and update the checked-in database
-IDs, including `preview_database_id`, before deployment. KV namespace titles can
-change while their IDs and cached data stay the same.
+The D1 IDs now identify the newly provisioned `yresonance-app` and
+`yresonance-app-preview` databases. Their schema, migration history, and rows
+were restored from the legacy databases and verified on 2026-10-03. KV titles
+changed while namespace IDs and cached data stayed the same. Both new R2 buckets
+contain verified copies of the original objects, including HTTP metadata.
+
+Backups are stored outside the repository under
+`/home/decbox/.local/state/yresonance/rename-2026-10-03`. Keep the legacy databases
+and buckets available for rollback. Recheck source contents with writes paused
+before switching traffic, since users can change data between copying and cutover.
 
 ## Rollout prerequisites
 
