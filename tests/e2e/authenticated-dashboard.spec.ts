@@ -125,6 +125,7 @@ test.describe('signed-in dashboard flow', () => {
     const renamed = `${name} renamed`;
     await renameDialog.getByLabel('Name', { exact: true }).fill(renamed);
     await renameDialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('link', { name: renamed, exact: true })).toBeVisible();
     await page.reload();
     row = page
       .getByRole('row')
