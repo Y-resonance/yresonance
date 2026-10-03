@@ -1,5 +1,5 @@
 import { requireSession } from './auth.server';
-import { dataSources, shareLinks, dashboards, dashboardGrants, libraryMetrics } from '#/db/schema';
+import { dataSources, shareLinks, dashboards, dashboardGrants } from '#/db/schema';
 import { eq, inArray, and, isNull } from 'drizzle-orm';
 import { ApiError } from './errors';
 import { type ApiRequest } from '#/api/contracts';
@@ -31,7 +31,7 @@ import {
   compiledSql,
 } from './widget-queries.server';
 import { sharingState } from './sharing.server';
-import { persistDashboard, widgetById } from './dashboard-records.server';
+import { persistDashboard, widgetById, nextDashboardTimestamp } from './dashboard-records.server';
 import { validateLibraryMetricInput, newLibraryMetricValues } from './formulas.server';
 
 export async function bootstrap() {
@@ -169,9 +169,9 @@ export async function updateDashboard(request: Extract<ApiRequest, { action: 'up
     name: request.name ?? access.document.name,
     timezone: request.timezone ?? access.document.timezone,
     defaultDateRange: request.defaultDateRange ?? access.document.defaultDateRange,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updated;
 }
 
@@ -208,9 +208,9 @@ export async function addWidget(request: Extract<ApiRequest, { action: 'addWidge
     ...access.document,
     widgets: [...access.document.widgets, widget],
     canvasRows: Math.max(access.document.canvasRows, widget.layout.y + widget.layout.height + 2),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return { widget, compiledSql: await compiledSql(updated, widget) };
 }
 
@@ -228,25 +228,17 @@ export async function updateWidget(request: Extract<ApiRequest, { action: 'updat
   const updated = {
     ...access.document,
     widgets: access.document.widgets.map((item) => (item.id === widget.id ? widget : item)),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   const sql = await compiledSql(updated, widget);
   if (!request.libraryMetric) {
-    await persistDashboard(updated);
+    await persistDashboard(updated, access.row.updatedAt);
     return { widget, compiledSql: sql };
   }
 
   await validateLibraryMetricInput(request.libraryMetric, access.session!);
   const libraryMetric = newLibraryMetricValues(request.libraryMetric, access.document.workspaceId);
-  dashboardDocumentSchema.parse(updated);
-  const db = database();
-  await db.batch([
-    db
-      .update(dashboards)
-      .set({ name: updated.name, document: updated, updatedAt: updated.updatedAt })
-      .where(eq(dashboards.id, updated.id)),
-    db.insert(libraryMetrics).values(libraryMetric),
-  ]);
+  await persistDashboard(updated, access.row.updatedAt, libraryMetric);
   return { widget, libraryMetric, compiledSql: sql };
 }
 
@@ -256,9 +248,9 @@ export async function removeWidget(request: Extract<ApiRequest, { action: 'remov
   const updated = {
     ...access.document,
     widgets: access.document.widgets.filter((item) => item.id !== request.widgetId),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updated;
 }
 
@@ -283,9 +275,9 @@ export async function moveWidget(request: Extract<ApiRequest, { action: 'moveWid
       access.document.canvasRows,
       request.placement.y + request.placement.height,
     ),
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updatedWidget;
 }
 
@@ -311,9 +303,9 @@ export async function updateLayout(request: Extract<ApiRequest, { action: 'updat
     ...access.document,
     widgets,
     canvasRows: request.canvasRows,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  await persistDashboard(updated);
+  await persistDashboard(updated, access.row.updatedAt);
   return updated;
 }
 
