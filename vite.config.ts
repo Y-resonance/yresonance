@@ -56,7 +56,9 @@ export default defineConfig(({ command, mode }) => ({
     fileDataPlugin(),
     queryEnginePlugin(),
     cloudflare({
-      ...(process.env.YRESONANCE_PR_CONFIG ? { configPath: process.env.YRESONANCE_PR_CONFIG } : {}),
+      ...(process.env.YRESONANCE_PREVIEW_CONFIG
+        ? { configPath: process.env.YRESONANCE_PREVIEW_CONFIG }
+        : {}),
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
         dev: {

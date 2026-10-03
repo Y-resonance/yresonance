@@ -32,7 +32,9 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run types:check && bun run db:migrate:check && bun run test",
-    "prepare:preview-example": "bun run scripts/prepare-preview-example.ts"
+    "prepare:preview-example": "bun run scripts/prepare-preview-example.ts",
+    "build:branch-preview": "bun run scripts/preview-resources.ts prepare && YRESONANCE_PREVIEW_CONFIG=.wrangler-branch.json bun run build",
+    "deploy:branch-preview": "wrangler preview --config dist/server/wrangler.json"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

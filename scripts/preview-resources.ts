@@ -1,20 +1,26 @@
 import { appendFile } from 'node:fs/promises';
+import { previewResourceName } from './preview-config';
 import { experimental_readRawConfig } from 'wrangler';
 import { z } from 'zod';
 
-const action = z.enum(['prepare', 'cleanup']).parse(process.argv[2]);
-const pr = z
+const action = z.enum(['prepare', 'cleanup', 'cleanup-legacy']).parse(process.argv[2]);
+const branch = z
   .string()
-  .regex(/^[1-9]\d*$/)
-  .parse(process.argv[3]);
-const previewName = `pr-${pr}`;
-const workerName = 'yresonance-preview';
-const configPath = '.wrangler-pr.json';
+  .min(1)
+  .parse(process.argv[3] ?? process.env.WORKERS_CI_BRANCH);
+const legacy = action === 'cleanup-legacy';
+if (legacy)
+  z.string()
+    .regex(/^[1-9]\d*$/)
+    .parse(branch);
+const previewName = legacy ? `pr-${branch}` : branch;
+const configPath = '.wrangler-branch.json';
 const { rawConfig } = experimental_readRawConfig({ config: 'wrangler.jsonc' });
-const template = rawConfig.env?.preview;
-if (template?.name !== workerName || !rawConfig.account_id) {
-  throw new Error('Expected the yresonance-preview environment and a Cloudflare account ID.');
-}
+const workerName = z.string().min(1).parse(rawConfig.name);
+const template = rawConfig.previews;
+if (!template || !rawConfig.account_id)
+  throw new Error('Expected a previews block and a Cloudflare account ID.');
+if (!legacy) previewResourceName(workerName, branch);
 const token = z.string().min(1).parse(process.env.CLOUDFLARE_API_TOKEN);
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${rawConfig.account_id}`;
 const databaseSchema = z.object({ uuid: z.string(), name: z.string() });
@@ -27,7 +33,8 @@ async function api(path: string, method = 'GET', body?: unknown) {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   // Deletion is repeatable, including partially provisioned or never deployed PRs.
-  if (response.status === 404 && method === 'DELETE') return null;
+  if (response.status === 404 && (method === 'DELETE' || path.startsWith('/workers/workers/')))
+    return null;
   const envelope = z
     .object({ success: z.boolean(), result: z.unknown() })
     .parse(await response.json());
@@ -51,9 +58,29 @@ async function run(command: string[]) {
   if ((await child.exited) !== 0) throw new Error(`Command failed: ${command[0]}`);
 }
 
-// Older PRs still own resources under the previous worker name. Keep cleanup repeatable
-// across the rename until every pre-rename PR has closed.
-const workerNames = action === 'cleanup' ? [workerName, 'rundown-preview'] : [workerName];
+// Cloudflare builds run outside GitHub's concurrency group. Wait for this branch's
+// in-flight builds before deleting data that they may still use or recreate.
+if (action === 'cleanup') {
+  const tag = z.string().min(1).parse(process.env.CLOUDFLARE_WORKER_TAG);
+  const buildSchema = z.object({
+    status: z.string(),
+    build_trigger_metadata: z.object({ branch: z.string() }).nullable(),
+  });
+  while (true) {
+    const builds = await list(`/builds/workers/${tag}/builds`, buildSchema);
+    if (
+      !builds.some(
+        (build) => build.status !== 'stopped' && build.build_trigger_metadata?.branch === branch,
+      )
+    )
+      break;
+    console.log(`Waiting for Cloudflare builds on ${branch} before cleanup.`);
+    await Bun.sleep(10_000);
+  }
+}
+
+// Legacy PR resources remain eligible for cleanup during the transition to branch previews.
+const workerNames = legacy ? ['yresonance-preview', 'rundown-preview'] : [workerName];
 const cleanupFailures: unknown[] = [];
 for (const name of workerNames) {
   try {
@@ -66,7 +93,9 @@ for (const name of workerNames) {
 if (cleanupFailures.length) throw new AggregateError(cleanupFailures, 'PR cleanup failed.');
 
 async function manageResources(workerName: string) {
-  const resourceName = `${workerName}-${previewName}`;
+  const resourceName = legacy
+    ? `${workerName}-${previewName}`
+    : previewResourceName(workerName, branch);
   const databases = await list('/d1/database', databaseSchema);
   const namespaces = await list('/storage/kv/namespaces', namespaceSchema);
   const database = databases.find((item) => item.name === resourceName);
@@ -116,18 +145,28 @@ async function manageResources(workerName: string) {
       JSON.stringify(
         {
           ...rawConfig,
-          ...template,
-          ...bindings,
-          name: workerName,
-          env: undefined,
-          routes: [],
           previews: bindings,
         },
         null,
         2,
       ),
     );
-    console.log(`Prepared ${resourceName}`);
+    await Bun.write(
+      '.wrangler-preview-migrations.json',
+      JSON.stringify({ account_id: rawConfig.account_id, d1_databases: bindings.d1_databases }),
+    );
+    await run([
+      'bunx',
+      'wrangler',
+      'd1',
+      'migrations',
+      'apply',
+      'DB',
+      '--remote',
+      '--config',
+      '.wrangler-preview-migrations.json',
+    ]);
+    console.log(`Prepared isolated resources for ${previewName}: ${resourceName}`);
   } else {
     // Attempt every cleanup even if one service fails. Rerunning discovers resources by their
     // exact PR name, without relying on artifacts from a successful deployment.
@@ -140,23 +179,29 @@ async function manageResources(workerName: string) {
         console.error(error);
       }
     }
-    await cleanup(() => api(`/workers/workers/${workerName}/previews/${previewName}`, 'DELETE'));
-    await cleanup(async () => {
-      const child = Bun.spawn(['bunx', 'wrangler', 'containers', 'list', '--json'], {
-        stdout: 'pipe',
-        stderr: 'inherit',
+    const previewPath = `/workers/workers/${workerName}/previews/${encodeURIComponent(previewName)}`;
+    const preview = z
+      .object({ slug: z.string() })
+      .nullable()
+      .parse(await api(previewPath));
+    await cleanup(() => api(previewPath, 'DELETE'));
+    if (preview)
+      await cleanup(async () => {
+        const child = Bun.spawn(['bunx', 'wrangler', 'containers', 'list', '--json'], {
+          stdout: 'pipe',
+          stderr: 'inherit',
+        });
+        const output = await new Response(child.stdout).text();
+        if ((await child.exited) !== 0) throw new Error('Could not list container apps');
+        const apps = z
+          .array(z.object({ id: z.string(), name: z.string() }))
+          .parse(JSON.parse(output));
+        for (const app of apps.filter((item) =>
+          item.name.startsWith(`${workerName}_${preview.slug}_`),
+        )) {
+          await cleanup(() => run(['bunx', 'wrangler', 'containers', 'delete', app.id]));
+        }
       });
-      const output = await new Response(child.stdout).text();
-      if ((await child.exited) !== 0) throw new Error('Could not list container apps');
-      const apps = z
-        .array(z.object({ id: z.string(), name: z.string() }))
-        .parse(JSON.parse(output));
-      for (const app of apps.filter((item) =>
-        item.name.startsWith(`${workerName}_${previewName}_`),
-      )) {
-        await cleanup(() => run(['bunx', 'wrangler', 'containers', 'delete', app.id]));
-      }
-    });
     if (database) await cleanup(() => api(`/d1/database/${database.uuid}`, 'DELETE'));
     if (namespace) await cleanup(() => api(`/storage/kv/namespaces/${namespace.id}`, 'DELETE'));
     await cleanup(async () => {

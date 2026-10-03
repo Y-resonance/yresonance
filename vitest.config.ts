@@ -5,6 +5,11 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'container/**/*.test.ts'],
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'container/**/*.test.ts',
+      'scripts/**/*.test.ts',
+    ],
   },
 });
