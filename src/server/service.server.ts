@@ -331,13 +331,7 @@ async function updateDashboard(request: Extract<ApiRequest, { action: 'updateDas
 
 async function deleteDashboard(dashboardId: string) {
   await authorizeDashboard(dashboardId, 'editor');
-  const db = database();
-  // These tables have no cascading foreign keys. Remove access records in the same transaction.
-  await db.batch([
-    db.delete(shareLinks).where(eq(shareLinks.dashboardId, dashboardId)),
-    db.delete(dashboardGrants).where(eq(dashboardGrants.dashboardId, dashboardId)),
-    db.delete(dashboards).where(eq(dashboards.id, dashboardId)),
-  ]);
+  await database().delete(dashboards).where(eq(dashboards.id, dashboardId));
   return { id: dashboardId, deleted: true };
 }
 
