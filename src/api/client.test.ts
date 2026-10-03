@@ -34,7 +34,7 @@ describe('API client boundary', () => {
     await callApi({ action: 'bootstrap' }, { signal: controller.signal });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/rundown',
+      '/api/yresonance',
       expect.objectContaining({ signal: controller.signal }),
     );
   });

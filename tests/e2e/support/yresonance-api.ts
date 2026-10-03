@@ -157,7 +157,7 @@ interface MockOptions {
  * Serves the signed-in API surface from an in-memory dashboard so mobile and keyboard
  * behaviour can be exercised against the real routes without a Clerk session.
  */
-export async function mockRundownApi(page: Page, options: MockOptions = {}) {
+export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
   const state = { dashboard: buildDashboard(), source: description(), nextWidget: 0 };
   const ok = (route: Route, data: unknown) =>
     route.fulfill({
@@ -166,7 +166,7 @@ export async function mockRundownApi(page: Page, options: MockOptions = {}) {
       body: JSON.stringify({ ok: true, data }),
     });
 
-  await page.route('**/api/rundown', async (route) => {
+  await page.route('**/api/yresonance', async (route) => {
     const request = route.request().postDataJSON() as Record<string, string> & {
       definition?: DashboardWidget['definition'];
       width?: number;
@@ -335,7 +335,7 @@ export async function mockRundownApi(page: Page, options: MockOptions = {}) {
             ok: false,
             error: {
               code: 'mock_action_not_implemented',
-              message: `The Rundown API mock does not implement ${request.action}.`,
+              message: `The yresonance API mock does not implement ${request.action}.`,
             },
           }),
         });

@@ -22,7 +22,7 @@ describe('control option search', () => {
   });
 
   it('uses the supplied source without rewriting the field expression', () => {
-    const query = controlOptionsQuery("'rundown_source'", undefined, 'ASC', '"source_1"');
-    expect(query.sql).toContain('SELECT \'rundown_source\' AS value FROM "source_1"');
+    const query = controlOptionsQuery("'yresonance_source'", undefined, 'ASC', '"source_1"');
+    expect(query.sql).toContain('SELECT \'yresonance_source\' AS value FROM "source_1"');
   });
 });

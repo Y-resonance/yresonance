@@ -21,12 +21,12 @@ export class QueryEngineContainer extends Container {
         // The SDK defaults to 300 ms between checks, longer than our process startup.
         cancellationOptions: { waitInterval: 50, ...options?.cancellationOptions },
       });
-      console.info('rundown.query_engine_start', {
+      console.info('yresonance.query_engine_start', {
         outcome: 'ready',
         startupDurationMs: performance.now() - startedAt,
       });
     } catch (error) {
-      console.warn('rundown.query_engine_start', {
+      console.warn('yresonance.query_engine_start', {
         outcome: 'error',
         startupDurationMs: performance.now() - startedAt,
       });

@@ -129,7 +129,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. Rundown computes its coordinates.',
+                'Validate and append a widget to the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
@@ -184,7 +184,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'upsertCalculatedField',
               description:
-                'Create or update a row-level Rundown formula after static syntax, field, and type validation.',
+                'Create or update a row-level yresonance formula after static syntax, field, and type validation.',
               readOnly: false,
               fixed,
             },
@@ -279,7 +279,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
                 {
                   action: 'upsertCalculatedField',
                   description:
-                    'Create or update a row-level Rundown formula after static syntax, field, and type validation.',
+                    'Create or update a row-level yresonance formula after static syntax, field, and type validation.',
                   readOnly: false,
                 },
                 {

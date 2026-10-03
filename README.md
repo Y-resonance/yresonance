@@ -1,13 +1,13 @@
-# Rundown
+# yresonance
 
 Client reporting without the rebuild. Describe the report, fine-tune it in the browser.
 
-Rundown is a dashboard builder for agency account managers. An agent and a human edit the same
+yresonance is a dashboard builder for agency account managers. An agent and a human edit the same
 dashboard in the same browser: the agent through [WebMCP](https://webmachinelearning.github.io/webmcp/)
 tools, the human through the GUI. Every widget is backed by a real query, and clients get a link
 they can open and interrogate without ever typing a formula.
 
-- Live app: [rundown.rundown.workers.dev](https://rundown.rundown.workers.dev)
+- Planned app domain: `yresonance.com`. See [the rename rollout](docs/project-rename.md) before deployment.
 - Demo video: TODO add the YouTube link before submitting
 - License: [MIT](./LICENSE)
 - Built for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/)
@@ -19,7 +19,7 @@ unreliable and hard to adjust. Whatagraph is reliable but has no blends, no form
 much. Neither turns intent into widgets: "a targeting report on adset level" still has to be
 translated into charts, fields, and filters by hand, for every new client.
 
-Rundown lets the account manager describe the report to an agent, then fix what they already know
+yresonance lets the account manager describe the report to an agent, then fix what they already know
 how to fix in the GUI, like a `CASE WHEN` that maps campaign ids to readable names. The agent sees
 that change immediately because its tools read the live dashboard, not a snapshot.
 
@@ -46,7 +46,7 @@ Create an unlisted link for this dashboard.
 Open the unlisted link in a fresh tab. The same question tools work there, the editing tools are
 not registered.
 
-## How Rundown uses WebMCP
+## How yresonance uses WebMCP
 
 Each page registers tools through `document.modelContext.registerTool()`, scoped to what the page
 shows and what the signed-in user may do. Tools are unregistered through an `AbortSignal` when the
@@ -80,12 +80,12 @@ page refreshes after each write.
 Security model: clients never send SQL or column names. The only query path is
 `queryWidget(widgetId, controlState)`, used by the GUI and the WebMCP tool alike. Viewers and agents
 on a shared link can only run queries the dashboard already defines. Formulas are written in
-Rundown's own text syntax, parsed to an AST, validated, and compiled to SQL on the server.
+yresonance's own text syntax, parsed to an AST, validated, and compiled to SQL on the server.
 
 ## Architecture
 
 The TanStack Start app and API run in a Cloudflare Worker. Query execution runs in a Bun Cloudflare
-Container with native DuckDB. The Worker authorizes exact Parquet objects, compiles Rundown formulas
+Container with native DuckDB. The Worker authorizes exact Parquet objects, compiles yresonance formulas
 to SQL, and gives DuckDB short-lived internal URLs for those objects. The container has no internet
 access or R2 credentials.
 
@@ -131,10 +131,10 @@ objects through the Worker's internal R2 handler. To work only on routes that do
 start the app without local containers:
 
 ```sh
-RUNDOWN_DISABLE_CONTAINERS=1 bun run dev
+bun run dev
 ```
 
-The app runs at `http://localhost:3000`. Set `RUNDOWN_PORT` to move the dev server; the local data
+The app runs at `http://localhost:3000`. Set `YRESONANCE_PORT` to move the dev server; the local data
 service follows it, so nothing stays pinned to `3000`.
 
 Create the production build with:
@@ -161,7 +161,7 @@ bindings. Clerk and the DuckDB query container are replaced at their network bou
 grants, share links, control validation, and query caching all run for real.
 
 `bun run test:e2e` runs two browser suites in order, each starting its own dev server on port
-`3140`. Set `RUNDOWN_E2E_PORT` to change the port.
+`3140`. Set `YRESONANCE_E2E_PORT` to change the port.
 
 - `bun run test:e2e:ui` exercises the builder, datasource screens, and WebMCP with mocked API
   responses and a ready Clerk session double. It needs no Clerk credentials, rejects external
@@ -169,9 +169,9 @@ grants, share links, control validation, and query caching all run for real.
   only by `vite dev --mode e2e-ui`; builds and normal development use real Clerk. Fixed-desktop
   specs run only in the desktop project, and the fixed mobile row spec runs only on mobile.
 - `bun run test:e2e:clerk` exercises the public shell, auth modal, and authenticated dashboard
-  flows with real Clerk. Set `RUNDOWN_E2E_REUSE_SERVER=1` to attach to an existing normal dev server.
+  flows with real Clerk. Set `YRESONANCE_E2E_REUSE_SERVER=1` to attach to an existing normal dev server.
   Reuse is off by default because an unrelated process on the port produced misleading runs;
-  setup also verifies the server's Rundown health response.
+  setup also verifies the server's yresonance health response.
 
 The real Clerk suite executes the container's DuckDB query handler inside Vite locally because
 Cloudflare's amd64 development container is not reliable under Apple Silicon emulation. Linux CI
@@ -210,7 +210,7 @@ bun run db:migrate:production
 
 ## Cloudflare deployment
 
-The app is available at [rundown.rundown.workers.dev](https://rundown.rundown.workers.dev).
+The configured app domain is `yresonance.com`. Complete [the rename rollout](docs/project-rename.md) before merging.
 Cloudflare deploys every push to `main`. The Worker deployment also builds and uploads the query
 container image.
 
@@ -237,7 +237,7 @@ Cloudflare builds it for the release.
 
 The named preview environment remains available for deliberate preview deployments with
 `bun run deploy` or `bun run deploy:preview`. PR previews are separate Worker Previews under
-`rundown-preview`. Production deployments normally come from pushes to `main`.
+`yresonance-preview`. Production deployments normally come from pushes to `main`.
 
 ### Pull request previews
 
@@ -252,7 +252,7 @@ regardless of the CI runner's location. Existing databases and buckets keep thei
 redeploying does not relocate their data.
 Cloudflare Worker Previews create separate Durable Object namespaces and container apps.
 The generated configuration includes the query container and its binding under `previews`.
-Analytics events use the shared `rundown_product_preview` dataset.
+Analytics events use the shared `yresonance_product_preview` dataset.
 
 Closing a PR, including merging, deletes its Preview, any remaining container app, D1 database,
 KV namespace, and R2 bucket with its uploads. Cleanup uses the default branch code and waits
@@ -304,7 +304,7 @@ the reset route. No R2 API credential belongs in the Worker or container. Cloudf
 production secrets do not carry over to preview.
 
 Browser uploads stream through the Worker into its R2 binding. No bucket CORS policy or presigned
-URL is needed. Managed CSV uploads convert to Parquet inside the query container before Rundown
+URL is needed. Managed CSV uploads convert to Parquet inside the query container before yresonance
 registers the datasource.
 
 ## Landing page screenshots
@@ -313,7 +313,7 @@ registers the datasource.
 
 ```sh
 bun run dev
-CLERK_SECRET_KEY=... bun run scripts/capture-landing.ts
+CLERK_SECRET_KEY=... LANDING_USER_EMAIL=... bun run scripts/capture-landing.ts
 ```
 
 The script signs in to the Clerk development instance with a sign-in token, seeds a demo datasource
@@ -327,11 +327,11 @@ The reset command requires an environment and `RESET_ADMIN_TOKEN`:
 
 ```sh
 bun run reset development
-RUNDOWN_PREVIEW_URL=https://preview.example bun run reset preview
+YRESONANCE_PREVIEW_URL=https://preview.example bun run reset preview
 bun run reset production
 ```
 
-Development and preview delete Rundown's D1 rows, R2 objects, and query-cache KV keys. Clerk users
+Development and preview delete yresonance's D1 rows, R2 objects, and query-cache KV keys. Clerk users
 and organizations are outside these bindings and remain untouched. Production always returns the
 exact deletion plan and performs no deletion. Apply the committed D1 migrations before using a
 fresh environment.
@@ -344,11 +344,11 @@ bun run deploy:production
 
 The Worker expects these private resources:
 
-| Resource | Production            | Preview                       |
-| -------- | --------------------- | ----------------------------- |
-| D1       | `rundown-app`         | `rundown-app-preview`         |
-| KV       | `rundown-query-cache` | `rundown-query-cache-preview` |
-| R2       | `rundown-data`        | `rundown-data-preview`        |
+| Resource | Production               | Preview                          |
+| -------- | ------------------------ | -------------------------------- |
+| D1       | `yresonance-app`         | `yresonance-app-preview`         |
+| KV       | `yresonance-query-cache` | `yresonance-query-cache-preview` |
+| R2       | `yresonance-data`        | `yresonance-data-preview`        |
 
 The query container has its own `container/package.json` and `container/bun.lock` holding only
 `@duckdb/node-api` and `zod`, so the image ships nothing from the frontend and its dependency layer
@@ -367,8 +367,8 @@ builds enabled so Wrangler can build and push the checked-in `Dockerfile`.
 To recreate the infrastructure in another Cloudflare account, enable R2 once in the dashboard and create the private buckets with:
 
 ```sh
-wrangler r2 bucket create rundown-data --location weur
-wrangler r2 bucket create rundown-data-preview --location weur
+wrangler r2 bucket create yresonance-data --location weur
+wrangler r2 bucket create yresonance-data-preview --location weur
 ```
 
 Store objects under `ws/<workspaceId>/`. Datasource registration rejects keys outside the active

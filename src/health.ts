@@ -1,7 +1,7 @@
 export function createHealthResponse() {
   return Response.json(
     {
-      service: 'rundown',
+      service: 'yresonance',
       status: 'ok',
     },
     {

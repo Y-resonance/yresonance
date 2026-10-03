@@ -118,7 +118,7 @@ Every card compiles to one query of this shape, with control state applied. The 
 
 ```sql
 SELECT <dimensions>, <metric expressions>
-FROM read_parquet(['http://r2.rundown.internal/capability/<token>', ...])
+FROM read_parquet(['http://r2.yresonance.internal/capability/<token>', ...])
 WHERE <dateRangeFieldId> BETWEEN ? AND ?
   AND <card filter>
   AND <matching control values>

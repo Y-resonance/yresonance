@@ -1,13 +1,13 @@
 import { test } from './support/ui-test';
 import { expect } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 375, height: 812 } });
 
 test('a phone browses datasources and edits a field without scrolling sideways', async ({
   page,
 }) => {
-  await mockRundownApi(page);
+  await mockYresonanceApi(page);
   await page.goto('/datasources');
 
   // Below sm the table becomes stacked cards, so nothing is clipped off-screen.
@@ -36,7 +36,7 @@ test('a phone browses datasources and edits a field without scrolling sideways',
 
   const saved = page.waitForResponse(
     (response) =>
-      response.url().includes('/api/rundown') &&
+      response.url().includes('/api/yresonance') &&
       response.request().postDataJSON()?.action === 'updateFieldMetadata',
   );
   await page.getByRole('button', { name: 'Edit Media cost' }).click();
@@ -53,7 +53,7 @@ test('a phone browses datasources and edits a field without scrolling sideways',
 
 test('the full table returns once there is room for it', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await mockRundownApi(page);
+  await mockYresonanceApi(page);
   await page.goto('/datasources');
 
   await expect(page.getByRole('columnheader', { name: 'Last updated' })).toBeVisible({

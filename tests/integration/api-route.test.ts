@@ -19,7 +19,7 @@ interface ApiEnvelope {
 
 const envelope = (response: Response) => response.json() as Promise<ApiEnvelope>;
 
-describe('POST /api/rundown', () => {
+describe('POST /api/yresonance', () => {
   test('a successful request answers with an uncacheable success envelope', async () => {
     const workspace = await signInToNewWorkspace();
     await seedDataSource(workspace);

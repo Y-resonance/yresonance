@@ -61,7 +61,7 @@ describe('internal R2 capabilities', () => {
     expect(path).not.toContain(key);
 
     const response = await handleBrowserUploadRequest(
-      new Request(`https://rundown.test${path}`, {
+      new Request(`https://yresonance.test${path}`, {
         method: 'PUT',
         headers: { 'content-length': '4' },
         body: 'data',
@@ -83,7 +83,7 @@ describe('internal R2 capabilities', () => {
   it('rejects browser upload keys outside the authorized workspace', async () => {
     const path = browserUploadPath('ws/other/upload.csv');
     const response = await handleBrowserUploadRequest(
-      new Request(`https://rundown.test${path}`, {
+      new Request(`https://yresonance.test${path}`, {
         method: 'PUT',
         headers: { 'content-length': '4' },
         body: 'data',

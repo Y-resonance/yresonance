@@ -1,6 +1,6 @@
 import { test } from './support/ui-test';
 import { expect, type Page } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
 
@@ -12,7 +12,7 @@ async function clickCanvasBackground(page: Page) {
 }
 
 test('the inspector releases the widget on Escape and on a canvas click', async ({ page }) => {
-  await mockRundownApi(page, { role: 'editor' });
+  await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -39,7 +39,7 @@ test('the inspector releases the widget on Escape and on a canvas click', async 
 
 // Escape is layered: the confirm dialog claims it before the canvas selection does.
 test('Escape closes the remove dialog before it clears the selection', async ({ page }) => {
-  await mockRundownApi(page, { role: 'editor' });
+  await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -55,7 +55,7 @@ test('Escape closes the remove dialog before it clears the selection', async ({ 
 });
 
 test('finishing a widget drag keeps the widget selected', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -80,7 +80,7 @@ test('finishing a widget drag keeps the widget selected', async ({ page }) => {
 });
 
 test('a widget resizes from anywhere along its border', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -105,7 +105,7 @@ test('a widget resizes from anywhere along its border', async ({ page }) => {
 });
 
 test('a control widget can be resized to one row', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   const dateControl = state.dashboard.widgets.find((widget) => widget.id === 'w_date')!;
   dateControl.layout = { ...dateControl.layout, y: 7 };
 
@@ -129,7 +129,7 @@ test('a control widget can be resized to one row', async ({ page }) => {
 });
 
 test('the toolbar adds a widget while another one is being edited', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -151,7 +151,7 @@ test('the toolbar adds a widget while another one is being edited', async ({ pag
 
 // The popover has to survive the drag it starts, and stay clear of the drop target.
 test('a widget dragged out of the toolbar popover lands on the grid', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 

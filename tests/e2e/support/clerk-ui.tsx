@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-// A ready session for tests that already replace /api/rundown. The real Clerk suite owns auth.
+// A ready session for tests that already replace /api/yresonance. The real Clerk suite owns auth.
 export function ClerkProvider({ children }: { children: ReactNode }) {
   return children;
 }

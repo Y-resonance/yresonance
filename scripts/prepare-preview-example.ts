@@ -7,7 +7,7 @@ import { exampleCampaignCsv } from '../src/data/example-campaign';
 
 // Package the preview fixture with its inspected schema. Bootstrap needs no query engine.
 const endDate = new Date().toISOString().slice(0, 10);
-const directory = await mkdtemp(join(tmpdir(), 'rundown-preview-example-'));
+const directory = await mkdtemp(join(tmpdir(), 'yresonance-preview-example-'));
 const instance = await DuckDBInstance.create(':memory:');
 const connection = await instance.connect();
 try {

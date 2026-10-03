@@ -1,17 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "rundown",
+  "name": "yresonance",
   "account_id": "17c619232f5d84567cd69896e892f326",
   "main": "src/server.ts",
   "compatibility_date": "2026-08-29",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "APP_ENV": "production",
-    "QUERY_CACHE_NAME": "rundown-query-cache",
+    "QUERY_CACHE_NAME": "yresonance-query-cache",
     "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
-    "R2_BUCKET_NAME": "rundown-data",
-    "DATA_SOURCE_BASE_URL": "r2://rundown-data",
-    "QUERY_DATA_SOURCE_BASE_URL": "r2://rundown-data",
+    "R2_BUCKET_NAME": "yresonance-data",
+    "DATA_SOURCE_BASE_URL": "r2://yresonance-data",
+    "QUERY_DATA_SOURCE_BASE_URL": "r2://yresonance-data",
   },
   "secrets": {
     "required": [
@@ -24,9 +24,9 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "rundown-app",
-      "database_id": "320d2de2-61ae-4e18-97b0-839ae748f2b9",
-      "preview_database_id": "e75e6c03-a9cf-404a-8d10-14d20f393697",
+      "database_name": "yresonance-app",
+      "database_id": "6cf6d365-7d3d-4965-b04f-8acaee8c19d6",
+      "preview_database_id": "906b8786-17a4-4068-98c4-c86c069d07ae",
       "migrations_dir": "drizzle",
     },
   ],
@@ -40,14 +40,14 @@
   "analytics_engine_datasets": [
     {
       "binding": "PRODUCT_ANALYTICS",
-      "dataset": "rundown_product",
+      "dataset": "yresonance_product",
     },
   ],
   "r2_buckets": [
     {
       "binding": "DATA",
-      "bucket_name": "rundown-data",
-      "preview_bucket_name": "rundown-data-preview",
+      "bucket_name": "yresonance-data",
+      "preview_bucket_name": "yresonance-data-preview",
     },
   ],
   "containers": [
@@ -88,21 +88,21 @@
   "upload_source_maps": true,
   "routes": [
     {
-      "pattern": "rundown-app.dev",
+      "pattern": "yresonance.com",
       "custom_domain": true,
     },
   ],
   "env": {
     "preview": {
-      "name": "rundown-preview",
+      "name": "yresonance-preview",
       "routes": [],
       "vars": {
         "APP_ENV": "preview",
-        "QUERY_CACHE_NAME": "rundown-query-cache-preview",
+        "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
         "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
-        "R2_BUCKET_NAME": "rundown-data-preview",
-        "DATA_SOURCE_BASE_URL": "r2://rundown-data-preview",
-        "QUERY_DATA_SOURCE_BASE_URL": "r2://rundown-data-preview",
+        "R2_BUCKET_NAME": "yresonance-data-preview",
+        "DATA_SOURCE_BASE_URL": "r2://yresonance-data-preview",
+        "QUERY_DATA_SOURCE_BASE_URL": "r2://yresonance-data-preview",
       },
       "secrets": {
         "required": [
@@ -115,8 +115,8 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "rundown-app-preview",
-          "database_id": "e75e6c03-a9cf-404a-8d10-14d20f393697",
+          "database_name": "yresonance-app-preview",
+          "database_id": "906b8786-17a4-4068-98c4-c86c069d07ae",
           "migrations_dir": "drizzle",
         },
       ],
@@ -129,13 +129,13 @@
       "analytics_engine_datasets": [
         {
           "binding": "PRODUCT_ANALYTICS",
-          "dataset": "rundown_product_preview",
+          "dataset": "yresonance_product_preview",
         },
       ],
       "r2_buckets": [
         {
           "binding": "DATA",
-          "bucket_name": "rundown-data-preview",
+          "bucket_name": "yresonance-data-preview",
         },
       ],
       "containers": [

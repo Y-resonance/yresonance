@@ -38,7 +38,7 @@ describe('environment reset', () => {
         environment: 'production',
         d1Tables: expect.arrayContaining(['query_read_budgets']),
         r2ObjectKeys: ['workspace/data.parquet'],
-        kvNamespace: 'rundown-query-cache',
+        kvNamespace: 'yresonance-query-cache',
         kvKeys: ['query-cache-key'],
       },
     });
@@ -49,7 +49,7 @@ describe('environment reset', () => {
 });
 
 function resetRequest(environment: string, token?: string) {
-  return new Request('https://rundown.test/api/admin/reset', {
+  return new Request('https://yresonance.test/api/admin/reset', {
     method: 'POST',
     headers: token ? { authorization: `Bearer ${token}` } : undefined,
     body: JSON.stringify({ environment }),
@@ -73,7 +73,7 @@ function resetEnvironment(appEnvironment: 'preview' | 'production') {
   const bindings = {
     APP_ENV: appEnvironment,
     RESET_ADMIN_TOKEN: 'reset-secret',
-    QUERY_CACHE_NAME: 'rundown-query-cache',
+    QUERY_CACHE_NAME: 'yresonance-query-cache',
     DB: { prepare: vi.fn<() => void>(), batch },
     DATA: { list: listR2, delete: deleteR2 },
     QUERY_CACHE: { list: listKv, delete: deleteKv },

@@ -5,7 +5,7 @@
  * export, builds a dashboard that uses the widget types the product actually ships, shares it, and
  * captures the shared view plus the field metadata screen, each in the light and the dark theme.
  *
- *   bun run dev                     # in another shell, or set RUNDOWN_BASE_URL
+ *   bun run dev                     # in another shell, or set YRESONANCE_BASE_URL
  *   bun run scripts/capture-landing.ts
  *
  * Every run creates a fresh datasource and dashboard in the local workspace; the local D1 file is
@@ -15,8 +15,8 @@ import { chromium, type Browser, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { exampleCampaignCsv } from '../src/data/example-campaign.ts';
 
-const baseUrl = process.env.RUNDOWN_BASE_URL ?? 'http://localhost:3140';
-const userEmail = process.env.LANDING_USER_EMAIL ?? 'rundown+clerk_test@example.com';
+const baseUrl = process.env.YRESONANCE_BASE_URL ?? 'http://localhost:3140';
+const userEmail = process.env.LANDING_USER_EMAIL;
 const organizationName = process.env.LANDING_ORG_NAME ?? 'Acme Media';
 const clerkSecretKey = process.env.CLERK_SECRET_KEY;
 const outputDirectory = 'public/landing';
@@ -35,6 +35,7 @@ interface Field {
   canonicalName: string;
 }
 
+if (!userEmail) throw new Error('LANDING_USER_EMAIL is required for an existing Clerk test user.');
 if (!clerkSecretKey) throw new Error('CLERK_SECRET_KEY is required to mint a sign-in token.');
 
 const browser = await chromium.launch();
@@ -495,7 +496,7 @@ function at(x: number, y: number, width: number, height: number): Placement {
 }
 
 async function callApi<T>(page: Page, body: Record<string, unknown>): Promise<T> {
-  const response = await page.request.post(`${baseUrl}/api/rundown`, { data: body });
+  const response = await page.request.post(`${baseUrl}/api/yresonance`, { data: body });
   const envelope = (await response.json()) as {
     ok: boolean;
     data?: unknown;

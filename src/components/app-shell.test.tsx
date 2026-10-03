@@ -90,7 +90,7 @@ describe('signed-in application shell', () => {
   });
 });
 
-// Scoped to the nav so the "Rundown" wordmark does not shadow the Dashboards link.
+// Scoped to the nav so the "yresonance" wordmark does not shadow the Dashboards link.
 const navLinkFor = (markup: string, href: string) => {
   const nav = markup.slice(markup.indexOf('<nav'), markup.indexOf('</nav>'));
   const start = nav.indexOf(`href="${href}"`);

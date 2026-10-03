@@ -6,7 +6,7 @@ vi.mock('cloudflare:workers', () => ({
 }));
 
 vi.mock('#/data/internal-r2', () => ({
-  INTERNAL_R2_HOST: 'r2.rundown.internal',
+  INTERNAL_R2_HOST: 'r2.yresonance.internal',
   handleInternalR2Request: vi.fn<() => void>(),
 }));
 

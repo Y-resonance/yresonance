@@ -14,7 +14,7 @@ vi.mock('@cloudflare/containers', () => ({
 }));
 
 vi.mock('#/data/internal-r2', () => ({
-  INTERNAL_R2_HOST: 'r2.rundown.internal',
+  INTERNAL_R2_HOST: 'r2.yresonance.internal',
   handleInternalR2Request: testState.handler,
 }));
 
@@ -24,7 +24,7 @@ describe('QueryEngineContainer', () => {
   it('registers the private R2 handler through the Containers SDK accessor', () => {
     expect(testState.registrations).toEqual([
       {
-        'r2.rundown.internal': testState.handler,
+        'r2.yresonance.internal': testState.handler,
       },
     ]);
     expect(Object.hasOwn(QueryEngineContainer, 'outboundByHost')).toBe(false);

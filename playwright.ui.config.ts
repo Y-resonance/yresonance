@@ -31,8 +31,8 @@ export default defineConfig({
     timeout: 120_000,
     // Mocked API tests do not need query containers or a pre-existing server.
     env: {
-      RUNDOWN_PORT: process.env.RUNDOWN_E2E_PORT ?? '3140',
-      RUNDOWN_ENABLE_CONTAINERS: '0',
+      YRESONANCE_PORT: process.env.YRESONANCE_E2E_PORT ?? '3140',
+      YRESONANCE_ENABLE_CONTAINERS: '0',
     },
   },
 });

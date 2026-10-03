@@ -19,5 +19,5 @@ bunx vitest --run container/httpfs.test.ts
 ```
 
 Cloudflare's container configuration disables general internet access and maps only
-`r2.rundown.internal` to `handleInternalR2Request`. A deployed preview smoke test remains the final
+`r2.yresonance.internal` to `handleInternalR2Request`. A deployed preview smoke test remains the final
 platform check because Cloudflare's outbound interception is not emulated by the local test runner.

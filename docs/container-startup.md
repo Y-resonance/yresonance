@@ -52,15 +52,15 @@ This isolates polling overhead; it does not measure VM allocation or Cloudflare 
 Build locally for the host's native architecture. On Apple Silicon:
 
 ```sh
-docker build --platform linux/arm64 -t rundown-cold-start:optimized .
-bun scripts/benchmark-query-startup.ts --rounds=15 rundown-cold-start:optimized
+docker build --platform linux/arm64 -t yresonance-cold-start:optimized .
+bun scripts/benchmark-query-startup.ts --rounds=15 yresonance-cold-start:optimized
 ```
 
 To compare two existing images, pass both image tags. The script alternates their order and removes
 every container it creates. It uses loopback ports and performs no Cloudflare requests.
 
 ```sh
-bun scripts/benchmark-query-startup.ts --rounds=15 rundown-cold-start:baseline rundown-cold-start:optimized
+bun scripts/benchmark-query-startup.ts --rounds=15 yresonance-cold-start:baseline yresonance-cold-start:optimized
 ```
 
 The final image also passed HTTP CSV reads, CSV-to-Parquet ingestion, HTTP Parquet range reads,
@@ -76,8 +76,8 @@ preview. The following experiments reuse that deployed image. No production depl
 production data change was made.
 
 The previous production request's `containerStartMs` included both startup and transport. New logs
-separate `rundown.query_engine_ready.processStartupMs` inside Bun from
-`rundown.query_engine_start.startupDurationMs` in the Durable Object. Together with the existing
+separate `yresonance.query_engine_ready.processStartupMs` inside Bun from
+`yresonance.query_engine_start.startupDurationMs` in the Durable Object. Together with the existing
 query and queue timings, they allow a preview benchmark to distinguish process loading, container
 startup, and request transport. Longer idle timeouts and prewarming were not changed.
 
@@ -126,7 +126,7 @@ the datasource, its fields, and the workspace completion marker. It preserves pe
 claims, retry cleanup, naming, and isolation. It creates no ingestion tokens and sends no query
 engine requests. User-uploaded CSVs still use the normal ingestion and inspection path.
 
-`rundown.preview_seed_prepared` records upload time, registration time, and the prepared dataset's
+`yresonance.preview_seed_prepared` records upload time, registration time, and the prepared dataset's
 end date. The existing overall seeding metric remains. A first real widget query can still start
 the container. There is no new deployed end-to-end bootstrap measurement yet; the previous
 9-second observation is not a measured before/after result for this change.

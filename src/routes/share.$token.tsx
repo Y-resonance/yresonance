@@ -47,7 +47,7 @@ function SharedDashboard() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-[100rem] px-4 py-6 sm:px-6">
       <header className="mb-6">
-        <p className="text-sm font-medium text-muted-foreground">Rundown</p>
+        <p className="text-sm font-medium text-muted-foreground">yresonance</p>
         <h1 className="text-3xl font-semibold tracking-tight">
           {dashboard?.name ?? 'Shared dashboard'}
         </h1>

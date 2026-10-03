@@ -87,7 +87,7 @@ export async function executeRequest(request: ApiRequest): Promise<unknown> {
   const startedAt = Date.now();
   try {
     const result = await dispatchRequest(request);
-    console.info('rundown.request', {
+    console.info('yresonance.request', {
       action: request.action,
       result: 'success',
       durationMs: Date.now() - startedAt,
@@ -96,7 +96,7 @@ export async function executeRequest(request: ApiRequest): Promise<unknown> {
     recordLatency(request.action, 'success', Date.now() - startedAt);
     return result;
   } catch (error) {
-    console.warn('rundown.request', {
+    console.warn('yresonance.request', {
       action: request.action,
       result: 'error',
       durationMs: Date.now() - startedAt,
@@ -587,10 +587,10 @@ async function queryWidget(
   });
   const cached = await env.QUERY_CACHE.get(cacheKey, 'json');
   if (cached) {
-    console.info('rundown.query_cache', { dashboardId, widgetId, outcome: 'hit' });
+    console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'hit' });
     return { ...(cached as object), columns, cache: 'hit' };
   }
-  console.info('rundown.query_cache', { dashboardId, widgetId, outcome: 'miss' });
+  console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'miss' });
   const run = (
     queryControlState: ControlState,
     queryDefinition: WidgetDefinition,
@@ -843,7 +843,7 @@ async function removeDatasourceUpload(
 ) {
   const session = await requireSession();
   if (!isManagedDatasourceUpload(session.workspace.r2Prefix, request.key))
-    throw new ApiError(400, 'invalid_upload_key', 'Only Rundown uploads can be removed here.');
+    throw new ApiError(400, 'invalid_upload_key', 'Only yresonance uploads can be removed here.');
   if (
     !(await verifyDatasourceUploadCleanupToken(
       request.cleanupToken,
@@ -891,7 +891,7 @@ async function trackDatasourceUpload(
   request: Extract<ApiRequest, { action: 'trackDatasourceUpload' }>,
 ) {
   const session = await requireSession();
-  console.info('rundown.datasource_upload', {
+  console.info('yresonance.datasource_upload', {
     event: request.event,
     fileSize: request.fileSize,
     format: request.format,
@@ -916,7 +916,7 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
     throw new ApiError(
       400,
       'managed_upload_prefix_not_allowed',
-      'Prefixes cannot include Rundown-managed uploads.',
+      'Prefixes cannot include yresonance-managed uploads.',
     );
   const managedUploadKey =
     request.location.kind === 'object' &&
@@ -1000,7 +1000,7 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
     ]);
     if (convertedKey && managedUploadKey)
       await deleteSourceObject(managedUploadKey).catch((error: unknown) => {
-        console.warn('rundown.datasource_ingestion_cleanup_failed', {
+        console.warn('yresonance.datasource_ingestion_cleanup_failed', {
           workspaceId: session.workspace.id,
           sourceKey: managedUploadKey,
           error: error instanceof Error ? error.message : 'Unknown cleanup error.',
@@ -1109,7 +1109,7 @@ async function importPreviewExample(session: SessionContext) {
         .set({ previewSeededAt: now, previewSeedClaimedAt: null })
         .where(and(eq(workspaces.id, workspaceId), eq(workspaces.previewSeedClaimedAt, claim))),
     ]);
-    console.info('rundown.preview_seed_prepared', {
+    console.info('yresonance.preview_seed_prepared', {
       workspaceId,
       exampleEndDate: previewExample.endDate,
       uploadDurationMs: uploadedAt - startedAt,
@@ -1121,11 +1121,11 @@ async function importPreviewExample(session: SessionContext) {
       .update(workspaces)
       .set({ previewSeedClaimedAt: null })
       .where(and(eq(workspaces.id, workspaceId), eq(workspaces.previewSeedClaimedAt, claim)));
-    console.warn('rundown.preview_seed', { workspaceId, result: 'error', error });
+    console.warn('yresonance.preview_seed', { workspaceId, result: 'error', error });
     recordProductMetric('preview_seed', { labels: ['error'], index: workspaceId });
     throw error;
   }
-  console.info('rundown.preview_seed', {
+  console.info('yresonance.preview_seed', {
     workspaceId,
     result: 'success',
     durationMs: Date.now() - startedAt,
@@ -1195,7 +1195,7 @@ function recordLatency(
         ? 'widget_query'
         : undefined;
   if (!event) return;
-  console.info(`rundown.${event}`, { action, result, durationMs });
+  console.info(`yresonance.${event}`, { action, result, durationMs });
   recordProductMetric(event, { labels: [action, result], numbers: [durationMs] });
 }
 
@@ -2289,7 +2289,7 @@ function throwDatasourceError(error: unknown): never {
   if (error.code === 'datasource_connector_failed') {
     // A connector that failed to answer reports whatever the transport said, which can name
     // container addresses and object keys. That belongs in the log, not in the response.
-    console.warn('rundown.datasource_connector_failed', { error: error.message });
+    console.warn('yresonance.datasource_connector_failed', { error: error.message });
     throw new ApiError(status, error.code, 'The query service is unavailable. Try again.');
   }
   throw new ApiError(status, error.code, error.message);

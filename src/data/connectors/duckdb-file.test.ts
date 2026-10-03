@@ -125,8 +125,8 @@ describe('duckdb-file datasource connector', () => {
   it('executes the existing file datasource from a domain widget definition', async () => {
     mocks.runPreparedQuery.mockImplementation(
       async (_dataSource: DataSourceRecord, compile: (source: string) => { sql: string }) => {
-        const compiled = compile('"rundown_source"');
-        expect(compiled.sql).toContain('FROM "rundown_source"');
+        const compiled = compile('"yresonance_source"');
+        expect(compiled.sql).toContain('FROM "yresonance_source"');
         expect(compiled.sql).toContain('SUM("MediaCost")');
         return [{ metric_1: 42 }];
       },
@@ -142,7 +142,7 @@ describe('duckdb-file datasource connector', () => {
     const explanation = duckdbFileConnector.explainQuery(dataSource, widgetQuery);
     await duckdbFileConnector.validateQuery(dataSource, widgetQuery);
 
-    expect(explanation.sql).toContain('FROM "rundown_source"');
+    expect(explanation.sql).toContain('FROM "yresonance_source"');
     expect(explanation.sql).toContain('SUM("MediaCost")');
   });
 

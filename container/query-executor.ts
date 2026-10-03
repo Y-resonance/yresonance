@@ -23,7 +23,7 @@ export function createQueryExecutor(
   return function enqueue(input: unknown, options: QueryExecutionOptions) {
     const queuedAt = performance.now();
     queuedQueries += 1;
-    console.info('rundown.query_engine_queue', {
+    console.info('yresonance.query_engine_queue', {
       queryId: options.queryId,
       state: 'queued',
       activeQueries,
@@ -35,7 +35,7 @@ export function createQueryExecutor(
       try {
         throwIfAborted(options.signal, options.deadlineAt);
       } catch (error) {
-        console.info('rundown.query_engine_queue', {
+        console.info('yresonance.query_engine_queue', {
           queryId: options.queryId,
           state: 'cancelled',
           activeQueries,
@@ -47,7 +47,7 @@ export function createQueryExecutor(
       activeQueries += 1;
       const startedAt = performance.now();
       const queueDurationMs = startedAt - queuedAt;
-      console.info('rundown.query_engine_queue', {
+      console.info('yresonance.query_engine_queue', {
         queryId: options.queryId,
         state: 'started',
         activeQueries,
@@ -58,7 +58,7 @@ export function createQueryExecutor(
         const data = await execute(input);
         const resultBytes = new TextEncoder().encode(JSON.stringify(data)).byteLength;
         const queryDurationMs = performance.now() - startedAt;
-        console.info('rundown.query_engine_queue', {
+        console.info('yresonance.query_engine_queue', {
           queryId: options.queryId,
           state: 'completed',
           activeQueries,
@@ -72,7 +72,7 @@ export function createQueryExecutor(
           metrics: { queryDurationMs, queueDurationMs, resultBytes },
         };
       } catch (error) {
-        console.warn('rundown.query_engine_queue', {
+        console.warn('yresonance.query_engine_queue', {
           queryId: options.queryId,
           state: 'failed',
           activeQueries,

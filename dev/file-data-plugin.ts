@@ -13,7 +13,7 @@ export function fileDataPlugin(directory = 'dev-data'): Plugin {
   const root = resolve(directory);
 
   return {
-    name: 'rundown-file-data',
+    name: 'yresonance-file-data',
     apply: 'serve',
     enforce: 'pre',
     configureServer(server) {

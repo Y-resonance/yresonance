@@ -8,15 +8,15 @@ import { fileDataPlugin } from './dev/file-data-plugin.ts';
 import { queryEnginePlugin } from './dev/query-engine-plugin.ts';
 
 // Browser tests run the dev server on their own port; the dev data service must follow it.
-const devPort = resolveDevPort(process.env.RUNDOWN_PORT);
+const devPort = resolveDevPort(process.env.YRESONANCE_PORT);
 const devDataBaseUrl = `http://localhost:${devPort}/__dev-data`;
-const enableDevContainers = process.env.RUNDOWN_ENABLE_CONTAINERS === '1';
+const enableDevContainers = process.env.YRESONANCE_ENABLE_CONTAINERS === '1';
 
 function resolveDevPort(value: string | undefined) {
   if (!value) return 3000;
   const port = Number(value);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
-    throw new Error(`RUNDOWN_PORT must be a port number, received "${value}".`);
+    throw new Error(`YRESONANCE_PORT must be a port number, received "${value}".`);
   return port;
 }
 
@@ -56,7 +56,7 @@ export default defineConfig(({ command, mode }) => ({
     fileDataPlugin(),
     queryEnginePlugin(),
     cloudflare({
-      ...(process.env.RUNDOWN_PR_CONFIG ? { configPath: process.env.RUNDOWN_PR_CONFIG } : {}),
+      ...(process.env.YRESONANCE_PR_CONFIG ? { configPath: process.env.YRESONANCE_PR_CONFIG } : {}),
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
         dev: {
@@ -70,20 +70,20 @@ export default defineConfig(({ command, mode }) => ({
           ? {
               vars: {
                 APP_ENV: 'development',
-                QUERY_CACHE_NAME: 'rundown-query-cache-development',
+                QUERY_CACHE_NAME: 'yresonance-query-cache-development',
                 ...(enableDevContainers
                   ? {
-                      DATA_SOURCE_BASE_URL: 'r2://rundown-data',
-                      QUERY_DATA_SOURCE_BASE_URL: 'r2://rundown-data',
+                      DATA_SOURCE_BASE_URL: 'r2://yresonance-data',
+                      QUERY_DATA_SOURCE_BASE_URL: 'r2://yresonance-data',
                     }
                   : {
                       DATA_SOURCE_BASE_URL: devDataBaseUrl,
                       QUERY_DATA_SOURCE_BASE_URL: devDataBaseUrl,
                     }),
                 INTERNAL_R2_SIGNING_SECRET:
-                  process.env.INTERNAL_R2_SIGNING_SECRET ?? 'rundown-local-internal-r2-only',
+                  process.env.INTERNAL_R2_SIGNING_SECRET ?? 'yresonance-local-internal-r2-only',
                 UPLOAD_SIGNING_SECRET:
-                  process.env.UPLOAD_SIGNING_SECRET ?? 'rundown-local-upload-only',
+                  process.env.UPLOAD_SIGNING_SECRET ?? 'yresonance-local-upload-only',
                 ...(process.env.RESET_ADMIN_TOKEN
                   ? { RESET_ADMIN_TOKEN: process.env.RESET_ADMIN_TOKEN }
                   : {}),

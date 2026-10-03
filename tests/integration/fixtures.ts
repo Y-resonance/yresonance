@@ -5,7 +5,7 @@ import { createDatabase } from '#/db/client';
 import { dataSources, fields } from '#/db/schema';
 import type { SourceListing } from '#/data/source.server';
 import type { WidgetDefinition } from '#/domain/schema';
-import { Route as apiRoute } from '#/routes/api.rundown';
+import { Route as apiRoute } from '#/routes/api.yresonance';
 import { ApiError } from '#/server/errors';
 import { executeRequest } from '#/server/service.server';
 import { signInAs } from './doubles/clerk';
@@ -35,14 +35,14 @@ export function callService(request: unknown) {
   return executeRequest(apiRequestSchema.parse(request));
 }
 
-/** Posts to the real `/api/rundown` handler to exercise the HTTP envelope. */
+/** Posts to the real `/api/yresonance` handler to exercise the HTTP envelope. */
 export function postApiRequest(body: unknown) {
   const handlers = apiRoute.options.server?.handlers;
   if (!handlers || typeof handlers !== 'object' || !('POST' in handlers))
-    throw new Error('The /api/rundown route no longer exposes a POST handler.');
+    throw new Error('The /api/yresonance route no longer exposes a POST handler.');
   const post = (handlers as { POST: (context: { request: Request }) => Promise<Response> }).POST;
   return post({
-    request: new Request('https://rundown.test/api/rundown', {
+    request: new Request('https://yresonance.test/api/yresonance', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -214,7 +214,7 @@ export async function expectApiError(
 export async function withR2Storage<T>(operation: () => Promise<T>) {
   const bindings = env as unknown as Record<string, string>;
   const original = bindings.DATA_SOURCE_BASE_URL;
-  bindings.DATA_SOURCE_BASE_URL = 'r2://rundown-data';
+  bindings.DATA_SOURCE_BASE_URL = 'r2://yresonance-data';
   try {
     return await operation();
   } finally {

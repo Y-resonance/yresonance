@@ -1,4 +1,4 @@
-# Rundown: discovery brief and plan
+# yresonance: discovery brief and plan
 
 Status: discovery outcome agreed on 2026-08-29 and implemented in the feature branch linked from
 issue #1. Deployment credentials, remote migrations, and the live release remain external rollout
@@ -50,7 +50,7 @@ From the spec ([webmachinelearning.github.io/webmcp](https://webmachinelearning.
 5. Auth: Clerk. Workspaces map to Clerk Organizations.
 6. Security model: viewers can only trigger queries the dashboard already defines. Column secrecy is explicitly not a goal, because a derived metric next to its denominator makes the numerator derivable anyway (CPM and impressions give spend).
 7. Clients never send SQL or column names. The one query endpoint is `queryWidget(widgetId, controlState)`, used by both the UI and the WebMCP tool.
-8. Formulas use Rundown's parsed text syntax at two levels: row-level calculated fields and
+8. Formulas use yresonance's parsed text syntax at two levels: row-level calculated fields and
    aggregate metrics. The backend validates an AST and compiles it to SQL. Users cannot submit SQL.
 9. Field semantics come from a lookup table per datasource that users maintain. A real catalog is deferred.
 10. Metric library is workspace-level data, configurable in the UI and via a tool. Nothing domain-specific is hardcoded.

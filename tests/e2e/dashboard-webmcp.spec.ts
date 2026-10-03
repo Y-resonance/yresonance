@@ -1,6 +1,6 @@
 import { test } from './support/ui-test';
 import { expect } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 type Tool = {
   name: string;
@@ -27,8 +27,8 @@ test('dashboard management tools keep context and disappear in viewer preview', 
       },
     });
   });
-  await mockRundownApi(page, { role: 'editor' });
-  await page.route('**/api/rundown', async (route) => {
+  await mockYresonanceApi(page, { role: 'editor' });
+  await page.route('**/api/yresonance', async (route) => {
     if (route.request().postDataJSON().action !== 'shareDashboard') return route.fallback();
     await route.fulfill({
       json: { ok: true, data: { token: 'test-link', url: '/share/test-link' } },
@@ -49,7 +49,8 @@ test('dashboard management tools keep context and disappear in viewer preview', 
 
   const request = page.waitForRequest(
     (request) =>
-      request.url().endsWith('/api/rundown') && request.postDataJSON().action === 'shareDashboard',
+      request.url().endsWith('/api/yresonance') &&
+      request.postDataJSON().action === 'shareDashboard',
   );
   await page.evaluate(async () => {
     const tool = (document.modelContext as unknown as TestModelContext).tools.get('shareDashboard');

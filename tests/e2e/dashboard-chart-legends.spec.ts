@@ -1,10 +1,10 @@
 import { test } from './support/ui-test';
 import { expect } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 test('charts show legends without widget configuration', async ({ page }) => {
   test.slow();
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   state.dashboard.widgets.push(
     {
       id: 'w_chart',
@@ -57,7 +57,7 @@ test('charts show legends without widget configuration', async ({ page }) => {
       },
     },
   );
-  await page.route('**/api/rundown', async (route) => {
+  await page.route('**/api/yresonance', async (route) => {
     const request = route.request().postDataJSON() as Record<string, unknown>;
     if (request.action !== 'queryWidget' || request.widgetId !== 'w_line_chart') {
       await route.fallback();

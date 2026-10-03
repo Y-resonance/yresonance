@@ -1,6 +1,6 @@
 import { test } from './support/ui-test';
 import { expect, type Locator, type Page } from '@playwright/test';
-import { mockRundownApi } from './support/rundown-api';
+import { mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
 
@@ -15,7 +15,7 @@ async function tabTo(page: Page, target: Locator, key: 'Tab' | 'Shift+Tab' = 'Ta
 }
 
 test('a keyboard-only editor selects, edits, and removes a widget', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible({
     timeout: 15_000,
@@ -59,7 +59,7 @@ test('a keyboard-only editor selects, edits, and removes a widget', async ({ pag
 });
 
 test('aggregation options explain their calculations', async ({ page }) => {
-  await mockRundownApi(page, { role: 'editor' });
+  await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
 
   await page.getByRole('button', { name: 'Edit Media spend' }).click();
@@ -91,7 +91,7 @@ test('aggregation options explain their calculations', async ({ page }) => {
 });
 
 test('a keyboard-only editor adds a widget from the toolbar catalog', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -106,7 +106,7 @@ test('a keyboard-only editor adds a widget from the toolbar catalog', async ({ p
 });
 
 test('row controls insert and remove an empty row with the keyboard', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -137,7 +137,7 @@ test('row controls insert and remove an empty row with the keyboard', async ({ p
 // The drag handle doubles as the keyboard "Edit" button, so the pointer path is worth
 // pinning down alongside it.
 test('the pointer drag handle still moves a widget', async ({ page }) => {
-  const state = await mockRundownApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 

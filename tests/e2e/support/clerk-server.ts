@@ -10,5 +10,7 @@ export async function auth() {
 }
 
 export function clerkClient(): never {
-  throw new Error('The UI suite must mock /api/rundown instead of accessing the Clerk directory.');
+  throw new Error(
+    'The UI suite must mock /api/yresonance instead of accessing the Clerk directory.',
+  );
 }
