@@ -36,6 +36,7 @@ export default defineConfig(({ command }) => ({
     fileDataPlugin(),
     queryEnginePlugin(),
     cloudflare({
+      ...(process.env.RUNDOWN_PR_CONFIG ? { configPath: process.env.RUNDOWN_PR_CONFIG } : {}),
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
         dev: {
