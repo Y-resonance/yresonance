@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "yresonance",
+  "preview_urls": true,
   "account_id": "17c619232f5d84567cd69896e892f326",
   "main": "src/server.ts",
   "compatibility_date": "2026-08-29",
