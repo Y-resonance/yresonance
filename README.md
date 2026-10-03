@@ -328,6 +328,11 @@ The query container has its own `container/package.json` and `container/bun.lock
 stays cached when frontend dependencies change. `@duckdb/node-api` is also a root dev dependency
 because the container unit tests run from the repository root; bump both manifests together.
 
+The runtime image bundles JavaScript and Bun bytecode, keeps only the glibc DuckDB binding,
+and uses Bun's distroless base. Native libraries and the preinstalled, signed `httpfs` extension
+remain available without runtime downloads. See [container startup measurements](docs/container-startup.md)
+for the benchmark command, results, and deployment limitations.
+
 The deployment provisions `QueryEngineContainer` as a SQLite-backed Durable Object namespace.
 Production permits five `basic` instances; preview permits two. Cloudflare Builds needs container
 builds enabled so Wrangler can build and push the checked-in `Dockerfile`.

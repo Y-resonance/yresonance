@@ -6,6 +6,7 @@
     "dev/**/*.ts",
     "tests/**/*.ts",
     "scripts/pr-preview.ts",
+    "scripts/benchmark-query-startup.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
