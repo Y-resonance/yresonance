@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { DuckDBInstance } from '@duckdb/node-api';
+import { pivotTableRows } from '#/domain/widget-results';
 import { defaultDateRange, type DashboardDocument, type WidgetDefinition } from '#/domain/schema';
 import {
   assertCalculatedFieldNameAvailable,
@@ -280,62 +282,81 @@ describe('query compiler', () => {
     expect(result.sql).toContain('GROUP BY 1 ORDER BY 1 ASC');
   });
 
-  it('returns detail rows, first-dimension subtotals, and a grand total together', () => {
-    const result = compileWidgetQuery({
-      dashboard,
-      definition: {
-        type: 'table',
-        title: 'Cost',
-        dataSourceId: 'source',
-        dateRangeFieldId: 'date',
-        dimensions: [{ fieldId: 'platform' }, { fieldId: 'campaign' }],
-        metrics: [
-          { source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' }, dataType: 'currency' },
-        ],
-        resultLimit: { mode: 'top', amount: 50 },
-        showSubtotals: true,
-      },
-      dataSource,
-      fields,
-      calculatedFields: [],
-      libraryMetrics: [],
-      controlState: {},
-      bucketName: 'bucket',
-      sourceSql: '"yresonance_source"',
+  describe.each([false, true])('table totals with pivot=%s', (pivot) => {
+    it.each([
+      { showSubtotals: false, showSummaryRow: false, groups: [0, 0, 0] },
+      { showSubtotals: true, showSummaryRow: false, groups: [0, 0, 1, 0, 1] },
+      { showSubtotals: false, showSummaryRow: true, groups: [0, 0, 0, 3] },
+      { showSubtotals: true, showSummaryRow: true, groups: [0, 0, 1, 0, 1, 3] },
+    ])('subtotals=$showSubtotals summary=$showSummaryRow', async ({ groups, ...toggles }) => {
+      const instance = await DuckDBInstance.create(':memory:');
+      const connection = await instance.connect();
+      try {
+        const compiled = compileWidgetQuery({
+          dashboard: {
+            ...dashboard,
+            defaultDateRange: {
+              startDate: { fixed: '2026-08-01' },
+              endDate: { fixed: '2026-08-31' },
+            },
+          },
+          definition: {
+            type: 'table',
+            title: 'Cost',
+            dataSourceId: 'source',
+            dateRangeFieldId: 'date',
+            dimensions: [{ fieldId: 'platform' }, { fieldId: 'campaign' }],
+            ...(pivot ? { pivotDimension: { fieldId: 'date' } } : {}),
+            metrics: [
+              {
+                source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+                dataType: 'currency',
+              },
+            ],
+            resultLimit: { mode: 'top', amount: 50 },
+            ...toggles,
+          },
+          dataSource,
+          fields,
+          calculatedFields: [],
+          libraryMetrics: [],
+          controlState: {},
+          bucketName: 'bucket',
+          sourceSql: `(VALUES
+            ('Meta', 'Feed', DATE '2026-08-01', 10),
+            ('Meta', 'Feed', DATE '2026-08-02', 20),
+            ('Meta', 'Stories', DATE '2026-08-01', 30),
+            ('Search', 'Feed', DATE '2026-08-01', 40)
+          ) AS source("Platform", "Campaign", "DateStart", "MediaCost")`,
+        });
+        const rawRows = (
+          await connection.runAndReadAll(compiled.sql, compiled.parameters.map(String))
+        ).getRowObjectsJson();
+        const rows = pivot
+          ? pivotTableRows(rawRows, ['dimension_1', 'dimension_2'], 'dimension_3', ['metric_1'])
+              .rows
+          : rawRows;
+        expect(rows.map((row) => Number(row.__grouping ?? 0))).toEqual(groups);
+        const totals = rows.filter((row) => Number(row.__grouping ?? 0) > 0);
+        expect(totals.map((row) => row.dimension_1)).toEqual([
+          ...(toggles.showSubtotals ? ['Meta', 'Search'] : []),
+          ...(toggles.showSummaryRow ? [null] : []),
+        ]);
+        expect(
+          totals.map((row) =>
+            Object.entries(row)
+              .filter(([key]) => key.endsWith('metric_1'))
+              .reduce((sum, [, value]) => sum + Number(value), 0),
+          ),
+        ).toEqual([
+          ...(toggles.showSubtotals ? [60, 40] : []),
+          ...(toggles.showSummaryRow ? [100] : []),
+        ]);
+      } finally {
+        connection.closeSync();
+        instance.closeSync();
+      }
     });
-
-    expect(result.sql).toContain('GROUPING("Platform", "Campaign") AS "__grouping"');
-    expect(result.sql).toContain('GROUP BY GROUPING SETS ((1, 2), (1), ())');
-    expect(result.sql).toContain('ORDER BY 1 ASC, "__grouping" ASC');
-  });
-
-  it('keeps the pivot dimension in every subtotal grouping set', () => {
-    const result = compileWidgetQuery({
-      dashboard,
-      definition: {
-        type: 'table',
-        title: 'Cost',
-        dataSourceId: 'source',
-        dateRangeFieldId: 'date',
-        dimensions: [{ fieldId: 'platform' }, { fieldId: 'campaign' }],
-        pivotDimension: { fieldId: 'date' },
-        metrics: [
-          { source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' }, dataType: 'currency' },
-        ],
-        resultLimit: { mode: 'top', amount: 50 },
-        showSubtotals: true,
-      },
-      dataSource,
-      fields,
-      calculatedFields: [],
-      libraryMetrics: [],
-      controlState: {},
-      bucketName: 'bucket',
-      sourceSql: '"yresonance_source"',
-    });
-
-    expect(result.sql).toContain('GROUPING("Platform", "Campaign") AS "__grouping"');
-    expect(result.sql).toContain('GROUP BY GROUPING SETS ((1, 2, 3), (1, 3), (3))');
   });
 
   it('selects a library-driven gauge upper limit', () => {
