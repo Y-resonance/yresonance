@@ -218,6 +218,7 @@ describe('widget result rendering', () => {
       ],
       resultLimit: { mode: 'top', amount: 20 },
       showSubtotals: true,
+      showSummaryRow: true,
     };
     const markup = render(definition, [
       { dimension_1: 'Meta', dimension_2: 'Feed', metric_1: 120, __grouping: 0 },

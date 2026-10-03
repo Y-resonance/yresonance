@@ -106,10 +106,12 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
   const groupingSets = groupedTable
     ? [
         `(${dimensionPositions.join(', ')})`,
-        ...(tableRowDimensions.length > 1
+        ...(definition.type === 'table' && definition.showSubtotals && tableRowDimensions.length > 1
           ? [`(${[dimensionPositions[0], ...pivotPositions].join(', ')})`]
           : []),
-        `(${pivotPositions.join(', ')})`,
+        ...(definition.type === 'table' && definition.showSummaryRow
+          ? [`(${pivotPositions.join(', ')})`]
+          : []),
       ]
     : [];
   const groupBy = dimensions.length
