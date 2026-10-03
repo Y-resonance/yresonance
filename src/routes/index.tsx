@@ -4,6 +4,15 @@ import { PlusIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { callApi } from '#/api/client';
 import { AppShell } from '#/components/app-shell';
+import { DashboardOverviewActions } from '#/components/dashboard-overview-actions';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '#/components/ui/dialog';
 import { LandingPage } from '#/components/landing-page';
 import { ErrorState, LoadingState } from '#/components/request-state';
 import { Button } from '#/components/ui/button';
@@ -32,7 +41,7 @@ export const Route = createFileRoute('/')({ component: Home });
 interface Bootstrap {
   workspace: { id: string; name: string };
   isAdmin: boolean;
-  dashboards: Array<{ id: string; name: string; widgetCount: number; updatedAt: string }>;
+  dashboards: Array<{ id: string; name: string; canEdit: boolean; updatedAt: string }>;
   dataSources: Array<{ id: string; name: string }>;
 }
 
@@ -53,6 +62,8 @@ function DashboardIndex() {
   const [data, setData] = useState<Bootstrap>();
   const [error, setError] = useState<string>();
   const [createError, setCreateError] = useState<string>();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   usePageTitle('Dashboards');
   const refresh = useCallback(async () => {
@@ -69,18 +80,20 @@ function DashboardIndex() {
   useWebMcpTools({ canCreate: Boolean(data), isAdmin: data?.isAdmin, onMutation: refresh });
   async function create(event: FormEvent) {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (creating || !name.trim()) return;
+    setCreating(true);
     setCreateError(undefined);
     try {
       const dashboard = await callApi<{ id: string }>({
         action: 'createDashboard',
-        name,
+        name: name.trim(),
         dataSourceIds: [],
         timezone: 'Europe/Berlin',
       });
       window.location.assign(`/dashboards/${dashboard.id}`);
     } catch (caught) {
       setCreateError(caught instanceof Error ? caught.message : String(caught));
+      setCreating(false);
     }
   }
   return (
@@ -91,36 +104,75 @@ function DashboardIndex() {
         <LoadingState />
       ) : (
         <div className="flex flex-col gap-8">
-          <div>
-            <p className="text-sm text-muted-foreground">{data.workspace.name}</p>
-            <h1 className="text-3xl font-semibold tracking-tight">Dashboards</h1>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">{data.workspace.name}</p>
+              <h1 className="text-3xl font-semibold tracking-tight">Dashboards</h1>
+            </div>
+            <Dialog
+              open={createOpen}
+              onOpenChange={(open) => {
+                if (creating) return;
+                setCreateOpen(open);
+                setName('');
+                setCreateError(undefined);
+              }}
+            >
+              <DialogTrigger render={<Button className="ml-auto" />}>
+                <PlusIcon data-icon="inline-start" />
+                New dashboard
+              </DialogTrigger>
+              <DialogContent showCloseButton={!creating}>
+                <DialogHeader>
+                  <DialogTitle>New dashboard</DialogTitle>
+                  <DialogDescription>Start with an empty dashboard.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={create}>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="dashboard-name">Name</FieldLabel>
+                      <Input
+                        id="dashboard-name"
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        placeholder="Campaign overview"
+                        required
+                        disabled={creating}
+                      />
+                    </Field>
+                    {createError ? (
+                      <p role="alert" className="text-sm text-destructive">
+                        {createError}
+                      </p>
+                    ) : null}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={creating}
+                        onClick={() => setCreateOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={creating || !name.trim()}>
+                        {creating ? 'Creating…' : 'Create'}
+                      </Button>
+                    </div>
+                  </FieldGroup>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
-          <form className="flex max-w-xl items-end gap-3" onSubmit={create}>
-            <FieldGroup className="flex-1">
-              <Field>
-                <FieldLabel htmlFor="dashboard-name">New dashboard</FieldLabel>
-                <Input
-                  id="dashboard-name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Campaign overview"
-                />
-              </Field>
-            </FieldGroup>
-            <Button type="submit">
-              <PlusIcon data-icon="inline-start" />
-              Create
-            </Button>
-          </form>
-          {createError ? <p className="text-sm text-destructive">{createError}</p> : null}
           {data.dashboards.length ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Widgets</TableHead>
                     <TableHead>Updated</TableHead>
+                    <TableHead>
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -135,8 +187,12 @@ function DashboardIndex() {
                           {dashboard.name}
                         </Link>
                       </TableCell>
-                      <TableCell>{dashboard.widgetCount}</TableCell>
                       <TableCell>{new Date(dashboard.updatedAt).toLocaleString()}</TableCell>
+                      <TableCell>
+                        {dashboard.canEdit ? (
+                          <DashboardOverviewActions dashboard={dashboard} onMutation={refresh} />
+                        ) : null}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

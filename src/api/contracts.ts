@@ -44,6 +44,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     timezone: timezoneSchema.optional(),
     defaultDateRange: dateRangeSchema.optional(),
   }),
+  z.object({ action: z.literal('deleteDashboard'), dashboardId: z.string().min(1) }),
   z.object({
     action: z.literal('addWidget'),
     dashboardId: z.string().min(1),

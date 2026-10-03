@@ -228,6 +228,29 @@ export function useWebMcpTools(options: WebMcpOptions) {
           },
         ]
       : [];
+    const overviewTools: ToolSpec[] =
+      options.canCreate && !options.dashboardId
+        ? [
+            {
+              action: 'updateDashboard',
+              description:
+                'Rename a dashboard or update its timezone or default date range. Requires editor access.',
+              readOnly: false,
+            },
+            {
+              action: 'shareDashboard',
+              description:
+                'Create or revoke read-only dashboard links, or manage user grants. Requires editor access and changes access.',
+              readOnly: false,
+            },
+            {
+              action: 'deleteDashboard',
+              description:
+                'Permanently delete a dashboard and all its share links and user grants. Datasources are kept. Requires editor access.',
+              readOnly: false,
+            },
+          ]
+        : [];
     const dataSourceTools: ToolSpec[] = options.canManageDataSources
       ? [
           {
@@ -284,6 +307,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
     for (const spec of [
       ...viewTools,
       ...createTools,
+      ...overviewTools,
       ...editTools,
       ...dataSourceTools,
       ...adminTools,

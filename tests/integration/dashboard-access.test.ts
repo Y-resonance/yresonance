@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { env } from 'cloudflare:workers';
 import { describe, expect, test } from 'vitest';
 import { createDatabase } from '#/db/client';
-import { libraryMetrics } from '#/db/schema';
+import { dashboardGrants, dataSources, libraryMetrics, shareLinks } from '#/db/schema';
 import { yearToDateRange } from '#/domain/dates';
 import { setClerkDirectory, signOut } from './doubles/clerk';
 import {
@@ -46,6 +46,56 @@ describe('dashboard grants', () => {
     ]);
   });
 
+  test('deleting as an editor removes the dashboard, grants, and links while keeping datasources', async () => {
+    const workspace = await signInToNewWorkspace({ isAdmin: false });
+    const source = await seedDataSource(workspace);
+    const dashboard = await createDashboard('Temporary report');
+    await addWidget(dashboard.id, scorecardDefinition(source));
+    const link = (await callService({
+      action: 'shareDashboard',
+      dashboardId: dashboard.id,
+      operation: { kind: 'createLink' },
+    })) as { token: string };
+    expect(await callService({ action: 'bootstrap' })).toMatchObject({
+      dashboards: [expect.objectContaining({ id: dashboard.id, canEdit: true })],
+    });
+
+    await callService({ action: 'deleteDashboard', dashboardId: dashboard.id });
+    expect(await callService({ action: 'listDashboards' })).toEqual([]);
+    await expectApiError(callService({ action: 'getDashboard', dashboardId: dashboard.id }), {
+      status: 404,
+      code: 'dashboard_not_found',
+    });
+    await expectApiError(callService({ action: 'getSharedDashboard', shareToken: link.token }), {
+      status: 404,
+      code: 'invalid_share_link',
+    });
+    const db = createDatabase(env.DB);
+    expect(
+      await db.select().from(dashboardGrants).where(eq(dashboardGrants.dashboardId, dashboard.id)),
+    ).toEqual([]);
+    expect(
+      await db.select().from(shareLinks).where(eq(shareLinks.dashboardId, dashboard.id)),
+    ).toEqual([]);
+    expect(await db.select().from(dataSources).where(eq(dataSources.id, source.id))).toHaveLength(
+      1,
+    );
+  });
+
+  test('an admin in another workspace cannot delete a dashboard', async () => {
+    const workspace = await signInToNewWorkspace();
+    const dashboard = await createDashboard();
+    await signInToNewWorkspace();
+    await expectApiError(callService({ action: 'deleteDashboard', dashboardId: dashboard.id }), {
+      status: 404,
+      code: 'dashboard_not_found',
+    });
+    signInAsOwner(workspace);
+    expect(await callService({ action: 'getDashboard', dashboardId: dashboard.id })).toMatchObject({
+      dashboard: { id: dashboard.id },
+    });
+  });
+
   test('a colleague in the same workspace needs a grant', async () => {
     const workspace = await signInToNewWorkspace();
     const dashboard = await createDashboard();
@@ -78,6 +128,13 @@ describe('dashboard grants', () => {
       dashboardId: dashboard.id,
     })) as OpenedDashboard;
     expect(opened.role).toBe('viewer');
+    expect(await callService({ action: 'bootstrap' })).toMatchObject({
+      dashboards: [expect.objectContaining({ id: dashboard.id, canEdit: false })],
+    });
+    await expectApiError(callService({ action: 'deleteDashboard', dashboardId: dashboard.id }), {
+      status: 403,
+      code: 'dashboard_access_denied',
+    });
     // Sharing state stays hidden from viewers.
     expect(opened.sharing).toBeUndefined();
     expect((await callService({ action: 'listDashboards' })) as unknown[]).toHaveLength(1);
