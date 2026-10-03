@@ -21,3 +21,4 @@ dev-data/*
 /.agents/skills/
 /skills-lock.json
 .wrangler-pr.json
+.generated/

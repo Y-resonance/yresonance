@@ -1,16 +1,14 @@
 import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { createDatabase } from '#/db/client';
 import { dataSources, workspaces } from '#/db/schema';
-import { handleInternalR2Request } from '#/data/internal-r2';
 import { queryEngine } from './doubles/query-engine';
 import { callService, seedDataSource, signInToNewWorkspace, withR2Storage } from './fixtures';
 
 const bindings = env as unknown as Record<string, string>;
 const originalEnvironment = bindings.APP_ENV;
 const db = createDatabase(env.DB);
-const metrics = { queryDurationMs: 1, resultBytes: 4 };
 
 interface Bootstrap {
   workspace: { id: string };
@@ -19,67 +17,19 @@ interface Bootstrap {
 
 const bootstrap = () => callService({ action: 'bootstrap' }) as Promise<Bootstrap>;
 
-// The engine is an external boundary. D1, R2, capability uploads and registration stay real.
-async function convertExample(
-  request: Extract<
-    import('#/query/engine-contract').QueryEngineRequest,
-    { operation: 'ingestCsv' }
-  >,
-) {
-  const source = await handleInternalR2Request(new Request(request.sourceUrl), env);
-  expect(source.ok).toBe(true);
-  const csv = await source.text();
-  expect(csv).toContain('Date,Advertiser,Campaign,Market,Platform');
-  expect(csv).toContain('Acme Media,Spring Launch DE');
-  expect(csv).toContain(`\n${new Date().toISOString().slice(0, 10)},Acme Media,`);
-  const converted = 'PAR1';
-  const stored = await handleInternalR2Request(
-    new Request(request.destinationUrl, {
-      method: 'PUT',
-      body: converted,
-      headers: { 'content-length': String(converted.length) },
-    }),
-    env,
-  );
-  expect(stored.status).toBe(201);
-  return {
-    body: {
-      ok: true,
-      data: { size: converted.length, etag: stored.headers.get('etag') },
-      metrics,
-    },
-  };
-}
-
-function answerSeedRequests() {
-  queryEngine.answerWith(async (request) => {
-    if (request.operation === 'ingestCsv') return convertExample(request);
-    return {
-      body: {
-        ok: true,
-        data: {
-          description: [
-            { column_name: 'Date', column_type: 'DATE' },
-            { column_name: 'Campaign', column_type: 'VARCHAR' },
-            { column_name: 'Impressions', column_type: 'BIGINT' },
-          ],
-          samples: [{ Date: '2026-01-01', Campaign: 'Spring Launch DE', Impressions: 12000 }],
-        },
-        metrics,
-      },
-    };
-  });
-}
-
 afterEach(() => {
   bindings.APP_ENV = originalEnvironment;
+  vi.restoreAllMocks();
 });
 
 describe('preview example datasource', () => {
-  test('concurrent bootstrap seeds once, discovers fields and preserves completion across rename and removal', async () => {
+  test('concurrent bootstrap seeds without an engine, registers fields and preserves completion across rename and removal', async () => {
     const workspace = await signInToNewWorkspace();
     bindings.APP_ENV = 'preview';
-    answerSeedRequests();
+    queryEngine.answerWith(() => ({
+      status: 503,
+      body: { ok: false, error: 'Engine unavailable' },
+    }));
     await withR2Storage(async () => {
       const [first, second, listing] = await Promise.all([
         bootstrap(),
@@ -113,26 +63,26 @@ describe('preview example datasource', () => {
       expect((await bootstrap()).dataSources).toEqual([{ id: source.id, name: 'My campaigns' }]);
       await db.delete(dataSources).where(eq(dataSources.id, source.id));
       expect((await bootstrap()).dataSources).toEqual([]);
-      expect(queryEngine.calls.filter((request) => request.operation === 'ingestCsv')).toHaveLength(
-        1,
-      );
+      expect(queryEngine.calls).toEqual([]);
     });
   });
 
-  test.each(['ingestCsv', 'describeSource'] as const)(
+  test.each(['upload', 'upload acknowledgement', 'registration'] as const)(
     'failed %s cleans up and the next bootstrap retries',
-    async (failedOperation) => {
+    async (failure) => {
       const workspace = await signInToNewWorkspace();
       bindings.APP_ENV = 'preview';
-      // Fail inspection after conversion as well as before a destination exists.
-      queryEngine.answerWith(async (request) => {
-        if (request.operation === failedOperation)
-          return { status: 503, body: { ok: false, error: 'Engine unavailable' } };
-        if (request.operation !== 'ingestCsv') throw new Error('Unexpected engine request');
-        return convertExample(request);
-      });
+      const put = env.DATA.put.bind(env.DATA);
+      const failingOperation =
+        failure === 'registration'
+          ? vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('Registration unavailable'))
+          : vi.spyOn(env.DATA, 'put').mockImplementationOnce(async (...args) => {
+              if (failure === 'upload acknowledgement') await put(...args);
+              throw new Error('Storage unavailable');
+            });
       await withR2Storage(async () => {
-        await expect(bootstrap()).rejects.toThrow('Engine unavailable');
+        await expect(bootstrap()).rejects.toThrow();
+        failingOperation.mockRestore();
         expect((await env.DATA.list({ prefix: workspace.r2Prefix })).objects).toEqual([]);
         expect(
           await db.query.dataSources.findMany({
@@ -144,8 +94,8 @@ describe('preview example datasource', () => {
         });
         expect(state?.previewSeededAt).toBeNull();
         expect(state?.previewSeedClaimedAt).toBeNull();
-        answerSeedRequests();
         expect((await bootstrap()).dataSources).toHaveLength(1);
+        expect(queryEngine.calls).toEqual([]);
       });
     },
   );
@@ -190,7 +140,6 @@ describe('preview example datasource', () => {
       .set({ previewSeedClaimedAt: new Date().toISOString() })
       .where(eq(workspaces.id, first.workspaceId));
     bindings.APP_ENV = 'preview';
-    answerSeedRequests();
     await withR2Storage(async () => {
       await db
         .update(workspaces)

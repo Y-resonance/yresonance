@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false vite build",
+    "dev": "bun run prepare:preview-example && vite dev",
+    "build": "bun run prepare:preview-example && CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false vite build",
     "preview": "vite preview",
     "deploy": "bun run deploy:preview",
     "deploy:production": "bun run build && bun run deploy:built",
@@ -21,15 +21,16 @@
     "generate-routes": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false bun run scripts/generate-routes.ts",
     "cf-typegen": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler types",
     "types:check": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler types --check",
-    "typecheck": "bun run generate-routes && tsc --noEmit",
+    "typecheck": "bun run prepare:preview-example && bun run generate-routes && tsc --noEmit",
     "test": "vitest --run",
-    "test:integration": "vitest --run --config vitest.integration.config.ts",
+    "test:integration": "bun run prepare:preview-example && vitest --run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
-    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run types:check && bun run db:migrate:check && bun run test"
+    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run types:check && bun run db:migrate:check && bun run test",
+    "prepare:preview-example": "bun run scripts/prepare-preview-example.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
