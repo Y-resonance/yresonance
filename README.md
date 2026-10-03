@@ -216,67 +216,84 @@ container image.
 
 Query containers are constrained to Western Europe (`WEUR`) in production and previews.
 
-The GitHub repository is connected with these Workers Builds settings:
+Workers Builds handles production and branch-preview deployment. GitHub Actions
+runs checks and deletes closed PR resources; it does not deploy previews.
+
+Production settings:
 
 ```text
 Production branch: main
 Build command: bun run build
 Deploy command: bun run deploy:built
-Non-production deploy command: bun run deploy:dry-run
-Non-production branch builds: disabled
 ```
 
-Set the `BUN_VERSION` build variable to `1.3.10`. GitHub Actions validates pull requests, including
-the Wrangler deployment package. PR previews deploy through GitHub Actions, so keep Cloudflare
-non-production branch builds disabled to avoid duplicate deployments.
+Native preview settings:
 
-Cloudflare no longer repeats `bun run check`. `main` is protected instead, with the three `Check`
-jobs required, so only commits that already passed those checks can land on the production branch.
-Each pipeline now builds the app once: GitHub Actions builds it for the deployment dry run, and
-Cloudflare builds it for the release.
+```text
+Preview builds: enabled
+Build command: bun run build:branch-preview
+Deploy command: bun run deploy:branch-preview
+```
 
-The named preview environment remains available for deliberate preview deployments with
-`bun run deploy` or `bun run deploy:preview`. PR previews are separate Worker Previews under
-`yresonance-preview`. Production deployments normally come from pushes to `main`.
+Set `BUN_VERSION=1.3.10` and the Clerk development publishable key in preview build
+variables. Preview build credentials need access to provision D1, KV, and R2 in
+addition to deploying Workers and containers. Configure preview runtime secrets
+in Cloudflare's Previews Base; they are not inherited from production.
 
-### Pull request previews
+### Preview isolation
 
-The `PR preview` workflow deploys same-repository PRs on opening, reopening, and each push.
-Draft PRs deploy too. Changing draft state keeps the same `pr-<number>` URL and data. Fork PRs
-do not receive credentials or deploy. The workflow posts the URL on the PR and checks `/ready`
-for D1, KV, and R2 connectivity. This check does not exercise container queries.
+This follows [Cloudflare's resource isolation model](https://developers.cloudflare.com/workers/previews/resources/).
+Cloudflare gives each branch Preview its own Durable Object namespace and
+container app. D1, KV, and R2 require distinct resources, so
+`scripts/preview-resources.ts prepare` provisions them before the native build.
+Names include a hash of the exact branch name, preserving data across pushes and
+avoiding collisions between branches such as `feature/report` and `feature-report`.
 
-Each PR gets a fresh D1 database with the branch migrations, a KV namespace, and an R2 bucket.
-New PR databases and buckets request Western Europe (`weur`) with best-effort location hints,
-regardless of the CI runner's location. Existing databases and buckets keep their original location;
-redeploying does not relocate their data.
-Cloudflare Worker Previews create separate Durable Object namespaces and container apps.
-The generated configuration includes the query container and its binding under `previews`.
-Analytics events use the shared `yresonance_product_preview` dataset.
+The helper writes `.wrangler-branch.json` with branch bindings under `previews`,
+and `.wrangler-preview-migrations.json` pointing to that same D1 database. It
+applies migrations before building. Production bindings and routes stay at the
+top level. Branch resources request Western Europe; containers retain `WEUR`.
+Analytics use the non-production `yresonance_product_preview` dataset.
 
-Closing a PR, including merging, deletes its Preview, any remaining container app, D1 database,
-KV namespace, and R2 bucket with its uploads. Cleanup uses the default branch code and waits
-for in-flight deployments. If cleanup fails, rerun it or dispatch `PR preview` with the closed
-PR number. Cleanup discovers resources by exact PR names and tolerates already deleted resources.
+Cloudflare deploys the Preview, maintains its branch URL, and posts it to the PR.
+The separate `env.preview` remains available for deliberate shared deployments
+with `bun run deploy:preview`.
 
-GitHub needs these credentials, already configured in this repository:
+### Secrets and activation
 
-| Name                         | Kind                | Purpose                                             |
-| ---------------------------- | ------------------- | --------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`       | Repository secret   | Deploy Previews and manage their resources          |
-| `PREVIEW_SIGNING_SECRET`     | Repository secret   | Derive stable signing and reset secrets per PR      |
-| `CLERK_SECRET_KEY`           | Repository secret   | Authenticate against the Clerk development instance |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Repository variable | Build the browser with the same Clerk instance      |
+Complete [the native preview rollout](docs/native-previews.md) before enabling
+Cloudflare preview builds. Configure these Previews Base secrets with the Clerk
+**development** instance and non-production signing keys:
 
-The CI token is scoped to the yresonance account with Account Settings Read, Workers Scripts
-Write, Workers KV Storage Write, D1 Write, Workers R2 Storage Write, Workers Containers Write,
-and Cloudchamber Write. These permissions cover resources in the account, so only trusted
-contributors should have branch write access. Production and shared preview resources are not
-targeted by this workflow. No S3 credentials are needed; cleanup uses the R2 empty-bucket API.
+```sh
+bunx wrangler preview base-config secret put CLERK_SECRET_KEY
+bunx wrangler preview base-config secret put INTERNAL_R2_SIGNING_SECRET
+bunx wrangler preview base-config secret put UPLOAD_SIGNING_SECRET
+bunx wrangler preview base-config secret put RESET_ADMIN_TOKEN
+```
 
-Worker Previews require Wrangler 4.135.0 or later. Cloudflare currently describes container
-support as partial. Validate an authenticated query or upload in the first deployed PR before
-using it for acceptance testing. See [Cloudflare resource isolation and container cleanup](https://developers.cloudflare.com/workers/previews/resources/).
+These commands change live preview configuration and require separate approval.
+Production secrets must not be copied into previews. Base-secret changes affect
+new Previews; update existing Previews explicitly when rotating credentials.
+
+### Cleanup
+
+The `Preview cleanup` workflow runs when a same-repository PR closes. It obtains
+the branch name from the closed PR, waits for Cloudflare builds on that branch to
+finish, then deletes the native Preview, its D1/KV/R2 resources, and any container
+apps matching its recorded Preview slug. It also removes legacy `pr-<number>`
+resources during the transition. Fork PRs cannot trigger resource deletion.
+
+Keep the repository `CLOUDFLARE_API_TOKEN` secret for cleanup and set the
+`CLOUDFLARE_WORKER_TAG` repository variable to the parent Worker's script tag.
+Cleanup credentials also need Workers Builds read access. Rerun failed cleanup
+or dispatch the workflow with the closed PR number. If the Preview record was
+already deleted, inspect leftover container apps manually before deleting them;
+Cloudflare notes that container apps can remain after Preview deletion.
+
+Native previews support containers partially. Validate a deployed authenticated
+query and upload before relying on the new flow. Cloudflare readiness alone does
+not prove container execution.
 
 ### GitHub Actions
 

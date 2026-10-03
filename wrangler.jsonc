@@ -157,4 +157,39 @@
       },
     },
   },
+  "previews": {
+    "vars": {
+      "APP_ENV": "preview",
+      "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
+      "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
+      "R2_BUCKET_NAME": "yresonance-data-preview",
+      "DATA_SOURCE_BASE_URL": "r2://yresonance-data-preview",
+      "QUERY_DATA_SOURCE_BASE_URL": "r2://yresonance-data-preview",
+    },
+    "analytics_engine_datasets": [
+      {
+        "binding": "PRODUCT_ANALYTICS",
+        "dataset": "yresonance_product_preview",
+      },
+    ],
+    "containers": [
+      {
+        "class_name": "QueryEngineContainer",
+        "image": "./Dockerfile",
+        "max_instances": 2,
+        "instance_type": "basic",
+        "constraints": {
+          "regions": ["WEUR"],
+        },
+      },
+    ],
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "QUERY_ENGINE",
+          "class_name": "QueryEngineContainer",
+        },
+      ],
+    },
+  },
 }

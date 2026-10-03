@@ -60,10 +60,12 @@ before switching traffic, since users can change data between copying and cutove
    Then authorize production cutover separately and validate the same journeys.
    Do not delete the old buckets or Workers until the rollback window ends.
 
-PR previews use isolated `yresonance-preview-pr-<number>` resources. Cleanup also
-checks `rundown-preview-pr-<number>` so PRs opened before the rename do not leak
-resources. Closing this rename PR before it merges requires cleanup from its
-branch as well: the current default branch only knows the previous prefix.
+Native branch previews use isolated `yresonance-branch-<hash>` storage after
+[the native preview rollout](native-previews.md). Cleanup also checks legacy
+`yresonance-preview-pr-<number>` and `rundown-preview-pr-<number>` resources so
+existing PRs do not leak data. Closing this rename PR before it merges requires
+cleanup from its branch as well: the current default branch only knows the
+previous prefix.
 
 ## Local and integration changes
 
