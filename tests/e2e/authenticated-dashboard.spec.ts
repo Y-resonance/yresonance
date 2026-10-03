@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { clerkCredentials, missingClerkCredentials } from './support/clerk-credentials';
 import { signInWithClerk } from './support/clerk-session';
-import { callApi, seedDashboard, seedDataSource, seedImpressionsDashboard } from './support/seed';
+import { seedDashboard, seedDataSource, seedImpressionsDashboard } from './support/seed';
 
 const credentials = clerkCredentials();
 
@@ -100,19 +100,70 @@ test.describe('signed-in dashboard flow', () => {
     }
   });
 
-  test('the dashboard index lists what the signed-in workspace owns', async ({ page }) => {
+  test('the overview creates, renames, shares, and deletes a dashboard', async ({
+    page,
+    browser,
+  }) => {
     test.slow();
     await signIn(page);
-    const suffix = Date.now().toString(36);
-    const source = await seedDataSource(page, `e2e-index-${suffix}`);
-    await seedDashboard(page, `E2E index ${suffix}`, source);
-
+    const name = `E2E overview ${Date.now().toString(36)}`;
+    await page.getByRole('button', { name: 'New dashboard', exact: true }).click();
+    const createDialog = page.getByRole('dialog', { name: 'New dashboard' });
+    await createDialog.getByLabel('Name', { exact: true }).fill(name);
+    await createDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(createDialog).toBeHidden();
+    await page.getByRole('button', { name: 'New dashboard', exact: true }).click();
+    await expect(createDialog.getByLabel('Name', { exact: true })).toHaveValue('');
+    await createDialog.getByLabel('Name', { exact: true }).fill(name);
+    await createDialog.getByRole('button', { name: 'Create', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboards' })).toBeVisible();
-    await expect(page.getByRole('link', { name: `E2E index ${suffix}` })).toBeVisible();
 
-    const bootstrap = await callApi<{ workspace: { id: string } }>(page, { action: 'bootstrap' });
-    expect(bootstrap.workspace.id).toMatch(/^ws_/);
+    let row = page.getByRole('row').filter({ has: page.getByRole('link', { name, exact: true }) });
+    await row.getByRole('button', { name: 'Rename', exact: true }).click();
+    const renameDialog = page.getByRole('dialog', { name: 'Rename dashboard' });
+    const renamed = `${name} renamed`;
+    await renameDialog.getByLabel('Name', { exact: true }).fill(renamed);
+    await renameDialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.reload();
+    row = page
+      .getByRole('row')
+      .filter({ has: page.getByRole('link', { name: renamed, exact: true }) });
+    await row.getByRole('button', { name: 'Share', exact: true }).click();
+    const sharing = page.getByRole('dialog', { name: 'Share dashboard' });
+    await sharing.getByRole('button', { name: 'Create unlisted link' }).click();
+    const shareLink = sharing.getByRole('link', { name: /\/share\// });
+    await expect(shareLink).toBeVisible();
+    const shareUrl = await shareLink.innerText();
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await sharing.getByRole('button', { name: 'Copy unlisted link' }).click();
+    await expect(sharing.getByRole('button', { name: 'Copied unlisted link' })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shareUrl);
+    await page.keyboard.press('Escape');
+    await row.getByRole('button', { name: 'Delete', exact: true }).click();
+    const deletion = page.getByRole('dialog', { name: 'Delete dashboard?' });
+    await deletion.getByRole('button', { name: 'Cancel' }).click();
+    await expect(row).toBeVisible();
+
+    const viewer = await browser.newContext();
+    try {
+      const viewerPage = await viewer.newPage();
+      await viewerPage.goto(shareUrl);
+      await expect(
+        viewerPage.getByRole('heading', { level: 1, name: renamed, exact: true }),
+      ).toBeVisible();
+      await row.getByRole('button', { name: 'Delete', exact: true }).click();
+      await deletion.getByRole('button', { name: 'Delete dashboard', exact: true }).click();
+      await expect(row).toHaveCount(0);
+      await page.reload();
+      await expect(page.getByRole('link', { name: renamed, exact: true })).toHaveCount(0);
+      await viewerPage.reload();
+      await expect(
+        viewerPage.getByText('This share link is invalid or has been revoked.'),
+      ).toBeVisible();
+    } finally {
+      await viewer.close();
+    }
   });
 
   test('an impressions dashboard shows the total calculated from its uploaded CSV', async ({

@@ -1,5 +1,5 @@
 import { clerkClient } from '@clerk/tanstack-react-start/server';
-import { and, count, eq, inArray, isNull, lt, or } from 'drizzle-orm';
+import { and, count, eq, getTableColumns, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { env } from 'cloudflare:workers';
 import type { ApiRequest } from '#/api/contracts';
 import { createDatabase } from '#/db/client';
@@ -120,6 +120,8 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
       return createDashboard(request);
     case 'updateDashboard':
       return updateDashboard(request);
+    case 'deleteDashboard':
+      return deleteDashboard(request.dashboardId);
     case 'addWidget':
       return addWidget(request);
     case 'updateWidget':
@@ -197,7 +199,10 @@ async function bootstrap() {
     userId: session.userId,
     workspace: { id: session.workspace.id, name: session.workspace.name },
     isAdmin: session.isAdmin,
-    dashboards: dashboardRows.map(summary),
+    dashboards: dashboardRows.map((row) => ({
+      ...summary(row),
+      canEdit: session.isAdmin || row.role === 'editor',
+    })),
     dataSources: sourceRows,
   };
 }
@@ -319,6 +324,18 @@ async function updateDashboard(request: Extract<ApiRequest, { action: 'updateDas
   };
   await persistDashboard(updated);
   return updated;
+}
+
+async function deleteDashboard(dashboardId: string) {
+  await authorizeDashboard(dashboardId, 'editor');
+  const db = database();
+  // These tables have no cascading foreign keys. Remove access records in the same transaction.
+  await db.batch([
+    db.delete(shareLinks).where(eq(shareLinks.dashboardId, dashboardId)),
+    db.delete(dashboardGrants).where(eq(dashboardGrants.dashboardId, dashboardId)),
+    db.delete(dashboards).where(eq(dashboards.id, dashboardId)),
+  ]);
+  return { id: dashboardId, deleted: true };
 }
 
 async function addWidget(request: Extract<ApiRequest, { action: 'addWidget' }>) {
@@ -1612,11 +1629,12 @@ async function authorizeDashboard(id: string, required: 'viewer' | 'editor', sha
 async function visibleDashboardRows(session: SessionContext) {
   if (session.isAdmin)
     return database()
-      .select()
+      .select({ ...getTableColumns(dashboards), role: sql<string>`'admin'` })
       .from(dashboards)
       .where(eq(dashboards.workspaceId, session.workspace.id));
   return database()
     .select({
+      role: dashboardGrants.role,
       id: dashboards.id,
       workspaceId: dashboards.workspaceId,
       name: dashboards.name,
