@@ -13,7 +13,7 @@
  */
 import { chromium, type Browser, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
-import { landingDemoCsv } from './landing-demo-data.ts';
+import { exampleCampaignCsv } from '../src/data/example-campaign.ts';
 
 const baseUrl = process.env.RUNDOWN_BASE_URL ?? 'http://localhost:3140';
 const userEmail = process.env.LANDING_USER_EMAIL ?? 'rundown+clerk_test@example.com';
@@ -137,7 +137,7 @@ async function registerDemoDatasource(page: Page) {
       dataSourceId: existing.id,
     });
 
-  const contents = Buffer.from(landingDemoCsv(), 'utf8');
+  const contents = Buffer.from(exampleCampaignCsv(), 'utf8');
   const upload = await callApi<{ key: string; uploadUrl: string; cleanupToken: string }>(page, {
     action: 'prepareDatasourceUpload',
     fileName: 'campaign_delivery.csv',
