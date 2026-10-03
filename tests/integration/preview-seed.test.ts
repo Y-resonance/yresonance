@@ -5,7 +5,7 @@ import { createDatabase } from '#/db/client';
 import { dataSources, workspaces } from '#/db/schema';
 import { handleInternalR2Request } from '#/data/internal-r2';
 import { queryEngine } from './doubles/query-engine';
-import { callService, expectApiError, signInToNewWorkspace, withR2Storage } from './fixtures';
+import { callService, seedDataSource, signInToNewWorkspace, withR2Storage } from './fixtures';
 
 const bindings = env as unknown as Record<string, string>;
 const originalEnvironment = bindings.APP_ENV;
@@ -150,7 +150,40 @@ describe('preview example datasource', () => {
     },
   );
 
-  test('an active claim waits for retry, an abandoned claim recovers, and another workspace gets its own example', async () => {
+  test('an active claim waits until another isolate persists its datasource', async () => {
+    const workspace = await signInToNewWorkspace();
+    await db
+      .update(workspaces)
+      .set({ previewSeedClaimedAt: new Date().toISOString() })
+      .where(eq(workspaces.id, workspace.workspaceId));
+    bindings.APP_ENV = 'preview';
+    let settled = false;
+    const pending = bootstrap()
+      .then(
+        (result) => ({ ok: true as const, result }),
+        (error: unknown) => ({ ok: false as const, error }),
+      )
+      .then((outcome) => {
+        settled = true;
+        return outcome;
+      });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(settled).toBe(false);
+    expect(queryEngine.calls).toEqual([]);
+    // Simulate the other isolate's atomic registration and completion.
+    const source = await seedDataSource(workspace);
+    await db
+      .update(workspaces)
+      .set({ previewSeededAt: new Date().toISOString(), previewSeedClaimedAt: null })
+      .where(eq(workspaces.id, workspace.workspaceId));
+    expect(await pending).toEqual({
+      ok: true,
+      result: expect.objectContaining({ dataSources: [{ id: source.id, name: source.name }] }),
+    });
+    expect(queryEngine.calls).toEqual([]);
+  });
+
+  test('an abandoned claim recovers, and another workspace gets its own example', async () => {
     const first = await signInToNewWorkspace();
     await db
       .update(workspaces)
@@ -159,8 +192,6 @@ describe('preview example datasource', () => {
     bindings.APP_ENV = 'preview';
     answerSeedRequests();
     await withR2Storage(async () => {
-      await expectApiError(bootstrap(), { status: 503, code: 'preview_seed_pending' });
-      expect(queryEngine.calls).toEqual([]);
       await db
         .update(workspaces)
         .set({ previewSeedClaimedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() })

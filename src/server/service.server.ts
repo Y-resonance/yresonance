@@ -1035,28 +1035,33 @@ async function seedPreviewWorkspace(session: SessionContext) {
 async function importPreviewExample(session: SessionContext) {
   const db = database();
   const workspaceId = session.workspace.id;
-  const claim = new Date().toISOString();
-  // Engine requests time out after 40 seconds. An hour also allows recovery after a Worker crash.
-  const expired = new Date(Date.now() - UPLOAD_CLAIM_LEASE_MS).toISOString();
-  const claimed = await db
-    .update(workspaces)
-    .set({ previewSeedClaimedAt: claim })
-    .where(
-      and(
-        eq(workspaces.id, workspaceId),
-        isNull(workspaces.previewSeededAt),
-        or(isNull(workspaces.previewSeedClaimedAt), lt(workspaces.previewSeedClaimedAt, expired)),
-      ),
-    )
-    .returning({ id: workspaces.id });
-  if (!claimed.length) {
+  const waitDeadline = Date.now() + 2 * 60 * 1000;
+  let claim: string;
+  while (true) {
+    claim = new Date().toISOString();
+    // Engine requests time out after 40 seconds. An hour allows recovery after a Worker crash.
+    const expired = new Date(Date.now() - UPLOAD_CLAIM_LEASE_MS).toISOString();
+    const claimed = await db
+      .update(workspaces)
+      .set({ previewSeedClaimedAt: claim })
+      .where(
+        and(
+          eq(workspaces.id, workspaceId),
+          isNull(workspaces.previewSeededAt),
+          or(isNull(workspaces.previewSeedClaimedAt), lt(workspaces.previewSeedClaimedAt, expired)),
+        ),
+      )
+      .returning({ id: workspaces.id });
+    if (claimed.length) break;
     const current = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
     if (current?.previewSeededAt) return;
-    throw new ApiError(
-      503,
-      'preview_seed_pending',
-      'Example data is being prepared. Try again shortly.',
-    );
+    if (Date.now() >= waitDeadline)
+      throw new ApiError(
+        503,
+        'preview_seed_pending',
+        'Example data is still being prepared. Try again shortly.',
+      );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   // A unique key per attempt prevents a failed import from deleting another attempt's objects.
   const sourceKey = `${session.workspace.r2Prefix}examples/${crypto.randomUUID()}.csv`;
