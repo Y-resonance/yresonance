@@ -16,3 +16,7 @@ dev-data/*
 
 .dev.vars*
 !.dev.vars.example
+
+# Keep installed agent skills local.
+/.agents/skills/
+/skills-lock.json
