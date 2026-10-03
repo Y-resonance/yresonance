@@ -14,6 +14,8 @@ export const workspaces = sqliteTable(
     clerkOrganizationId: text('clerk_organization_id').notNull(),
     name: text().notNull(),
     r2Prefix: text('r2_prefix').notNull(),
+    previewSeededAt: text('preview_seeded_at'),
+    previewSeedClaimedAt: text('preview_seed_claimed_at'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [
