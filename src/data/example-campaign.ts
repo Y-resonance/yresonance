@@ -1,5 +1,5 @@
 /**
- * Deterministic demo delivery data for the landing page screenshots. The shape mirrors a campaign
+ * Deterministic synthetic campaign data for previews and landing page screenshots. The shape mirrors a campaign
  * export an agency would actually register: one row per day, campaign, platform and ad format,
  * with the dimensions that make breakdowns interesting and the metrics a client report reports on.
  */
@@ -102,7 +102,7 @@ const targetings = ['Broad', 'Interest', 'Retargeting', 'Lookalike'];
 /** Video formats carry the completion metric and cost more per thousand impressions. */
 const isVideoFormat = (format: string) => format === 'Video' || format === 'Spark Ad';
 
-export function landingDemoCsv() {
+export function exampleCampaignCsv() {
   const random = mulberry32(0x5eed_1234);
   const rows: string[] = [columns.join(',')];
 
