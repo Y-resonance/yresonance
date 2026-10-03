@@ -28,7 +28,9 @@ export const dataSources = sqliteTable(
   'data_sources',
   {
     id: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text().notNull(),
     connectorType: text('connector_type').notNull().default('duckdb-file'),
     location: text({ mode: 'json' }).notNull(),
@@ -46,7 +48,9 @@ export const datasourceUploads = sqliteTable(
   'datasource_uploads',
   {
     key: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     clerkUserId: text('clerk_user_id').notNull(),
     status: text({ enum: ['pending', 'registering', 'removing'] }).notNull(),
     claimId: text('claim_id'),
@@ -60,7 +64,9 @@ export const ingestionTokens = sqliteTable(
   'ingestion_tokens',
   {
     id: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     sourceKey: text('source_key').notNull(),
     destinationKey: text('destination_key').notNull(),
     expiresAt: text('expires_at').notNull(),
@@ -74,7 +80,9 @@ export const queryReadBudgets = sqliteTable(
   'query_read_budgets',
   {
     id: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     scannedBytes: integer('scanned_bytes').notNull().default(0),
     maximumBytes: integer('maximum_bytes').notNull(),
     expiresAt: text('expires_at').notNull(),
@@ -87,8 +95,12 @@ export const fields = sqliteTable(
   'fields',
   {
     id: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
-    dataSourceId: text('data_source_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    dataSourceId: text('data_source_id')
+      .notNull()
+      .references(() => dataSources.id, { onDelete: 'cascade' }),
     columnName: text('column_name').notNull(),
     canonicalName: text('canonical_name').notNull(),
     label: text().notNull(),
@@ -112,8 +124,12 @@ export const calculatedFields = sqliteTable(
   'calculated_fields',
   {
     id: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
-    dataSourceId: text('data_source_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    dataSourceId: text('data_source_id')
+      .notNull()
+      .references(() => dataSources.id, { onDelete: 'cascade' }),
     canonicalName: text('canonical_name').notNull(),
     label: text().notNull(),
     expression: text().notNull(),
@@ -136,7 +152,9 @@ export const libraryMetrics = sqliteTable(
   'library_metrics',
   {
     id: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text().notNull(),
     canonicalName: text('canonical_name').notNull(),
     expression: text().notNull(),
@@ -156,7 +174,9 @@ export const dashboards = sqliteTable(
   'dashboards',
   {
     id: text().primaryKey(),
-    workspaceId: text('workspace_id').notNull(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text().notNull(),
     document: text({ mode: 'json' }).notNull(),
     createdBy: text('created_by').notNull(),
@@ -169,7 +189,9 @@ export const dashboards = sqliteTable(
 export const dashboardGrants = sqliteTable(
   'dashboard_grants',
   {
-    dashboardId: text('dashboard_id').notNull(),
+    dashboardId: text('dashboard_id')
+      .notNull()
+      .references(() => dashboards.id, { onDelete: 'cascade' }),
     clerkUserId: text('clerk_user_id').notNull(),
     role: text().notNull(),
     grantedBy: text('granted_by').notNull(),
@@ -185,7 +207,9 @@ export const shareLinks = sqliteTable(
   'share_links',
   {
     token: text().primaryKey(),
-    dashboardId: text('dashboard_id').notNull(),
+    dashboardId: text('dashboard_id')
+      .notNull()
+      .references(() => dashboards.id, { onDelete: 'cascade' }),
     createdBy: text('created_by').notNull(),
     createdAt: text('created_at').notNull(),
     revokedAt: text('revoked_at'),

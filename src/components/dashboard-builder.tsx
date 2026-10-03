@@ -1,3 +1,4 @@
+import { DASHBOARD_GRID } from '#/domain/layout';
 import {
   ActivityIcon,
   AlignCenterVerticalIcon,
@@ -581,8 +582,9 @@ export function DashboardBuilder({
   );
 
   const gridRows = dashboard.canvasRows;
-  // Matches the height GridBackground draws (56px cells + 8px margins).
-  const canvasHeight = gridRows * 64 + 8;
+  // Matches the height GridBackground draws for the canvas rows.
+  const canvasHeight =
+    gridRows * (DASHBOARD_GRID.rowHeight + DASHBOARD_GRID.margin[1]) + DASHBOARD_GRID.margin[1];
   const insertionCuts = rowInsertionCuts(dashboard.widgets, dashboard.canvasRows);
 
   return (
@@ -649,9 +651,9 @@ export function DashboardBuilder({
                   <>
                     <GridBackground
                       width={width}
-                      cols={12}
-                      rowHeight={56}
-                      margin={[8, 8]}
+                      cols={DASHBOARD_GRID.cols}
+                      rowHeight={DASHBOARD_GRID.rowHeight}
+                      margin={DASHBOARD_GRID.margin}
                       rows={gridRows}
                       color="color-mix(in srgb, var(--color-muted) 96%, var(--color-foreground) 4%)"
                       // Numeric prop, so --radius-xl (0.625rem * 1.4) is inlined here to keep the
@@ -685,7 +687,7 @@ export function DashboardBuilder({
                       width={width}
                       layout={layout}
                       compactor={noCompactor}
-                      gridConfig={{ cols: 12, rowHeight: 56, margin: [8, 8] }}
+                      gridConfig={DASHBOARD_GRID}
                       dragConfig={{ enabled: !saving, handle: '.widget-drag-handle', threshold: 8 }}
                       resizeConfig={{
                         enabled: !saving,
@@ -885,7 +887,13 @@ function RowInsertionControl({
   return (
     <div
       className="group/row absolute right-2 left-2 z-20 flex h-6 -translate-y-1/2 items-center"
-      style={{ top: cut === 0 ? 8 : cut * 64 + 4 }}
+      style={{
+        top:
+          cut === 0
+            ? DASHBOARD_GRID.margin[1]
+            : cut * (DASHBOARD_GRID.rowHeight + DASHBOARD_GRID.margin[1]) +
+              DASHBOARD_GRID.margin[1] / 2,
+      }}
     >
       <span className="h-px flex-1 bg-primary opacity-0 transition-none group-hover/row:opacity-100 group-focus-within/row:opacity-100" />
       <Button
@@ -917,7 +925,12 @@ function RowRemovalControl({
   return (
     <Button
       className="absolute right-3 z-30 -translate-y-1/2 opacity-0 transition-none hover:opacity-100 focus-visible:opacity-100"
-      style={{ top: row * 64 + 36 }}
+      style={{
+        top:
+          row * (DASHBOARD_GRID.rowHeight + DASHBOARD_GRID.margin[1]) +
+          DASHBOARD_GRID.margin[1] +
+          DASHBOARD_GRID.rowHeight / 2,
+      }}
       variant="outline"
       size="icon-xs"
       disabled={disabled}
