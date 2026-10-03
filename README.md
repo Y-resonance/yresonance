@@ -202,6 +202,8 @@ The app is available at [rundown.rundown.workers.dev](https://rundown.rundown.wo
 Cloudflare deploys every push to `main`. The Worker deployment also builds and uploads the query
 container image.
 
+Query containers are constrained to Western Europe (`WEUR`) in production and previews.
+
 The GitHub repository is connected with these Workers Builds settings:
 
 ```text
@@ -233,6 +235,9 @@ do not receive credentials or deploy. The workflow posts the URL on the PR and c
 for D1, KV, and R2 connectivity. This check does not exercise container queries.
 
 Each PR gets a fresh D1 database with the branch migrations, a KV namespace, and an R2 bucket.
+New PR databases and buckets request Western Europe (`weur`) with best-effort location hints,
+regardless of the CI runner's location. Existing databases and buckets keep their original location;
+redeploying does not relocate their data.
 Cloudflare Worker Previews create separate Durable Object namespaces and container apps.
 The generated configuration includes the query container and its binding under `previews`.
 Analytics events use the shared `rundown_product_preview` dataset.
