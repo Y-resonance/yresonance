@@ -172,3 +172,33 @@ test('a widget dragged out of the toolbar popover lands on the grid', async ({ p
     .toContain('gauge');
   await expect(page.getByRole('button', { name: 'Add Gauge' })).toHaveCount(0);
 });
+
+test('a catalog widget dropped onto an empty canvas lands where it was dropped', async ({
+  page,
+}) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.dashboard = { ...state.dashboard, widgets: [] };
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+
+  // The visible canvas, including the spare rows below the (absent) widgets.
+  const canvas = (await page.locator('.react-grid-layout').locator('..').boundingBox())!;
+  await page.getByRole('button', { name: 'Add widget' }).click();
+  const source = (await page
+    .getByRole('dialog')
+    .locator('[draggable="true"]')
+    .filter({ hasText: 'Scorecard' })
+    .boundingBox())!;
+  await page.mouse.move(source.x + 30, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(canvas.x + canvas.width * 0.75, canvas.y + canvas.height / 2, {
+    steps: 15,
+  });
+  await page.mouse.up();
+
+  await expect.poll(() => state.dashboard.widgets.length).toBe(1);
+  await expect.poll(() => state.dashboard.widgets[0]?.layout.x).toBeGreaterThan(5);
+  // The mock appends new widgets at row 20; the layout save moves it to the drop row.
+  await expect.poll(() => state.dashboard.widgets[0]?.layout.y).toBeGreaterThan(0);
+  await expect.poll(() => state.dashboard.widgets[0]?.layout.y).toBeLessThan(10);
+});

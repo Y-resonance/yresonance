@@ -581,6 +581,8 @@ export function DashboardBuilder({
   );
 
   const gridRows = dashboard.canvasRows;
+  // Matches the height GridBackground draws (56px cells + 8px margins).
+  const canvasHeight = gridRows * 64 + 8;
   const insertionCuts = rowInsertionCuts(dashboard.widgets, dashboard.canvasRows);
 
   return (
@@ -631,9 +633,7 @@ export function DashboardBuilder({
               <div
                 ref={containerRef}
                 className="relative"
-                // Matches the height GridBackground draws (56px cells + 8px margins)
-                // so the drop area covers the spare rows below the last widget.
-                style={{ minHeight: gridRows * 64 + 8 }}
+                style={{ minHeight: canvasHeight }}
                 onPointerDownCapture={() => {
                   gridGestureRef.current = false;
                 }}
@@ -679,6 +679,9 @@ export function DashboardBuilder({
                           ))
                       : null}
                     <GridLayout
+                      // The grid only accepts drops on its own element, which otherwise ends at the
+                      // lowest widget, so it has to span the spare rows (all of an empty canvas).
+                      style={{ minHeight: canvasHeight }}
                       width={width}
                       layout={layout}
                       compactor={noCompactor}
