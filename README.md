@@ -94,8 +94,11 @@ Clerk, with workspaces mapped to Clerk organizations. Application data lives in 
 Nothing domain-specific is hardcoded: metrics such as VTR or CPV are workspace data, not code.
 
 Preview workspaces automatically receive an "Example campaign data" datasource on their first
-bootstrap. It contains 90 days of synthetic campaign delivery ending on the seed date and goes through
-normal CSV-to-Parquet ingestion and field discovery. Seeding is enabled only by `APP_ENV=preview`;
+bootstrap. The build prepares 90 days of synthetic campaign delivery ending on the build date,
+including Parquet conversion and inspected field metadata. Bootstrap uploads the prepared file and
+registers its fields without starting the query container. `bun run dev`, `build`, `typecheck`, and
+`test:integration` automatically regenerate the ignored `.generated/preview-example.json` fixture.
+Seeding is enabled only by `APP_ENV=preview`;
 local development and production do not seed. Completion is stored per workspace, so redeploying or
 renaming the datasource does not create another example. Failed imports retry on the next bootstrap;
 concurrent requests wait up to two minutes for another Worker isolate to finish. An interrupted
@@ -211,6 +214,8 @@ The app is available at [rundown.rundown.workers.dev](https://rundown.rundown.wo
 Cloudflare deploys every push to `main`. The Worker deployment also builds and uploads the query
 container image.
 
+Query containers are constrained to Western Europe (`WEUR`) in production and previews.
+
 The GitHub repository is connected with these Workers Builds settings:
 
 ```text
@@ -242,6 +247,9 @@ do not receive credentials or deploy. The workflow posts the URL on the PR and c
 for D1, KV, and R2 connectivity. This check does not exercise container queries.
 
 Each PR gets a fresh D1 database with the branch migrations, a KV namespace, and an R2 bucket.
+New PR databases and buckets request Western Europe (`weur`) with best-effort location hints,
+regardless of the CI runner's location. Existing databases and buckets keep their original location;
+redeploying does not relocate their data.
 Cloudflare Worker Previews create separate Durable Object namespaces and container apps.
 The generated configuration includes the query container and its binding under `previews`.
 Analytics events use the shared `rundown_product_preview` dataset.
@@ -346,6 +354,11 @@ The query container has its own `container/package.json` and `container/bun.lock
 `@duckdb/node-api` and `zod`, so the image ships nothing from the frontend and its dependency layer
 stays cached when frontend dependencies change. `@duckdb/node-api` is also a root dev dependency
 because the container unit tests run from the repository root; bump both manifests together.
+
+The runtime image bundles JavaScript and Bun bytecode, keeps only the glibc DuckDB binding,
+and uses Bun's distroless base. Native libraries and the preinstalled, signed `httpfs` extension
+remain available without runtime downloads. See [container startup measurements](docs/container-startup.md)
+for the benchmark command, results, and deployment limitations.
 
 The deployment provisions `QueryEngineContainer` as a SQLite-backed Durable Object namespace.
 Production permits five `basic` instances; preview permits two. Cloudflare Builds needs container

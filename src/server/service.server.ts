@@ -9,7 +9,7 @@ import {
   localSourceUrl,
   prepareSourceUpload,
 } from '#/data/source.server';
-import { exampleCampaignCsv } from '#/data/example-campaign';
+import previewExample from '../../.generated/preview-example.json';
 import { capabilityUrl, createR2Capability } from '#/data/internal-r2';
 import {
   DatasourceError,
@@ -901,12 +901,8 @@ async function trackDatasourceUpload(
   return { tracked: true };
 }
 
-async function registerDatasource(
-  request: Extract<ApiRequest, { action: 'registerDatasource' }>,
-  sessionContext?: SessionContext,
-  previewSeedClaim?: string,
-) {
-  const session = sessionContext ?? (await requireSession());
+async function registerDatasource(request: Extract<ApiRequest, { action: 'registerDatasource' }>) {
+  const session = await requireSession();
   if (!isWorkspaceR2Key(session.workspace.r2Prefix, request.location.key))
     throw new ApiError(
       400,
@@ -1001,19 +997,6 @@ async function registerDatasource(
         db.insert(fields).values({ ...field, workspaceId: session.workspace.id }),
       ),
       ...uploadCompletion,
-      ...(previewSeedClaim
-        ? [
-            db
-              .update(workspaces)
-              .set({ previewSeededAt: now, previewSeedClaimedAt: null })
-              .where(
-                and(
-                  eq(workspaces.id, session.workspace.id),
-                  eq(workspaces.previewSeedClaimedAt, previewSeedClaim),
-                ),
-              ),
-          ]
-        : []),
     ]);
     if (convertedKey && managedUploadKey)
       await deleteSourceObject(managedUploadKey).catch((error: unknown) => {
@@ -1080,15 +1063,18 @@ async function importPreviewExample(session: SessionContext) {
       );
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  // A unique key per attempt prevents a failed import from deleting another attempt's objects.
-  const sourceKey = `${session.workspace.r2Prefix}examples/${crypto.randomUUID()}.csv`;
-  const destinationKey = sourceKey.replace(/\.csv$/u, '.parquet');
+  // Each attempt owns its object, including cleanup after a failed registration.
+  const destinationKey = `${session.workspace.r2Prefix}examples/${crypto.randomUUID()}.parquet`;
   const startedAt = Date.now();
   try {
-    await env.DATA.put(sourceKey, exampleCampaignCsv(new Date().toISOString().slice(0, 10)), {
-      httpMetadata: { contentType: 'text/csv' },
+    const bytes = Uint8Array.from(atob(previewExample.parquet), (character) =>
+      character.charCodeAt(0),
+    );
+    const object = await env.DATA.put(destinationKey, bytes, {
+      httpMetadata: { contentType: 'application/vnd.apache.parquet' },
     });
-    const converted = await ingestManagedCsvUpload(session, sourceKey);
+    if (!object) throw new Error('Could not store the preview example.');
+    const uploadedAt = Date.now();
     const existingNames = new Set(
       (
         await db
@@ -1100,15 +1086,35 @@ async function importPreviewExample(session: SessionContext) {
     let name = 'Example campaign data';
     for (let suffix = 2; existingNames.has(name); suffix++)
       name = `Example campaign data ${suffix}`;
-    await registerDatasource(
-      {
-        action: 'registerDatasource',
-        name,
-        location: converted.location,
-      },
-      session,
-      claim,
+    const id = `ds_${crypto.randomUUID()}`;
+    const version = await hashJson([[destinationKey, object.etag]]);
+    const now = new Date().toISOString();
+    const discovered = previewExample.description.map((column) =>
+      seedField(id, column, previewExample.samples),
     );
+    await db.batch([
+      db.insert(dataSources).values({
+        id,
+        workspaceId,
+        name,
+        connectorType: DUCKDB_FILE_CONNECTOR,
+        location: { kind: 'object', key: destinationKey, format: 'parquet' },
+        version,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      ...discovered.map((field) => db.insert(fields).values({ ...field, workspaceId })),
+      db
+        .update(workspaces)
+        .set({ previewSeededAt: now, previewSeedClaimedAt: null })
+        .where(and(eq(workspaces.id, workspaceId), eq(workspaces.previewSeedClaimedAt, claim))),
+    ]);
+    console.info('rundown.preview_seed_prepared', {
+      workspaceId,
+      exampleEndDate: previewExample.endDate,
+      uploadDurationMs: uploadedAt - startedAt,
+      registrationDurationMs: Date.now() - uploadedAt,
+    });
   } catch (error) {
     await deleteSourceObject(destinationKey).catch(() => undefined);
     await db
@@ -1118,8 +1124,6 @@ async function importPreviewExample(session: SessionContext) {
     console.warn('rundown.preview_seed', { workspaceId, result: 'error', error });
     recordProductMetric('preview_seed', { labels: ['error'], index: workspaceId });
     throw error;
-  } finally {
-    await deleteSourceObject(sourceKey).catch(() => undefined);
   }
   console.info('rundown.preview_seed', {
     workspaceId,
