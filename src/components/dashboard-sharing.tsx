@@ -1,4 +1,4 @@
-import { CheckIcon, CopyIcon, Trash2Icon } from 'lucide-react';
+import { CheckIcon, CopyIcon, Share2Icon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { callApi } from '#/api/client';
 import { Button } from '#/components/ui/button';
@@ -14,6 +14,7 @@ import { Field, FieldGroup, FieldLabel } from '#/components/ui/field';
 import { Input } from '#/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
 import { Separator } from '#/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '#/components/ui/tooltip';
 import { sharedUserLabel } from '#/domain/sharing';
 
 export interface SharingState {
@@ -98,13 +99,22 @@ export function DashboardSharing({
   }
   return (
     <Dialog onOpenChange={onOpenChange}>
-      <DialogTrigger
-        render={
-          <Button variant={linksOnly ? 'ghost' : 'outline'} size={linksOnly ? 'sm' : 'default'} />
-        }
-      >
-        Share
-      </DialogTrigger>
+      {linksOnly ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <DialogTrigger
+                render={<Button variant="ghost" size="icon-sm" aria-label="Share" />}
+              />
+            }
+          >
+            <Share2Icon aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent>Share</TooltipContent>
+        </Tooltip>
+      ) : (
+        <DialogTrigger render={<Button variant="outline" />}>Share</DialogTrigger>
+      )}
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Share dashboard</DialogTitle>

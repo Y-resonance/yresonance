@@ -1,3 +1,4 @@
+import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { callApi } from '#/api/client';
 import { DashboardSharing, type SharingState } from '#/components/dashboard-sharing';
@@ -11,6 +12,7 @@ import {
 } from '#/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '#/components/ui/field';
 import { Input } from '#/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '#/components/ui/tooltip';
 
 export function DashboardOverviewActions({
   dashboard,
@@ -72,9 +74,21 @@ export function DashboardOverviewActions({
   return (
     <>
       <div className="flex justify-end gap-1">
-        <Button variant="ghost" size="sm" onClick={() => selectAction('rename')}>
-          Rename
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Rename"
+                onClick={() => selectAction('rename')}
+              />
+            }
+          >
+            <PencilIcon aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent>Rename</TooltipContent>
+        </Tooltip>
         <DashboardSharing
           dashboardId={dashboard.id}
           sharing={sharing}
@@ -84,9 +98,21 @@ export function DashboardOverviewActions({
           error={error}
           onOpenChange={(open) => void openSharing(open)}
         />
-        <Button variant="ghost" size="sm" onClick={() => selectAction('delete')}>
-          Delete
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Delete"
+                onClick={() => selectAction('delete')}
+              />
+            }
+          >
+            <Trash2Icon aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent>Delete</TooltipContent>
+        </Tooltip>
       </div>
       <Dialog
         open={Boolean(action)}
