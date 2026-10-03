@@ -9,6 +9,7 @@ import {
   localSourceUrl,
   prepareSourceUpload,
 } from '#/data/source.server';
+import { exampleCampaignCsv } from '#/data/example-campaign';
 import { capabilityUrl, createR2Capability } from '#/data/internal-r2';
 import {
   DatasourceError,
@@ -26,6 +27,7 @@ import {
   ingestionTokens,
   libraryMetrics,
   shareLinks,
+  workspaces,
 } from '#/db/schema';
 import {
   controlStateSchema,
@@ -188,6 +190,7 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
 
 async function bootstrap() {
   const session = await requireSession();
+  await seedPreviewWorkspace(session);
   const [dashboardRows, sourceRows] = await Promise.all([
     visibleDashboardRows(session),
     database()
@@ -721,6 +724,7 @@ async function getControlOptions(
 
 async function listDataSources() {
   const session = await requireSession();
+  await seedPreviewWorkspace(session);
   const db = database();
   const workspace = eq(dataSources.workspaceId, session.workspace.id);
   const [sourceRows, rawCounts, calculatedCounts] = await Promise.all([
@@ -897,8 +901,12 @@ async function trackDatasourceUpload(
   return { tracked: true };
 }
 
-async function registerDatasource(request: Extract<ApiRequest, { action: 'registerDatasource' }>) {
-  const session = await requireSession();
+async function registerDatasource(
+  request: Extract<ApiRequest, { action: 'registerDatasource' }>,
+  sessionContext?: SessionContext,
+  previewSeedClaim?: string,
+) {
+  const session = sessionContext ?? (await requireSession());
   if (!isWorkspaceR2Key(session.workspace.r2Prefix, request.location.key))
     throw new ApiError(
       400,
@@ -993,6 +1001,19 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
         db.insert(fields).values({ ...field, workspaceId: session.workspace.id }),
       ),
       ...uploadCompletion,
+      ...(previewSeedClaim
+        ? [
+            db
+              .update(workspaces)
+              .set({ previewSeededAt: now, previewSeedClaimedAt: null })
+              .where(
+                and(
+                  eq(workspaces.id, session.workspace.id),
+                  eq(workspaces.previewSeedClaimedAt, previewSeedClaim),
+                ),
+              ),
+          ]
+        : []),
     ]);
     if (convertedKey && managedUploadKey)
       await deleteSourceObject(managedUploadKey).catch((error: unknown) => {
@@ -1009,6 +1030,107 @@ async function registerDatasource(request: Extract<ApiRequest, { action: 'regist
       await restorePendingUpload(session, managedUploadKey, 'registering', claimId);
     throw error;
   }
+}
+
+// Requests in one isolate share the import; D1 coordinates claims between isolates.
+const previewSeeds = new Map<string, Promise<void>>();
+
+async function seedPreviewWorkspace(session: SessionContext) {
+  if (env.APP_ENV !== 'preview' || session.workspace.previewSeededAt) return;
+  const workspaceId = session.workspace.id;
+  const pending = previewSeeds.get(workspaceId);
+  if (pending) return pending;
+  const seed = importPreviewExample(session);
+  previewSeeds.set(workspaceId, seed);
+  try {
+    await seed;
+  } finally {
+    previewSeeds.delete(workspaceId);
+  }
+}
+
+async function importPreviewExample(session: SessionContext) {
+  const db = database();
+  const workspaceId = session.workspace.id;
+  const waitDeadline = Date.now() + 2 * 60 * 1000;
+  let claim: string;
+  while (true) {
+    claim = new Date().toISOString();
+    // Engine requests time out after 40 seconds. An hour allows recovery after a Worker crash.
+    const expired = new Date(Date.now() - UPLOAD_CLAIM_LEASE_MS).toISOString();
+    const claimed = await db
+      .update(workspaces)
+      .set({ previewSeedClaimedAt: claim })
+      .where(
+        and(
+          eq(workspaces.id, workspaceId),
+          isNull(workspaces.previewSeededAt),
+          or(isNull(workspaces.previewSeedClaimedAt), lt(workspaces.previewSeedClaimedAt, expired)),
+        ),
+      )
+      .returning({ id: workspaces.id });
+    if (claimed.length) break;
+    const current = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
+    if (current?.previewSeededAt) return;
+    if (Date.now() >= waitDeadline)
+      throw new ApiError(
+        503,
+        'preview_seed_pending',
+        'Example data is still being prepared. Try again shortly.',
+      );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  // A unique key per attempt prevents a failed import from deleting another attempt's objects.
+  const sourceKey = `${session.workspace.r2Prefix}examples/${crypto.randomUUID()}.csv`;
+  const destinationKey = sourceKey.replace(/\.csv$/u, '.parquet');
+  const startedAt = Date.now();
+  try {
+    await env.DATA.put(sourceKey, exampleCampaignCsv(new Date().toISOString().slice(0, 10)), {
+      httpMetadata: { contentType: 'text/csv' },
+    });
+    const converted = await ingestManagedCsvUpload(session, sourceKey);
+    const existingNames = new Set(
+      (
+        await db
+          .select({ name: dataSources.name })
+          .from(dataSources)
+          .where(eq(dataSources.workspaceId, workspaceId))
+      ).map((source) => source.name),
+    );
+    let name = 'Example campaign data';
+    for (let suffix = 2; existingNames.has(name); suffix++)
+      name = `Example campaign data ${suffix}`;
+    await registerDatasource(
+      {
+        action: 'registerDatasource',
+        name,
+        location: converted.location,
+      },
+      session,
+      claim,
+    );
+  } catch (error) {
+    await deleteSourceObject(destinationKey).catch(() => undefined);
+    await db
+      .update(workspaces)
+      .set({ previewSeedClaimedAt: null })
+      .where(and(eq(workspaces.id, workspaceId), eq(workspaces.previewSeedClaimedAt, claim)));
+    console.warn('rundown.preview_seed', { workspaceId, result: 'error', error });
+    recordProductMetric('preview_seed', { labels: ['error'], index: workspaceId });
+    throw error;
+  } finally {
+    await deleteSourceObject(sourceKey).catch(() => undefined);
+  }
+  console.info('rundown.preview_seed', {
+    workspaceId,
+    result: 'success',
+    durationMs: Date.now() - startedAt,
+  });
+  recordProductMetric('preview_seed', {
+    labels: ['success'],
+    numbers: [Date.now() - startedAt],
+    index: workspaceId,
+  });
 }
 
 async function ingestManagedCsvUpload(session: SessionContext, sourceKey: string) {

@@ -12,6 +12,7 @@ export default defineConfig({
     alias: {
       // The suite drives the real service; only Clerk's network boundary is replaced.
       '@clerk/tanstack-react-start/server': fromRoot('./tests/integration/doubles/clerk.ts'),
+      '@cloudflare/containers': fromRoot('./tests/integration/doubles/containers.ts'),
     },
   },
   plugins: [
