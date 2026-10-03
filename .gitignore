@@ -20,3 +20,4 @@ dev-data/*
 # Keep installed agent skills local.
 /.agents/skills/
 /skills-lock.json
+.wrangler-pr.json

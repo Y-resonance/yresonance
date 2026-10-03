@@ -205,7 +205,8 @@ Non-production branch builds: disabled
 ```
 
 Set the `BUN_VERSION` build variable to `1.3.10`. GitHub Actions validates pull requests, including
-the Wrangler deployment package, so Cloudflare does not need to build non-production branches.
+the Wrangler deployment package. PR previews deploy through GitHub Actions, so keep Cloudflare
+non-production branch builds disabled to avoid duplicate deployments.
 
 Cloudflare no longer repeats `bun run check`. `main` is protected instead, with the three `Check`
 jobs required, so only commits that already passed those checks can land on the production branch.
@@ -213,8 +214,44 @@ Each pipeline now builds the app once: GitHub Actions builds it for the deployme
 Cloudflare builds it for the release.
 
 The named preview environment remains available for deliberate preview deployments with
-`bun run deploy` or `bun run deploy:preview`, but is not used by pull-request checks. Production
-deployments normally come from pushes to `main`.
+`bun run deploy` or `bun run deploy:preview`. PR previews are separate Worker Previews under
+`rundown-preview`. Production deployments normally come from pushes to `main`.
+
+### Pull request previews
+
+The `PR preview` workflow deploys same-repository PRs on opening, reopening, and each push.
+Draft PRs deploy too. Changing draft state keeps the same `pr-<number>` URL and data. Fork PRs
+do not receive credentials or deploy. The workflow posts the URL on the PR and checks `/ready`
+for D1, KV, and R2 connectivity. This check does not exercise container queries.
+
+Each PR gets a fresh D1 database with the branch migrations, a KV namespace, and an R2 bucket.
+Cloudflare Worker Previews create separate Durable Object namespaces and container apps.
+The generated configuration includes the query container and its binding under `previews`.
+Analytics events use the shared `rundown_product_preview` dataset.
+
+Closing a PR, including merging, deletes its Preview, any remaining container app, D1 database,
+KV namespace, and R2 bucket with its uploads. Cleanup uses the default branch code and waits
+for in-flight deployments. If cleanup fails, rerun it or dispatch `PR preview` with the closed
+PR number. Cleanup discovers resources by exact PR names and tolerates already deleted resources.
+
+GitHub needs these credentials, already configured in this repository:
+
+| Name                         | Kind                | Purpose                                             |
+| ---------------------------- | ------------------- | --------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`       | Repository secret   | Deploy Previews and manage their resources          |
+| `PREVIEW_SIGNING_SECRET`     | Repository secret   | Derive stable signing and reset secrets per PR      |
+| `CLERK_SECRET_KEY`           | Repository secret   | Authenticate against the Clerk development instance |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Repository variable | Build the browser with the same Clerk instance      |
+
+The CI token is scoped to the yresonance account with Account Settings Read, Workers Scripts
+Write, Workers KV Storage Write, D1 Write, Workers R2 Storage Write, Workers Containers Write,
+and Cloudchamber Write. These permissions cover resources in the account, so only trusted
+contributors should have branch write access. Production and shared preview resources are not
+targeted by this workflow. No S3 credentials are needed; cleanup uses the R2 empty-bucket API.
+
+Worker Previews require Wrangler 4.135.0 or later. Cloudflare currently describes container
+support as partial. Validate an authenticated query or upload in the first deployed PR before
+using it for acceptance testing. See [Cloudflare resource isolation and container cleanup](https://developers.cloudflare.com/workers/previews/resources/).
 
 ### GitHub Actions
 

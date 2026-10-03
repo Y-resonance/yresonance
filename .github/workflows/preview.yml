@@ -1,0 +1,117 @@
+name: PR preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Closed PR number to retry cleanup for
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# Never interrupt provisioning or cleanup. A close event waits for an in-flight deployment.
+concurrency:
+  group: cloudflare-preview-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 17c619232f5d84567cd69896e892f326
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+      RUNDOWN_PR_CONFIG: .wrangler-pr.json
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - run: bun install --frozen-lockfile
+      - uses: docker/setup-buildx-action@v3
+      - name: Validate preview credentials
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN repository secret'; exit 1; }
+          test -n "$VITE_CLERK_PUBLISHABLE_KEY" || { echo 'Missing VITE_CLERK_PUBLISHABLE_KEY repository variable'; exit 1; }
+          test -n "$CLERK_SECRET_KEY" || { echo 'Missing CLERK_SECRET_KEY repository secret'; exit 1; }
+      - name: Verify PR is still open
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh pr view "$PR_NUMBER" --json state --jq .state)" = OPEN
+      - name: Provision PR resources
+        run: bun run scripts/pr-preview.ts prepare "$PR_NUMBER"
+      - name: Migrate PR database
+        run: bunx wrangler d1 migrations apply DB --remote --config .wrangler-pr.json
+      - run: bun run build
+      - name: Deploy Preview
+        id: preview
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          PREVIEW_SIGNING_SECRET: ${{ secrets.PREVIEW_SIGNING_SECRET }}
+        run: |
+          test -n "$PREVIEW_SIGNING_SECRET" || { echo 'Missing PREVIEW_SIGNING_SECRET repository secret'; exit 1; }
+          secrets_file="$(mktemp)"
+          chmod 600 "$secrets_file"
+          trap 'rm -f "$secrets_file"' EXIT
+          bun -e 'import { createHmac } from "node:crypto";
+          const secret = (purpose) => createHmac("sha256", process.env.PREVIEW_SIGNING_SECRET)
+            .update(`${process.env.PR_NUMBER}:${purpose}`).digest("hex");
+          await Bun.write(process.argv[1], JSON.stringify({
+            CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
+            INTERNAL_R2_SIGNING_SECRET: secret("internal-r2"),
+            UPLOAD_SIGNING_SECRET: secret("upload"),
+            RESET_ADMIN_TOKEN: secret("reset"),
+          }))' "$secrets_file"
+          bunx wrangler preview --config dist/server/wrangler.json --name "pr-$PR_NUMBER" \
+            --ignore-base-config --secrets-file "$secrets_file" --json > preview-output.json
+          # Docker writes progress to stdout even when Wrangler uses --json.
+          preview_url="$(sed -n '/^{/,$p' preview-output.json | jq -er '.preview.urls[0]')"
+          echo "url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Preview: $preview_url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check Preview dependencies
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: curl --fail --show-error --silent --retry 12 --retry-all-errors --retry-delay 5 "$PREVIEW_URL/ready"
+      - name: Comment Preview URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: |
+          gh pr comment "$PR_NUMBER" --edit-last --create-if-none --body "Preview: $PREVIEW_URL"
+
+  cleanup:
+    if: github.event_name == 'workflow_dispatch' || (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 17c619232f5d84567cd69896e892f326
+      PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+    steps:
+      # Cleanup uses trusted base-branch code even when the closed PR contained broken code.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - run: bun install --frozen-lockfile
+      - name: Verify PR is closed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh pr view "$PR_NUMBER" --json state --jq .state)" != OPEN
+      - name: Delete Preview, containers, and data resources
+        run: bun run scripts/pr-preview.ts cleanup "$PR_NUMBER"
