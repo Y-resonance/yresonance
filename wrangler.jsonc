@@ -25,8 +25,8 @@
     {
       "binding": "DB",
       "database_name": "yresonance-app",
-      "database_id": "320d2de2-61ae-4e18-97b0-839ae748f2b9",
-      "preview_database_id": "e75e6c03-a9cf-404a-8d10-14d20f393697",
+      "database_id": "6cf6d365-7d3d-4965-b04f-8acaee8c19d6",
+      "preview_database_id": "906b8786-17a4-4068-98c4-c86c069d07ae",
       "migrations_dir": "drizzle",
     },
   ],
@@ -116,7 +116,7 @@
         {
           "binding": "DB",
           "database_name": "yresonance-app-preview",
-          "database_id": "e75e6c03-a9cf-404a-8d10-14d20f393697",
+          "database_id": "906b8786-17a4-4068-98c4-c86c069d07ae",
           "migrations_dir": "drizzle",
         },
       ],
