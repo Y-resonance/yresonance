@@ -12,7 +12,7 @@ import {
   SquareFunctionIcon,
   TypeIcon,
 } from 'lucide-react';
-import { useMemo, useState, type RefObject } from 'react';
+import { useMemo, useState, useSyncExternalStore, type RefObject } from 'react';
 import { Input } from '#/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/components/ui/tooltip';
 import type { DatasourceDescription, DatasourceFieldRow } from '#/domain/datasource-fields';
@@ -119,6 +119,21 @@ export function FormulaFieldList({
   );
 }
 
+// ThemeToggle owns the root class outside React. Observe it so an open editor follows toggles.
+function subscribeToTheme(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  return () => observer.disconnect();
+}
+
+function isDarkTheme() {
+  return document.documentElement.classList.contains('dark');
+}
+
+function serverTheme() {
+  return false;
+}
+
 /** Code editor for a Rundown formula. `validation` drives the inline error underline. */
 export function FormulaInput({
   editorRef,
@@ -139,6 +154,7 @@ export function FormulaInput({
   validation: FormulaValidation;
   height?: string;
 }) {
+  const dark = useSyncExternalStore(subscribeToTheme, isDarkTheme, serverTheme);
   const completion = useMemo(
     () => completionSource(datasource, mode, excludedFieldId),
     [datasource, mode, excludedFieldId],
@@ -162,10 +178,11 @@ export function FormulaInput({
       ref={editorRef}
       value={value}
       height={height}
+      theme={dark ? 'dark' : 'light'}
       extensions={extensions}
       onChange={onChange}
       basicSetup={{ bracketMatching: true, closeBrackets: true, lineNumbers: true }}
-      className="overflow-hidden rounded-md border text-sm [&_.cm-editor]:bg-transparent [&_.cm-editor.cm-focused]:outline-none"
+      className="overflow-hidden rounded-md border text-sm [&_.cm-activeLine]:bg-muted! [&_.cm-activeLineGutter]:bg-muted! [&_.cm-editor]:bg-card! [&_.cm-editor.cm-focused]:outline-none [&_.cm-gutters]:border-border! [&_.cm-gutters]:bg-card!"
       aria-label="Formula"
     />
   );
