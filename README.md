@@ -94,8 +94,11 @@ Clerk, with workspaces mapped to Clerk organizations. Application data lives in 
 Nothing domain-specific is hardcoded: metrics such as VTR or CPV are workspace data, not code.
 
 Preview workspaces automatically receive an "Example campaign data" datasource on their first
-bootstrap. It contains 90 days of synthetic campaign delivery ending on the seed date and goes through
-normal CSV-to-Parquet ingestion and field discovery. Seeding is enabled only by `APP_ENV=preview`;
+bootstrap. The build prepares 90 days of synthetic campaign delivery ending on the build date,
+including Parquet conversion and inspected field metadata. Bootstrap uploads the prepared file and
+registers its fields without starting the query container. `bun run dev`, `build`, `typecheck`, and
+`test:integration` automatically regenerate the ignored `.generated/preview-example.json` fixture.
+Seeding is enabled only by `APP_ENV=preview`;
 local development and production do not seed. Completion is stored per workspace, so redeploying or
 renaming the datasource does not create another example. Failed imports retry on the next bootstrap;
 concurrent requests wait up to two minutes for another Worker isolate to finish. An interrupted

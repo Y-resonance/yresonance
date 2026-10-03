@@ -69,13 +69,70 @@ successful query after those failures against an isolated local fixture server.
 
 ## Deployment boundary
 
-No deployment or production data change was made. The Linux AMD64 baseline build crashed while
-loading DuckDB under this Mac's emulation, an existing limitation also documented in the README.
-The deployed architecture therefore still requires a native AMD64 build and an isolated Cloudflare
-preview benchmark before these local improvements can be translated into a deployed latency claim.
+The initial local experiments did not deploy anything. The Linux AMD64 baseline build crashed
+while loading DuckDB under this Mac's emulation, an existing limitation also documented in the
+README. Native AMD64 CI subsequently built the retained image and deployed it to PR 54's isolated
+preview. The following experiments reuse that deployed image. No production deployment or
+production data change was made.
 
 The previous production request's `containerStartMs` included both startup and transport. New logs
 separate `rundown.query_engine_ready.processStartupMs` inside Bun from
 `rundown.query_engine_start.startupDurationMs` in the Durable Object. Together with the existing
 query and queue timings, they allow a preview benchmark to distinguish process loading, container
 startup, and request transport. Longer idle timeouts and prewarming were not changed.
+
+
+## Cloudflare placement and CPU comparison
+
+On 3 October 2026, a temporary authenticated benchmark Worker ran the same deployed image in
+three isolated container applications. Each application allowed one instance. Every measured
+request began with the SDK reporting `stopped`, awaited readiness with 50 ms polling, executed
+its workload, and destroyed the container. Variant order rotated each round. The test used the
+PR 54 image digest `cb7a7ffe8d15e24b328526116504b6df7a52a16c5d660c4694a34ed0233f9ccf`.
+
+The variants were `basic` with default placement, `basic` constrained to `WEUR` and `EEUR`, and
+`standard-2` constrained to those European regions. Cloudflare confirmed the last configuration
+had 1 vCPU and 6 GiB memory, versus 0.25 vCPU and 1 GiB for `basic`.
+
+| Median measurement | Basic, default | Basic, Europe | 1 vCPU, Europe |
+| --- | ---: | ---: | ---: |
+| Readiness before SELECT 42, 8 starts each | 1,166 ms | 605 ms | 655 ms |
+| Readiness before example ingestion, 6 starts each | 604 ms | 826 ms | 1,000 ms |
+| Example ingestion execution, 6 runs each | 442 ms | 465 ms | 484 ms |
+
+Readiness includes platform allocation, process loading, networking between the Durable Object
+and container, and the SDK health checks. Execution includes HTTP reads and upload through a
+Worker fixture handler. That handler served the same synthetic campaign CSV and accepted the
+Parquet output without D1 or R2. It does not reproduce the preview's complete seeding workflow.
+The client measurements in the [raw results](./benchmarks/2026-10-03-cloudflare-startup.csv) also
+include authentication, RPC, network transport, and container destruction before the response.
+
+All 42 recorded starts completed successfully. Startup variance was large: the first workload's
+basic/default readiness ranged from 472 to 4,648 ms. These samples do not establish a stable
+percentage improvement from regional placement, or compare the PR against an unoptimized deployed
+image. More CPU showed no consistent benefit for either workload, so the PR retains `basic`.
+The repository constrains placement specifically to `WEUR`, rather than both regions used in this
+experiment, to keep query containers near the new PR storage location hints. Existing databases
+and buckets retain their original locations.
+
+The temporary Worker and its three container applications were deleted after the comparison.
+
+## Preview bootstrap without container startup
+
+Build-time preparation packages a 28,906-byte Parquet file with its actual DuckDB description and
+20 sample rows. The current fixture has 2,378 rows from 6 July through 3 October 2026. Its 90-day
+window refreshes on each build. Runtime seeding performs one R2 upload and a D1 batch that inserts
+the datasource, its fields, and the workspace completion marker. It preserves per-workspace
+claims, retry cleanup, naming, and isolation. It creates no ingestion tokens and sends no query
+engine requests. User-uploaded CSVs still use the normal ingestion and inspection path.
+
+`rundown.preview_seed_prepared` records upload time, registration time, and the prepared dataset's
+end date. The existing overall seeding metric remains. A first real widget query can still start
+the container. There is no new deployed end-to-end bootstrap measurement yet; the previous
+9-second observation is not a measured before/after result for this change.
+
+Integration coverage exercises concurrent first requests with an unavailable engine, upload
+failures including a lost acknowledgement, registration failure after upload, abandoned claims,
+workspace isolation, and persisted completion. The unavailable-engine case failed against the
+previous service and passed with prepared seeding. The native DuckDB build fixture was also queried
+directly to validate its row count, date range, and aggregate metrics.
