@@ -71,6 +71,13 @@
       "when": 1791033306546,
       "tag": "0009_quick_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791057254249,
+      "tag": "0010_cascading-foreign-keys",
+      "breakpoints": true
     }
   ]
 }
