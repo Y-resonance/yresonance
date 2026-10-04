@@ -14,9 +14,54 @@ import {
 } from '#/data/clickhouse.server';
 import { hashJson } from '#/domain/hash';
 import { DatasourceError } from './contract';
+import { ingestClickhouseUpload, removeClickhouseUpload } from '#/data/clickhouse-ingestion.server';
+import { deleteSourceObject } from '#/data/source.server';
 
 export const clickhouseBackend: AnalyticsDataBackend = {
   type: 'clickhouse',
+  managedUploads: {
+    async import(dataSource) {
+      // Querying external tables does not need the DuckDB ingestion runtime.
+      const [{ duckdbFileConnector }, { importManagedFile }] = await Promise.all([
+        import('./duckdb-file.server'),
+        import('#/data/file-ingestion.server'),
+      ]);
+      const file = await importManagedFile(
+        { ...dataSource, connectorType: duckdbFileConnector.type },
+        duckdbFileConnector.inspect,
+      );
+      const fileLocation = file.dataSource.location;
+      if (fileLocation.kind !== 'object') throw new Error('Managed upload requires a file object.');
+      try {
+        const location = await ingestClickhouseUpload(
+          dataSource.workspaceId,
+          dataSource.id,
+          fileLocation.key,
+          file.inspection,
+        );
+        return {
+          dataSource: { ...file.dataSource, connectorType: 'clickhouse', location },
+          inspection: file.inspection,
+          async cleanup(outcome) {
+            try {
+              if (outcome === 'failed')
+                await removeClickhouseUpload(
+                  dataSource.workspaceId,
+                  location.database,
+                  location.table,
+                );
+              else await deleteSourceObject(fileLocation.key);
+            } finally {
+              await file.cleanup(outcome);
+            }
+          },
+        };
+      } catch (error) {
+        await file.cleanup('failed').catch(() => undefined);
+        throw error;
+      }
+    },
+  },
   async cacheIdentity(dataSource) {
     await authorizedClickhouseTable(dataSource);
     return {

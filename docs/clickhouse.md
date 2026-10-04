@@ -4,6 +4,12 @@ Choose an analytics backend when registering a datasource. DuckDB remains the de
 Existing file datasources stay on DuckDB. Choosing ClickHouse for an upload creates a new
 managed table; it does not migrate any existing datasource.
 
+The application imports managed uploads through the backend's optional `managedUploads`
+capability. The import returns the inspected datasource and a cleanup method for registration
+success or failure. Conversion, insertion, and storage cleanup stay inside the backend;
+the application owns upload claims and the registration transaction. Query-only backends
+can omit this capability.
+
 Managed CSV uploads still use the existing CSV-to-Parquet conversion. The Worker inspects
 that Parquet file, creates a nullable scalar schema, and streams the file into ClickHouse.
 The table is registered only after insertion succeeds. An import or registration failure

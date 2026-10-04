@@ -52,6 +52,8 @@ explain. Update it when a decision changes, not when an implementation detail do
 - Managed CSV uploads are converted to Parquet before registration. ClickHouse imports stream
   the inspected Parquet into a database per workspace and environment. External tables require
   explicit server-side workspace mappings and SQL grants. Existing DuckDB sources are not migrated.
+  The optional backend `managedUploads` capability owns import and cleanup; the application
+  coordinates upload claims and commits registration without calling either engine directly.
 
 ## Behavior
 
