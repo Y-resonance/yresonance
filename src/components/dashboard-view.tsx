@@ -4,6 +4,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Label,
   Line,
   LineChart,
@@ -14,7 +15,13 @@ import {
 } from 'recharts';
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ChevronsUpDown, X } from 'lucide-react';
-import type { ControlState, DashboardDocument, DashboardWidget, DateRange } from '#/domain/schema';
+import type {
+  ComboMetric,
+  ControlState,
+  DashboardDocument,
+  DashboardWidget,
+  DateRange,
+} from '#/domain/schema';
 import type { QueryResultColumn } from '#/domain/query-result';
 import { callApi } from '#/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card';
@@ -882,14 +889,23 @@ export function Result({
         )
       : undefined;
   let chartRows = comparison?.rows ?? currentRows;
+  const comboMetrics = definition.type === 'combo' ? definition.metrics : undefined;
+  // With both combo axes in use, the legend and tooltip say which scale a series is read against.
+  const axisSuffix = (index: number) => {
+    const axis = comboMetrics?.[index]?.axis;
+    return axis && new Set(comboMetrics.map((metric) => metric.axis)).size > 1
+      ? ` (${axis} axis)`
+      : '';
+  };
   const sourceSeries = [
     ...chartMetrics.map((column, index) => ({
       sourceKey: column.key,
       column,
       colorIndex: index,
-      yAxisId: lineMetricAxis(index),
+      yAxisId: comboMetrics?.[index]?.axis ?? lineMetricAxis(index),
+      mark: comboMetrics?.[index]?.mark ?? 'line',
       isComparison: false,
-      label: column.label,
+      label: `${column.label}${axisSuffix(index)}`,
     })),
     ...(comparison?.series.map((sourceKey, index) => {
       const column = chartMetrics[index]!;
@@ -897,9 +913,10 @@ export function Result({
         sourceKey,
         column,
         colorIndex: index,
-        yAxisId: lineMetricAxis(index),
+        yAxisId: comboMetrics?.[index]?.axis ?? lineMetricAxis(index),
+        mark: comboMetrics?.[index]?.mark ?? 'line',
         isComparison: true,
-        label: `Previous ${column.label}`,
+        label: `Previous ${column.label}${axisSuffix(index)}`,
       };
     }) ?? []),
   ];
@@ -1039,6 +1056,75 @@ export function Result({
         </BarChart>
       </ChartContainer>
     );
+  if (comboMetrics) {
+    const axes = comboChartAxes(comboMetrics, chartMetrics);
+    // Bars render first so lines stay visible on top of them.
+    const ordered = [
+      ...series.filter((item) => item.mark === 'bar'),
+      ...series.filter((item) => item.mark === 'line'),
+    ];
+    return (
+      <ChartContainer
+        role="img"
+        aria-label={`${definition.title} chart`}
+        className="h-72 w-full md:h-full md:min-h-0"
+        config={config}
+      >
+        <ComposedChart data={chartRows}>
+          <CartesianGrid vertical={false} />
+          <XAxis
+            dataKey={dimension.key}
+            tickFormatter={(value) => formatAxisValue(value, dimension)}
+          />
+          {axes.map(({ axis, column, label }) => (
+            <YAxis
+              key={axis}
+              yAxisId={axis}
+              orientation={axis}
+              width={axes.length > 1 ? 76 : undefined}
+              tickFormatter={(value) => formatAxisValue(value, column)}
+            >
+              {axes.length > 1 ? (
+                <Label
+                  value={label}
+                  angle={axis === 'left' ? -90 : 90}
+                  position={axis === 'left' ? 'insideLeft' : 'insideRight'}
+                  className="fill-muted-foreground text-[11px]"
+                  style={{ textAnchor: 'middle' }}
+                />
+              ) : null}
+            </YAxis>
+          ))}
+          {tooltip}
+          {ordered.map((item) =>
+            item.mark === 'bar' ? (
+              <Bar
+                key={item.key}
+                dataKey={item.key}
+                yAxisId={item.yAxisId}
+                fill={`var(--color-${item.key})`}
+                fillOpacity={item.isComparison ? 0.5 : 1}
+                radius={6}
+                isAnimationActive={false}
+              />
+            ) : (
+              <Line
+                key={item.key}
+                dataKey={item.key}
+                yAxisId={item.yAxisId}
+                stroke={`var(--color-${item.key})`}
+                strokeWidth={2}
+                strokeDasharray={item.isComparison ? '4 4' : undefined}
+                dot={false}
+                isAnimationActive={false}
+              />
+            ),
+          )}
+          <ChartLegend content={<ChartLegendContent />} />
+        </ComposedChart>
+      </ChartContainer>
+    );
+  }
   const axes = lineChartAxes(chartMetrics);
   return (
     <ChartContainer
@@ -1123,6 +1209,17 @@ export function lineChartAxes(metrics: QueryResultColumn[]) {
     yAxisId: lineMetricAxis(index),
     orientation: index === 0 ? ('left' as const) : ('right' as const),
   }));
+}
+
+// One y-axis per side that carries a combo metric. Validation keeps one data type per axis, so the
+// first metric on a side formats its ticks and the caption names every metric drawn against it.
+export function comboChartAxes(metrics: ComboMetric[], columns: QueryResultColumn[]) {
+  return (['left', 'right'] as const).flatMap((axis) => {
+    const onAxis = columns.filter((_, index) => metrics[index]?.axis === axis);
+    return onAxis.length
+      ? [{ axis, column: onAxis[0]!, label: onAxis.map((column) => column.label).join(', ') }]
+      : [];
+  });
 }
 
 export function initialControlState(dashboard: DashboardDocument): ControlState {

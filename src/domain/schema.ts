@@ -148,6 +148,13 @@ const metricSchema = z.object({
   styling: stylingSchema,
 });
 
+// A combo chart draws each metric as bars or a line on the left or right axis, so a ratio can sit
+// next to a currency value without flattening against its scale.
+const comboMetricSchema = metricSchema.extend({
+  mark: z.enum(['bar', 'line']),
+  axis: z.enum(['left', 'right']),
+});
+
 const dimensionSchema = z.object({
   fieldId: z.string().min(1),
   userDefinedName: z.string().trim().min(1).optional(),
@@ -224,6 +231,27 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     metrics: z.array(metricSchema).min(1),
     comparison: comparisonSchema.optional(),
   }),
+  z
+    .object({
+      ...cardBase,
+      type: z.literal('combo'),
+      dimension: dimensionSchema,
+      metrics: z.array(comboMetricSchema).min(1),
+      comparison: comparisonSchema.optional(),
+    })
+    // One axis has one tick format, so it cannot carry both a currency and a percentage.
+    .refine(
+      (definition) =>
+        (['left', 'right'] as const).every(
+          (axis) =>
+            new Set(
+              definition.metrics
+                .filter((metric) => metric.axis === axis)
+                .map((metric) => metric.dataType),
+            ).size <= 1,
+        ),
+      { message: 'Metrics on the same axis must share a data type.', path: ['metrics'] },
+    ),
   z.object({
     ...cardBase,
     type: z.literal('bar'),
@@ -340,6 +368,7 @@ export type DashboardDocument = z.infer<typeof dashboardDocumentSchema>;
 export type DashboardWidget = z.infer<typeof dashboardWidgetSchema>;
 export type WidgetDefinition = z.infer<typeof widgetDefinitionSchema>;
 export type WidgetMetric = z.infer<typeof metricSchema>;
+export type ComboMetric = z.infer<typeof comboMetricSchema>;
 export type DateGranularity = z.infer<typeof dateGranularitySchema>;
 export type ControlState = z.infer<typeof controlStateSchema>;
 export type DateRange = z.infer<typeof dateRangeSchema>;

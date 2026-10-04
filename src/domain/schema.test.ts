@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardDocumentSchema, defaultDateRange } from './schema';
+import { dashboardDocumentSchema, defaultDateRange, widgetDefinitionSchema } from './schema';
 
 describe('dashboard document schema', () => {
   it('derives canvas rows for documents saved before the field existed', () => {
@@ -57,5 +57,42 @@ describe('dashboard document schema', () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it('accepts one data type per combo axis and rejects mixed units on one axis', () => {
+    const combo = {
+      type: 'combo',
+      title: 'Spend and CTR',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      dimension: { fieldId: 'date' },
+      metrics: [
+        {
+          source: { kind: 'field', fieldId: 'spend', aggregation: 'sum' },
+          dataType: 'currency',
+          mark: 'bar',
+          axis: 'left',
+        },
+        {
+          source: { kind: 'field', fieldId: 'ctr', aggregation: 'average' },
+          dataType: 'percent',
+          mark: 'line',
+          axis: 'right',
+        },
+        {
+          source: { kind: 'field', fieldId: 'budget', aggregation: 'sum' },
+          dataType: 'currency',
+          mark: 'line',
+          axis: 'left',
+        },
+      ],
+    };
+
+    expect(widgetDefinitionSchema.safeParse(combo).success).toBe(true);
+    const mixed = structuredClone(combo);
+    mixed.metrics[2]!.axis = 'right';
+    expect(widgetDefinitionSchema.safeParse(mixed).error?.issues[0]?.message).toBe(
+      'Metrics on the same axis must share a data type.',
+    );
   });
 });

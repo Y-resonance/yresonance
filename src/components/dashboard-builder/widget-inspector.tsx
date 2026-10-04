@@ -860,6 +860,7 @@ function TypeSettings({
   switch (definition.type) {
     case 'scorecard':
     case 'line':
+    case 'combo':
       return (
         <ComparisonSetting
           value={definition.comparison?.mode ?? 'none'}

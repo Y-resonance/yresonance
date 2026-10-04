@@ -87,7 +87,7 @@ export function remapWidgetDefinition(
     return widgetDefinitionSchema.parse({ ...common, fieldId: fieldId(definition.fieldId) });
   if (definition.type === 'scorecard' || definition.type === 'gauge')
     return widgetDefinitionSchema.parse({ ...common, metric: metric(definition.metric) });
-  if (definition.type === 'line')
+  if (definition.type === 'line' || definition.type === 'combo')
     return widgetDefinitionSchema.parse({
       ...common,
       dimension: dimension(definition.dimension),
