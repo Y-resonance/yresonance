@@ -255,7 +255,18 @@ export async function duplicateDashboard(
       return { widget, remapped: false };
     }
   });
-  if (unmatched.length)
+  if (unmatched.length) {
+    console.info('yresonance.dashboard_duplicate', {
+      dashboardId: original.document.id,
+      result: 'unmatched_fields',
+      unmatchedWidgetCount: unmatched.length,
+      canonicalNames: [...new Set(unmatched.flatMap((item) => item.canonicalNames))],
+    });
+    recordProductMetric('dashboard_duplicate', {
+      labels: ['mapped', 'unmatched_fields'],
+      numbers: [original.document.widgets.length, unmatched.length],
+      index: workspaceId,
+    });
     throw new ApiError(
       400,
       'canonical_field_missing',
@@ -264,6 +275,7 @@ export async function duplicateDashboard(
         .join('; ')}. Add or rename these fields on the target datasource and retry.`,
       unmatched,
     );
+  }
   const widgets = await Promise.all(
     remapped.map(async (item): Promise<DashboardWidget> => {
       const id = `widget_${crypto.randomUUID()}`;
@@ -297,13 +309,14 @@ export async function duplicateDashboard(
   await insertDashboard(document);
   console.info('yresonance.dashboard_duplicate', {
     dashboardId: original.document.id,
+    result: 'success',
     duplicateId: document.id,
     widgetCount: widgets.length,
     remappedWidgetCount: remappedCount,
     mapped: mapping.size > 0,
   });
   recordProductMetric('dashboard_duplicate', {
-    labels: [mapping.size ? 'mapped' : 'plain'],
+    labels: [mapping.size ? 'mapped' : 'plain', 'success'],
     numbers: [widgets.length, remappedCount],
     index: workspaceId,
   });

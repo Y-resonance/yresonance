@@ -149,6 +149,7 @@ function DashboardContent() {
                     ],
                   }}
                   dataSources={payload.dataSources}
+                  disabled={saveStatus !== 'saved'}
                 />
                 <DashboardSharing
                   dashboardId={dashboardId}

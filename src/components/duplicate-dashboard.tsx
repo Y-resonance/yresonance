@@ -24,10 +24,13 @@ export function DuplicateDashboard({
   dashboard,
   dataSources,
   compact = false,
+  disabled = false,
 }: {
   dashboard: { id: string; name: string; dataSourceIds: string[] };
   dataSources: Array<{ id: string; name: string }>;
   compact?: boolean;
+  // The server copies the stored version, so the builder blocks this while edits are unsaved.
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -78,7 +81,9 @@ export function DuplicateDashboard({
           <TooltipContent>Duplicate</TooltipContent>
         </Tooltip>
       ) : (
-        <DialogTrigger render={<Button variant="outline" />}>Duplicate</DialogTrigger>
+        <DialogTrigger render={<Button variant="outline" disabled={disabled} />}>
+          Duplicate
+        </DialogTrigger>
       )}
       <DialogContent showCloseButton={!pending}>
         <DialogHeader>
