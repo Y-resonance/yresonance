@@ -1,0 +1,12 @@
+[
+  {
+    "event_name": "product_action",
+    "event_description": "Records each validated API action's outcome, duration, identifiers, and GUI or WebMCP origin.",
+    "file": "src/routes/api.yresonance.ts"
+  },
+  {
+    "event_name": "workspace_action",
+    "event_description": "Records success or failure when creating, joining, selecting, or activating a workspace.",
+    "file": "src/components/workspace-gate.tsx"
+  }
+]
