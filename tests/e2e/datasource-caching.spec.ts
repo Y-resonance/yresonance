@@ -31,8 +31,7 @@ for (const role of ['editor', 'viewer', 'shared'] as const) {
       if (request.action === 'queryWidget') requests.push(request);
       return route.fallback();
     });
-    // Editor uses the consuming view; its builder queries run as uncached previews already.
-    await page.goto(role === 'shared' ? '/share/demo' : '/dashboards/dash_demo?preview=viewer');
+    await page.goto(role === 'shared' ? '/share/demo' : '/dashboards/dash_demo');
     const refresh = page.getByRole('button', { name: 'Fetch fresh data' });
     await expect(refresh).toBeEnabled();
     // Refresh must retain the selected platform.
