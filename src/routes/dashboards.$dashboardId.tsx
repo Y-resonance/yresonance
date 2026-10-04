@@ -1,4 +1,5 @@
 import { DashboardPages } from '#/components/dashboard-pages';
+import { dashboardWidgets } from '#/domain/schema';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { createFileRoute } from '@tanstack/react-router';
 import { CloudAlertIcon, CloudCheckIcon, LoaderCircleIcon } from 'lucide-react';
@@ -17,6 +18,7 @@ import {
   dashboardDateControlRange,
   initialControlState,
 } from '#/components/dashboard-view';
+import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { ErrorState, LoadingState } from '#/components/request-state';
 import { Badge } from '#/components/ui/badge';
 import { Label } from '#/components/ui/label';
@@ -153,6 +155,23 @@ function DashboardContent() {
                   />
                 </Label>
                 <SaveStatusIndicator status={saveStatus} />
+                <DuplicateDashboard
+                  dashboard={{
+                    id: dashboardId,
+                    name: payload.dashboard.name,
+                    dataSourceIds: [
+                      ...new Set(
+                        dashboardWidgets(payload.dashboard).flatMap((widget) =>
+                          'dataSourceId' in widget.definition
+                            ? [widget.definition.dataSourceId]
+                            : [],
+                        ),
+                      ),
+                    ],
+                  }}
+                  dataSources={payload.dataSources}
+                  disabled={saveStatus !== 'saved'}
+                />
                 <DashboardSharing
                   dashboardId={dashboardId}
                   sharing={payload.sharing ?? { links: [], grants: [] }}

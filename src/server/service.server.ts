@@ -13,6 +13,7 @@ import {
   createDashboard,
   updateDashboard,
   deleteDashboard,
+  duplicateDashboard,
   addWidget,
   updateWidget,
   removeWidget,
@@ -103,6 +104,8 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
       return updateDashboard(request);
     case 'deleteDashboard':
       return deleteDashboard(request.dashboardId);
+    case 'duplicateDashboard':
+      return duplicateDashboard(request);
     case 'addWidget':
       return addWidget(request);
     case 'updateWidget':
@@ -190,6 +193,7 @@ const dashboardSaveActions = new Set<ApiRequest['action']>([
   'removePage',
   'createDashboard',
   'updateDashboard',
+  'duplicateDashboard',
   'addWidget',
   'updateWidget',
   'removeWidget',

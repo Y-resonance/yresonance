@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { DashboardDocument, DashboardWidget } from '#/domain/schema';
-import { signOut } from './doubles/clerk';
+import { signOut, setClerkDirectory } from './doubles/clerk';
 import { queryEngine } from './doubles/query-engine';
 import {
   addWidget,
@@ -11,6 +11,8 @@ import {
   scorecardDefinition,
   seedDataSource,
   signInToNewWorkspace,
+  newUserId,
+  signInAsUser,
 } from './fixtures';
 
 async function openDashboard(dashboardId: string) {
@@ -135,6 +137,22 @@ describe('dashboard pages', () => {
       dashboardId: dashboard.id,
       operation: { kind: 'createLink' },
     })) as { token: string };
+    const viewerId = newUserId();
+    setClerkDirectory([{ id: viewerId, emailAddress: 'page-viewer@example.com' }]);
+    await callService({
+      action: 'shareDashboard',
+      dashboardId: dashboard.id,
+      operation: { kind: 'grant', userEmail: 'page-viewer@example.com', role: 'viewer' },
+    });
+    signInAsUser(workspace, viewerId);
+    await expectApiError(
+      callService({
+        action: 'describeDatasource',
+        dashboardId: dashboard.id,
+        dataSourceId: source.id,
+      }),
+      { status: 403, code: 'datasource_access_denied' },
+    );
     signOut();
     const opened = (await callService({
       action: 'getSharedDashboard',

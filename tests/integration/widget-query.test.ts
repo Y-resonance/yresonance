@@ -23,6 +23,7 @@ interface QueryResult {
   controlState: { values?: Record<string, unknown[]> };
   page?: number;
   hasMore?: boolean;
+  scaleBounds?: Record<string, { min: number; max: number }>;
 }
 
 async function seedScorecardDashboard() {
@@ -163,6 +164,56 @@ describe('widget queries', () => {
     expect(
       ((await callService({ action: 'queryWidget', dashboardId, widgetId })) as QueryResult).cache,
     ).toBe('miss');
+  });
+
+  test('a paged table reads color scale bounds over the whole result', async () => {
+    const workspace = await signInToNewWorkspace();
+    const source = await seedDataSource(workspace);
+    const dashboard = await createDashboard();
+    const revenue = {
+      source: {
+        kind: 'field' as const,
+        fieldId: source.fieldIds.revenue,
+        aggregation: 'sum' as const,
+      },
+      dataType: 'currency' as const,
+    };
+    const widget = await addWidget(dashboard.id, {
+      type: 'table',
+      title: 'Revenue by region',
+      dataSourceId: source.id,
+      dateRangeFieldId: source.fieldIds.day,
+      dimensions: [{ fieldId: source.fieldIds.region }],
+      metrics: [
+        revenue,
+        { ...revenue, colorScale: { style: 'heatmap', color: 'positive' } },
+        { ...revenue, colorScale: { style: 'bar', color: 'neutral' } },
+      ],
+      resultLimit: { mode: 'pagination', amount: 1 },
+    });
+    queryEngine.answerWith((request) => ({
+      body: {
+        ok: true,
+        data:
+          request.operation !== 'query'
+            ? []
+            : request.sql.includes('AS scaled')
+              ? [{ min_1: 1, max_1: 2, min_2: 5, max_2: 900, min_3: null, max_3: null }]
+              : [{ dimension_1: 'north', metric_1: 50, metric_2: 50 }],
+        metrics: { queryDurationMs: 1, queueDurationMs: 0, resultBytes: 2 },
+      },
+    }));
+
+    const result = (await callService({
+      action: 'queryWidget',
+      dashboardId: dashboard.id,
+      widgetId: widget.id,
+      page: 1,
+    })) as QueryResult;
+
+    expect(result.scaleBounds).toEqual({ metric_2: { min: 5, max: 900 } });
+    const boundsQuery = queryEngine.queryCalls.find((call) => call.sql.includes('AS scaled'));
+    expect(boundsQuery?.sql).not.toContain('LIMIT');
   });
 
   test('a share link can run the widget query without a session', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardDocumentSchema, defaultDateRange } from './schema';
+import { dashboardDocumentSchema, defaultDateRange, widgetDefinitionSchema } from './schema';
 
 describe('dashboard document schema', () => {
   it('derives canvas rows for documents saved before the field existed', () => {
@@ -69,5 +69,30 @@ describe('dashboard document schema', () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it('rejects a table metric with both threshold rules and a color scale', () => {
+    const table = (metric: Record<string, unknown>) =>
+      widgetDefinitionSchema.safeParse({
+        type: 'table',
+        title: 'Campaigns',
+        dataSourceId: 'source',
+        dateRangeFieldId: 'date',
+        dimensions: [],
+        metrics: [
+          {
+            source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+            dataType: 'currency',
+            ...metric,
+          },
+        ],
+        resultLimit: { mode: 'top', amount: 10 },
+      }).success;
+    const colorScale = { style: 'heatmap', color: 'negative', invert: true };
+
+    expect(table({ colorScale })).toBe(true);
+    expect(
+      table({ colorScale, conditionalFormat: [{ comparator: 'gt', value: 1, color: 'positive' }] }),
+    ).toBe(false);
   });
 });

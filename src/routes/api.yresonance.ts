@@ -31,7 +31,12 @@ export const Route = createFileRoute('/api/yresonance')({
                   : error instanceof ZodError
                     ? 'The request is invalid.'
                     : 'yresonance could not complete the request.',
-              issues: error instanceof ZodError ? error.issues : undefined,
+              issues:
+                error instanceof ZodError
+                  ? error.issues
+                  : error instanceof ApiError
+                    ? error.issues
+                    : undefined,
             },
           };
           if (!(error instanceof ApiError) && !(error instanceof ZodError))

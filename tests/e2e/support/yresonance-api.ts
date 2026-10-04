@@ -167,7 +167,12 @@ interface MockOptions {
  * behaviour can be exercised against the real routes without a Clerk session.
  */
 export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
-  const state = { dashboard: buildDashboard(), source: description(), nextWidget: 0 };
+  const state = {
+    dashboard: buildDashboard(),
+    source: description(),
+    nextWidget: 0,
+    duplicateRequests: [] as unknown[],
+  };
   const ok = (route: Route, data: unknown) =>
     route.fulfill({
       status: 200,
@@ -226,8 +231,21 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         return ok(route, { pageId: request.pageId });
       case 'bootstrap':
         return ok(route, {
+          workspace: { id: 'ws_demo', name: 'Demo workspace' },
           isAdmin: options.isAdmin ?? true,
-          dataSources: [{ id: dataSourceId, name: state.source.name }],
+          dashboards: [
+            {
+              id: state.dashboard.id,
+              name: state.dashboard.name,
+              canEdit: (options.role ?? 'editor') !== 'viewer',
+              dataSourceIds: [dataSourceId],
+              updatedAt: state.dashboard.updatedAt,
+            },
+          ],
+          dataSources: [
+            { id: dataSourceId, name: state.source.name },
+            { id: 'src_client_b', name: 'Client B reporting' },
+          ],
         });
       case 'listDashboards':
         return ok(route, [{ id: state.dashboard.id, name: state.dashboard.name }]);
@@ -406,6 +424,9 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
           ),
         };
         return ok(route, { ok: true });
+      case 'duplicateDashboard':
+        state.duplicateRequests.push(request);
+        return ok(route, { ...state.dashboard, id: 'dash_copy', name: request.name });
       case 'listLibraryMetrics':
         return ok(route, []);
       case 'listR2Objects':

@@ -16,6 +16,7 @@ import { CircleHelpIcon, Trash2Icon, PlusIcon } from 'lucide-react';
 import { Button } from '#/components/ui/button';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
 import { Input } from '#/components/ui/input';
+import { Switch } from '#/components/ui/switch';
 import { type QuerySettingsProps } from './shared';
 import {
   fieldChoices,
@@ -236,8 +237,9 @@ export function MetricSettings({
                 {definition.type === 'table' ? (
                   <ConditionalFormatSettings
                     metric={metric}
-                    onChange={async (conditionalFormat) => {
-                      await update(index, { ...metric, conditionalFormat });
+                    metricLabel={`metric ${index + 1}`}
+                    onChange={async (next) => {
+                      await update(index, next);
                     }}
                   />
                 ) : null}
@@ -276,31 +278,79 @@ export function MetricSettings({
 }
 
 type ConditionalFormat = NonNullable<WidgetMetric['conditionalFormat']>;
+type ColorScale = NonNullable<WidgetMetric['colorScale']>;
 
+// A metric is formatted by threshold rules or by a scale over its values, never both.
 function ConditionalFormatSettings({
   metric,
+  metricLabel,
   onChange,
 }: {
   metric: WidgetMetric;
-  onChange: (rules: ConditionalFormat | undefined) => Promise<void>;
+  metricLabel: string;
+  onChange: (metric: WidgetMetric) => Promise<void>;
 }) {
   const rules = metric.conditionalFormat ?? [];
+  const scale = metric.colorScale;
+  const setRules = (next: ConditionalFormat) =>
+    onChange({ ...metric, conditionalFormat: next.length ? next : undefined });
   const update = (index: number, rule: ConditionalFormat[number]) =>
-    onChange(rules.map((item, itemIndex) => (itemIndex === index ? rule : item)));
+    setRules(rules.map((item, itemIndex) => (itemIndex === index ? rule : item)));
+  const setScale = (next: ColorScale) =>
+    onChange({ ...metric, conditionalFormat: undefined, colorScale: next });
   return (
     <div className="grid gap-2 pl-2">
       <div className="flex items-center justify-between gap-2">
         <FieldLabel>Conditional formatting</FieldLabel>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() =>
-            void onChange([...rules, { comparator: 'gte', value: 0, color: 'positive' }])
-          }
-        >
-          <PlusIcon data-icon="inline-start" /> Add rule
-        </Button>
+        <div className="flex items-center gap-1">
+          <NativeSelect
+            size="sm"
+            aria-label={`Formatting style for ${metricLabel}`}
+            value={scale?.style ?? 'rules'}
+            onChange={(event) => {
+              const style = event.target.value;
+              void (style === 'heatmap' || style === 'bar'
+                ? setScale({ ...scale, style, color: scale?.color ?? 'positive' })
+                : onChange({ ...metric, colorScale: undefined }));
+            }}
+          >
+            <NativeSelectOption value="rules">Rules</NativeSelectOption>
+            <NativeSelectOption value="heatmap">Heatmap</NativeSelectOption>
+            <NativeSelectOption value="bar">Bar</NativeSelectOption>
+          </NativeSelect>
+          {scale ? null : (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() =>
+                void setRules([...rules, { comparator: 'gte', value: 0, color: 'positive' }])
+              }
+            >
+              <PlusIcon data-icon="inline-start" /> Add rule
+            </Button>
+          )}
+        </div>
       </div>
+      {scale ? (
+        <div className="flex items-center gap-3">
+          <NativeSelect
+            aria-label={`Scale color for ${metricLabel}`}
+            value={scale.color}
+            onChange={(event) =>
+              void setScale({ ...scale, color: event.target.value as ColorScale['color'] })
+            }
+          >
+            <SemanticColorOptions />
+          </NativeSelect>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={scale.invert ?? false}
+              onCheckedChange={(invert) => void setScale({ ...scale, invert: invert || undefined })}
+            />
+            Lower is better
+          </label>
+        </div>
+      ) : null}
       {rules.map((rule, index) => (
         <div key={index} className="grid grid-cols-[1fr_5rem_6rem_auto] items-center gap-1">
           <NativeSelect
@@ -337,25 +387,30 @@ function ConditionalFormatSettings({
               })
             }
           >
-            <NativeSelectOption value="positive">Positive</NativeSelectOption>
-            <NativeSelectOption value="warning">Warning</NativeSelectOption>
-            <NativeSelectOption value="negative">Negative</NativeSelectOption>
-            <NativeSelectOption value="neutral">Neutral</NativeSelectOption>
+            <SemanticColorOptions />
           </NativeSelect>
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label={`Remove rule ${index + 1}`}
-            onClick={() => {
-              const next = rules.filter((_, itemIndex) => itemIndex !== index);
-              void onChange(next.length ? next : undefined);
-            }}
+            onClick={() => void setRules(rules.filter((_, itemIndex) => itemIndex !== index))}
           >
             <Trash2Icon />
           </Button>
         </div>
       ))}
     </div>
+  );
+}
+
+function SemanticColorOptions() {
+  return (
+    <>
+      <NativeSelectOption value="positive">Positive</NativeSelectOption>
+      <NativeSelectOption value="warning">Warning</NativeSelectOption>
+      <NativeSelectOption value="negative">Negative</NativeSelectOption>
+      <NativeSelectOption value="neutral">Neutral</NativeSelectOption>
+    </>
   );
 }
 
