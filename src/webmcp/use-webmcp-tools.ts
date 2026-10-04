@@ -153,14 +153,14 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
+                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
             {
               action: 'updateWidget',
               description:
-                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors or a colorScale heatmap or in-cell bar (invert when lower is better), not both; showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle.',
+                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors or a colorScale heatmap or in-cell bar (invert when lower is better), not both; showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle.',
               readOnly: false,
               fixed,
             },
@@ -360,7 +360,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
               ...input,
             });
             options.onToolUse?.(spec.action);
-            const result = await callApi(request);
+            const result = await callApi(request, { source: 'webmcp' });
             if (!spec.readOnly) await options.onMutation?.();
             return result;
           },
@@ -393,6 +393,9 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
     target: 'draft-07',
     unrepresentable: 'any',
     reused: 'ref',
+    // Tools describe what an agent may send, so defaulted fields stay optional and unknown keys
+    // are not forbidden; zod strips them. This also keeps descriptors within browser size limits.
+    io: 'input',
   });
   const removed = new Set(['action', ...Object.keys(fixed ?? {})]);
   if (json.properties) for (const key of removed) delete json.properties[key];

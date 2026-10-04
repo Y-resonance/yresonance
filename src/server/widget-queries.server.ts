@@ -595,7 +595,7 @@ function definitionFieldIds(definition: WidgetDefinition) {
 }
 
 function definitionDimensions(definition: WidgetDefinition) {
-  if (definition.type === 'line') return [definition.dimension];
+  if (definition.type === 'line' || definition.type === 'combo') return [definition.dimension];
   if (definition.type === 'bar' || definition.type === 'pie')
     return [
       definition.dimension,

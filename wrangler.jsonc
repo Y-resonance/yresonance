@@ -8,6 +8,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "APP_ENV": "production",
+    "POSTHOG_ENABLED": "false",
+    "POSTHOG_PROJECT_TOKEN": "",
+    "POSTHOG_HOST": "https://eu.i.posthog.com",
     "CLICKHOUSE_DATABASE": "yresonance_production",
     "QUERY_CACHE_NAME": "yresonance-query-cache",
     "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
@@ -100,6 +103,9 @@
       "routes": [],
       "vars": {
         "APP_ENV": "preview",
+        "POSTHOG_ENABLED": "false",
+        "POSTHOG_PROJECT_TOKEN": "",
+        "POSTHOG_HOST": "https://eu.i.posthog.com",
         "CLICKHOUSE_DATABASE": "yresonance_preview_shared",
         "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
         "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
@@ -163,6 +169,9 @@
   "previews": {
     "vars": {
       "APP_ENV": "preview",
+      "POSTHOG_ENABLED": "false",
+      "POSTHOG_PROJECT_TOKEN": "",
+      "POSTHOG_HOST": "https://eu.i.posthog.com",
       "CLICKHOUSE_DATABASE": "yresonance_preview_shared",
       "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
       "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
