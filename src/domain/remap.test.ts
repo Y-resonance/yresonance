@@ -84,7 +84,7 @@ describe('widget datasource remapping', () => {
     });
   });
 
-  it('rejects a target missing a referenced canonical field', () => {
+  it('lists every canonical field the target is missing', () => {
     expect(() =>
       remapWidgetDefinition(
         {
@@ -92,6 +92,10 @@ describe('widget datasource remapping', () => {
           title: 'Spend',
           dataSourceId: 'source',
           dateRangeFieldId: 'source_date',
+          filter: {
+            conditions: [{ fieldId: 'source_campaign', operator: 'isNotEmpty' }],
+            connector: 'and',
+          },
           metric: {
             source: { kind: 'field', fieldId: 'source_spend', aggregation: 'sum' },
             dataType: 'currency',
@@ -104,7 +108,7 @@ describe('widget datasource remapping', () => {
           calculatedFields: [],
         },
       ),
-    ).toThrow('source_spend');
+    ).toThrow('Target datasource has no canonical field campaign, spend.');
   });
 
   it('matches expression identifiers using DuckDB casing rules', () => {
@@ -477,6 +481,6 @@ describe('widget datasource remapping', () => {
           calculatedFields: [],
         },
       ),
-    ).toThrow('source_campaign');
+    ).toThrow('no canonical field campaign.');
   });
 });

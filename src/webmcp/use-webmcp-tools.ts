@@ -39,6 +39,9 @@ interface ToolSpec {
   fixed?: Record<string, unknown>;
 }
 
+const duplicateDashboardDescription =
+  'Copy a dashboard under a new name. dataSourceMapping ({ sourceId: targetId }) points widgets at another datasource, matching fields by canonical name. Fails without storing anything and lists the unmatched canonical fields per widget when the target lacks them. Share links and grants are not copied. Returns the new dashboard.';
+
 export function useWebMcpTools(options: WebMcpOptions) {
   const [available, setAvailable] = useState(false);
 
@@ -161,6 +164,12 @@ export function useWebMcpTools(options: WebMcpOptions) {
               fixed,
             },
             {
+              action: 'duplicateDashboard',
+              description: duplicateDashboardDescription,
+              readOnly: false,
+              fixed,
+            },
+            {
               action: 'copyWidget',
               description:
                 'Copy a widget from another visible dashboard into the open dashboard. Optionally select a target datasource; referenced fields are remapped by canonical name.',
@@ -241,6 +250,11 @@ export function useWebMcpTools(options: WebMcpOptions) {
               action: 'shareDashboard',
               description:
                 'Create or revoke read-only dashboard links, or manage user grants. Requires editor access and changes access.',
+              readOnly: false,
+            },
+            {
+              action: 'duplicateDashboard',
+              description: duplicateDashboardDescription,
               readOnly: false,
             },
             {
