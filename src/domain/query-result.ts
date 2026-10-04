@@ -65,7 +65,7 @@ export function queryResultColumns(
 }
 
 function widgetDimensions(definition: WidgetDefinition) {
-  if (definition.type === 'line') return [definition.dimension];
+  if (definition.type === 'line' || definition.type === 'combo') return [definition.dimension];
   if (definition.type === 'bar' || definition.type === 'pie') {
     return [
       definition.dimension,
@@ -85,7 +85,9 @@ function widgetMetrics(definition: WidgetDefinition) {
     definition.type === 'pie'
   )
     return [definition.metric];
-  return definition.type === 'line' || definition.type === 'table' ? definition.metrics : [];
+  return definition.type === 'line' || definition.type === 'combo' || definition.type === 'table'
+    ? definition.metrics
+    : [];
 }
 
 function fieldById(fieldId: string, metadata: QueryResultMetadata) {

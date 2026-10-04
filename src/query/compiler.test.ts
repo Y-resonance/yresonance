@@ -250,19 +250,23 @@ describe('query compiler', () => {
     expect(result.sql).toContain('ORDER BY 1 ASC');
   });
 
-  it('buckets date dimensions to the widget target', () => {
+  const cost = {
+    source: { kind: 'field' as const, fieldId: 'cost', aggregation: 'sum' as const },
+    dataType: 'currency' as const,
+  };
+  const dateChart = {
+    title: 'Cost by date',
+    dataSourceId: 'source',
+    dateRangeFieldId: 'date',
+    dimension: { fieldId: 'date', dateGranularity: 'auto' as const },
+  };
+  it.each<WidgetDefinition>([
+    { ...dateChart, type: 'line', metrics: [cost] },
+    { ...dateChart, type: 'combo', metrics: [{ ...cost, mark: 'bar', axis: 'left' }] },
+  ])('buckets $type date dimensions to the widget target', (definition) => {
     const result = compileWidgetQuery({
       dashboard,
-      definition: {
-        type: 'line',
-        title: 'Cost by date',
-        dataSourceId: 'source',
-        dateRangeFieldId: 'date',
-        dimension: { fieldId: 'date', dateGranularity: 'auto' },
-        metrics: [
-          { source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' }, dataType: 'currency' },
-        ],
-      },
+      definition,
       dataSource,
       fields,
       calculatedFields: [],

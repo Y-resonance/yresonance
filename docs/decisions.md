@@ -64,6 +64,9 @@ explain. Update it when a decision changes, not when an implementation detail do
 - Tools are generic (`addWidget`, `updateWidget`, `moveWidget`) rather than one per feature. Their
   input schemas are generated from the zod contracts the API validates with, so tool and API cannot
   drift. Descriptions state what a tool returns, because ChatGPT ignores `outputSchema`.
+- Bars and lines on two explicit axes are a separate `combo` widget, so `line` and `bar`
+  definitions keep their shape. Each axis is formatted from one data type, so mixing units on one
+  axis is rejected.
 - `updateWidget` takes a full definition. No deep patches, because patches on arrays such as
   `metrics` are ambiguous.
 - `addWidget` accepts only width and height and appends at the bottom. Agents do not compute
@@ -81,5 +84,5 @@ explain. Update it when a decision changes, not when an implementation detail do
 ## Deferred
 
 Data catalog beyond the field lookup table. Ingestion and transformation pipelines. Blends and
-cross-source fields. Nested filter groups. Percent-of-total comparison modes. Line chart axis
-override. Per-workspace R2 buckets.
+cross-source fields. Nested filter groups. Percent-of-total comparison modes. Stacked bars and
+breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.

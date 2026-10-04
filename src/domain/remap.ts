@@ -107,11 +107,13 @@ export function remapWidgetDefinition(
     return finish({ ...common, fieldId: fieldId(definition.fieldId) });
   if (definition.type === 'scorecard' || definition.type === 'gauge')
     return finish({ ...common, metric: metric(definition.metric) });
-  if (definition.type === 'line')
+  if (definition.type === 'line' || definition.type === 'combo')
     return finish({
       ...common,
       dimension: dimension(definition.dimension),
-      drillDimensions: definition.drillDimensions?.map(dimension),
+      ...(definition.type === 'line'
+        ? { drillDimensions: definition.drillDimensions?.map(dimension) }
+        : {}),
       metrics: definition.metrics.map(metric),
     });
   if (definition.type === 'bar' || definition.type === 'pie')

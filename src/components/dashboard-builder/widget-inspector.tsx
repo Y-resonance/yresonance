@@ -418,15 +418,14 @@ function DimensionSettings({
                     'auto',
                   );
                   // A date top level cannot be drilled from, so its drill levels go with it.
-                  void commit({
-                    ...definition,
-                    dimension,
-                    drillDimensions: fields.some(
-                      (field) => field.id === fieldId && field.semanticType === 'date',
-                    )
-                      ? undefined
-                      : definition.drillDimensions,
-                  });
+                  const date = fields.some(
+                    (field) => field.id === fieldId && field.semanticType === 'date',
+                  );
+                  void commit(
+                    definition.type === 'combo' || !date
+                      ? { ...definition, dimension }
+                      : { ...definition, dimension, drillDimensions: undefined },
+                  );
                 }}
               />
             </div>
@@ -445,7 +444,7 @@ function DimensionSettings({
               commit({ ...definition, dimension: { ...definition.dimension, dateGranularity } })
             }
           />
-        ) : (
+        ) : definition.type === 'combo' ? null : (
           <DrillDownSettings definition={definition} fields={fields} commit={commit} />
         )}
       </>
@@ -944,6 +943,7 @@ function TypeSettings({
   switch (definition.type) {
     case 'scorecard':
     case 'line':
+    case 'combo':
       return (
         <ComparisonSetting
           value={definition.comparison?.mode ?? 'none'}
