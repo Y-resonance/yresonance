@@ -86,6 +86,7 @@ export interface DatasourceConnector {
 }
 
 export type DatasourceErrorCode =
+  | 'datasource_access_denied'
   | 'datasource_source_not_found'
   | 'datasource_source_too_large'
   | 'datasource_inspection_failed'
@@ -103,9 +104,9 @@ export class DatasourceError extends Error {
   }
 }
 
-export function resolveDatasourceConnector(
+export function resolveDatasourceConnector<T extends DatasourceConnector>(
   connectorType: string,
-  connectors: readonly DatasourceConnector[],
+  connectors: readonly T[],
 ) {
   const connector = connectors.find((candidate) => candidate.type === connectorType);
   if (connector) return connector;

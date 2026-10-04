@@ -81,6 +81,7 @@ export async function libraryMetricApplies(
 function throwDatasourceError(error: unknown): never {
   if (!(error instanceof DatasourceError)) throw error;
   const status = {
+    datasource_access_denied: 403,
     datasource_source_not_found: 404,
     datasource_source_too_large: 413,
     datasource_inspection_failed: 422,

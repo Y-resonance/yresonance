@@ -35,7 +35,9 @@ The existing `env.preview` remains a manual shared staging deployment.
 3. Configure Cloudflare's preview build environment with `BUN_VERSION=1.3.10`,
    `VITE_CLERK_PUBLISHABLE_KEY` from the Clerk development instance, and
    `CLOUDFLARE_API_TOKEN` with Worker/container deployment and D1/KV/R2 creation,
-   read, write, and migration permissions. Do not expose these credentials to
+   read, write, and migration permissions. Add the five `CLICKHOUSE_PREVIEW_*` variables from
+   [ClickHouse setup](clickhouse.md) as preview build secrets and GitHub repository cleanup secrets
+   when ClickHouse is enabled. Do not expose these credentials to
    fork builds or copy production Clerk keys.
 4. Set the Previews Base runtime secrets using the development Clerk instance
    and non-production signing keys. Supply values interactively:
@@ -62,7 +64,7 @@ The existing `env.preview` remains a manual shared staging deployment.
    so a successful build alone is insufficient verification.
 7. Close a test PR. Confirm the GitHub cleanup workflow waits for its running
    native builds, removes its Preview and matching container apps, and deletes
-   only that branch's D1/KV/R2. Verify the other preview still works.
+   only that branch's D1/KV/R2 and ClickHouse database. Verify the other preview still works.
 
 ## Cleanup and recovery
 

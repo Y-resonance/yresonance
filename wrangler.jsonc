@@ -8,6 +8,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "APP_ENV": "production",
+    "CLICKHOUSE_DATABASE": "yresonance_production",
     "QUERY_CACHE_NAME": "yresonance-query-cache",
     "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
     "R2_BUCKET_NAME": "yresonance-data",
@@ -99,6 +100,7 @@
       "routes": [],
       "vars": {
         "APP_ENV": "preview",
+        "CLICKHOUSE_DATABASE": "yresonance_preview_shared",
         "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
         "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
         "R2_BUCKET_NAME": "yresonance-data-preview",
@@ -161,6 +163,7 @@
   "previews": {
     "vars": {
       "APP_ENV": "preview",
+      "CLICKHOUSE_DATABASE": "yresonance_preview_shared",
       "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
       "CLOUDFLARE_ACCOUNT_ID": "17c619232f5d84567cd69896e892f326",
       "R2_BUCKET_NAME": "yresonance-data-preview",

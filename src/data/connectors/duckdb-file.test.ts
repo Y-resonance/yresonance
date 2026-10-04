@@ -163,7 +163,7 @@ describe('duckdb-file datasource connector', () => {
 
   it('inspects a file and returns a stable source version', async () => {
     mocks.headSourceObject.mockResolvedValue({
-      key: dataSource.location.key,
+      key: 'ws/workspace/report.csv',
       size: 128,
       etag: 'etag-1',
       uploaded: new Date('2026-08-31T00:00:00.000Z'),

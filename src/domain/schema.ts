@@ -317,11 +317,24 @@ export const controlStateSchema = z.object({
   values: z.record(z.string(), z.array(z.unknown())).optional(),
 });
 
-export const dataSourceLocationSchema = z.object({
+export const fileDataSourceLocationSchema = z.object({
   kind: z.enum(['object', 'prefix']),
   key: z.string().trim().min(1),
   format: z.enum(['parquet', 'csv']),
 });
+
+export const clickhouseLocationSchema = z.object({
+  kind: z.literal('clickhouse'),
+  database: z.string().trim().min(1).max(255),
+  table: z.string().trim().min(1).max(255),
+  ownership: z.enum(['managed', 'external']),
+  cacheTtlSeconds: z.number().int().min(0).max(86_400).default(300),
+});
+
+export const dataSourceLocationSchema = z.union([
+  fileDataSourceLocationSchema,
+  clickhouseLocationSchema,
+]);
 
 export type DashboardDocument = z.infer<typeof dashboardDocumentSchema>;
 export type DashboardWidget = z.infer<typeof dashboardWidgetSchema>;

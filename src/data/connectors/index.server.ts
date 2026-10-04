@@ -2,7 +2,9 @@ import type { DataSourceRecord } from '#/query/types';
 import { resolveDatasourceConnector } from './contract';
 import { duckdbFileConnector } from './duckdb-file.server';
 
-const connectors = [duckdbFileConnector];
+import { clickhouseBackend } from './clickhouse.server';
+
+const connectors = [duckdbFileConnector, clickhouseBackend];
 
 export function datasourceConnector(dataSource: DataSourceRecord | string) {
   return resolveDatasourceConnector(

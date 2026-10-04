@@ -91,15 +91,15 @@ export async function deleteSourceObject(key: string) {
 }
 
 export async function resolveDataSource(dataSource: DataSourceRecord, queryId: string) {
+  const location = dataSource.location;
+  if (location.kind === 'clickhouse') throw new Error('File source required.');
   if (!usesR2()) {
     const keys =
-      dataSource.location.kind === 'object'
-        ? [dataSource.location.key]
+      location.kind === 'object'
+        ? [location.key]
         : matchingSourceObjects(
-            await collectObjectPages((cursor) =>
-              listSourceObjects(dataSource.location.key, cursor),
-            ),
-            dataSource.location.format,
+            await collectObjectPages((cursor) => listSourceObjects(location.key, cursor)),
+            location.format,
           ).map((object) => object.key);
     if (!keys.length)
       throw new DatasourceError(
@@ -115,11 +115,11 @@ export async function resolveDataSource(dataSource: DataSourceRecord, queryId: s
   }
 
   const objects =
-    dataSource.location.kind === 'object'
-      ? [await headSourceObject(dataSource.location.key)].filter((item) => item !== null)
+    location.kind === 'object'
+      ? [await headSourceObject(location.key)].filter((item) => item !== null)
       : matchingSourceObjects(
-          await collectObjectPages((cursor) => listSourceObjects(dataSource.location.key, cursor)),
-          dataSource.location.format,
+          await collectObjectPages((cursor) => listSourceObjects(location.key, cursor)),
+          location.format,
         );
   if (!objects.length)
     throw new DatasourceError(
@@ -174,4 +174,22 @@ function sourceUrl(key: string) {
 export function localSourceUrl(key: string) {
   if (usesR2()) throw new Error('Local source URLs are unavailable for R2.');
   return sourceUrl(key);
+}
+
+export async function readSourceObject(key: string, maximumBytes: number) {
+  if (usesR2()) {
+    const object = await env.DATA.get(key);
+    if (!object) throw new DatasourceError('datasource_source_not_found', 'Upload not found.');
+    if (object.size > maximumBytes)
+      throw new DatasourceError('datasource_source_too_large', 'The uploaded file is too large.');
+    return object.body;
+  }
+  const response = await fetch(sourceUrl(key));
+  if (!response.ok || !response.body)
+    throw new DatasourceError('datasource_source_not_found', 'Upload not found.');
+  if (Number(response.headers.get('content-length')) > maximumBytes) {
+    await response.body.cancel();
+    throw new DatasourceError('datasource_source_too_large', 'The uploaded file is too large.');
+  }
+  return response.body;
 }

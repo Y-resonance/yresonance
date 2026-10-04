@@ -5,7 +5,9 @@ Container with native DuckDB. The Worker authorizes exact Parquet objects, compi
 to SQL, and gives DuckDB short-lived internal URLs for those objects. The container has no internet
 access or R2 credentials.
 
-Editors register uploaded or existing CSV and Parquet files from tenant-scoped R2 prefixes. Auth is
+Editors register uploaded or existing CSV and Parquet files from tenant-scoped R2 prefixes.
+ClickHouse is also available for managed uploads and authorized external tables. See
+[ClickHouse setup and freshness](clickhouse.md) for server configuration. Auth is
 Clerk, with workspaces mapped to Clerk organizations. Application data lives in D1 with Drizzle.
 Nothing domain-specific is hardcoded: metrics such as VTR or CPV are workspace data, not code.
 

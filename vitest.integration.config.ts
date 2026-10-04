@@ -32,6 +32,7 @@ export default defineConfig({
           DATA_SOURCE_BASE_URL: 'http://query-engine.test/__dev-data',
           QUERY_DATA_SOURCE_BASE_URL: 'http://query-engine.test/__dev-data',
           APP_ENV: 'development',
+          CLICKHOUSE_DATABASE: 'yresonance_development',
           QUERY_CACHE_NAME: 'yresonance-query-cache-test',
           CLERK_SECRET_KEY: 'sk_test_integration',
           INTERNAL_R2_SIGNING_SECRET: 'test-internal-r2-signing-secret',

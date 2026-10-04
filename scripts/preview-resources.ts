@@ -1,5 +1,6 @@
 import { appendFile } from 'node:fs/promises';
-import { previewResourceName } from './preview-config';
+import { previewResourceName, previewClickhouseDatabase } from './preview-config';
+import { managePreviewClickhouse } from './clickhouse-preview';
 import { experimental_readRawConfig } from 'wrangler';
 import { z } from 'zod';
 
@@ -103,6 +104,7 @@ async function manageResources(workerName: string) {
   const namespace = namespaces.find((item) => item.title === resourceName);
 
   if (action === 'prepare') {
+    await managePreviewClickhouse('prepare', branch);
     const db =
       database ??
       databaseSchema.parse(
@@ -120,6 +122,7 @@ async function manageResources(workerName: string) {
     const bindings = {
       vars: {
         ...template.vars,
+        CLICKHOUSE_DATABASE: previewClickhouseDatabase(branch),
         QUERY_CACHE_NAME: resourceName,
         R2_BUCKET_NAME: resourceName,
         DATA_SOURCE_BASE_URL: `r2://${resourceName}`,
@@ -205,6 +208,7 @@ async function manageResources(workerName: string) {
       });
     if (database) await cleanup(() => api(`/d1/database/${database.uuid}`, 'DELETE'));
     if (namespace) await cleanup(() => api(`/storage/kv/namespaces/${namespace.id}`, 'DELETE'));
+    if (!legacy) await cleanup(() => managePreviewClickhouse('cleanup', branch));
     await cleanup(async () => {
       const buckets = z
         .object({ buckets: z.array(z.object({ name: z.string() })) })
