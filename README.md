@@ -395,6 +395,11 @@ production remains a separate explicit step.
 ## PostHog
 
 The public project token and EU ingestion host are Worker variables in `wrangler.jsonc`.
+Browser telemetry uses the same-origin `/ingest` proxy in the existing Worker. It routes `/static/*`
+and `/array/*` to EU PostHog assets, and events, feature flags, and browser logs to the configured
+ingestion host. The proxy strips app cookies, authorization headers, and referrers, forwards the
+Cloudflare client IP for geolocation, and preserves asset cache headers. Server telemetry goes
+directly to the ingestion host. See [PostHog's proxy reference](https://posthog.com/docs/advanced/proxy/proxy-reference).
 Production enables tracking. Development and previews disable it so test traffic stays out of
 product reports. To test locally, run `POSTHOG_ENABLED=true bun run dev`. The token is an ingestion
 key, not a personal API key.

@@ -1,3 +1,5 @@
+export const ANALYTICS_PROXY_PATH = '/ingest';
+
 export interface AnalyticsConfig {
   token: string;
   host: string;
