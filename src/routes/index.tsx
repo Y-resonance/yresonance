@@ -41,7 +41,13 @@ export const Route = createFileRoute('/')({ component: Home });
 interface Bootstrap {
   workspace: { id: string; name: string };
   isAdmin: boolean;
-  dashboards: Array<{ id: string; name: string; canEdit: boolean; updatedAt: string }>;
+  dashboards: Array<{
+    id: string;
+    name: string;
+    canEdit: boolean;
+    dataSourceIds: string[];
+    updatedAt: string;
+  }>;
   dataSources: Array<{ id: string; name: string }>;
 }
 
@@ -190,7 +196,11 @@ function DashboardIndex() {
                       <TableCell>{new Date(dashboard.updatedAt).toLocaleString()}</TableCell>
                       <TableCell>
                         {dashboard.canEdit ? (
-                          <DashboardOverviewActions dashboard={dashboard} onMutation={refresh} />
+                          <DashboardOverviewActions
+                            dashboard={dashboard}
+                            dataSources={data.dataSources}
+                            onMutation={refresh}
+                          />
                         ) : null}
                       </TableCell>
                     </TableRow>

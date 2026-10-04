@@ -192,7 +192,7 @@ test('aggregations, nulls, formulas, and empty results match DuckDB', async () =
 });
 
 // oxlint-disable-next-line vitest/expect-expect -- expectParity compares real engine results.
-test('date buckets, grouping sets, filtering, sorting, and pagination match DuckDB', async () => {
+test('date buckets, grouping sets, filtering, sorting, pagination, and scale bounds match DuckDB', async () => {
   const widget: Extract<WidgetDefinition, { type: 'table' }> = {
     type: 'table',
     title: 'Grouped',
@@ -220,6 +220,15 @@ test('date buckets, grouping sets, filtering, sorting, and pagination match Duck
     controlState: {},
     offset: 2,
   });
+  const [bounds] = await expectParity({
+    kind: 'widget',
+    dashboard,
+    definition: widget,
+    metadata,
+    controlState: {},
+    scaleBounds: true,
+  });
+  expect(bounds).toMatchObject({ min_1: expect.anything(), max_1: expect.anything() });
   await expectParity({
     kind: 'widget',
     dashboard,

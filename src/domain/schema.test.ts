@@ -95,4 +95,29 @@ describe('dashboard document schema', () => {
       'Metrics on the same axis must share a data type.',
     );
   });
+
+  it('rejects a table metric with both threshold rules and a color scale', () => {
+    const table = (metric: Record<string, unknown>) =>
+      widgetDefinitionSchema.safeParse({
+        type: 'table',
+        title: 'Campaigns',
+        dataSourceId: 'source',
+        dateRangeFieldId: 'date',
+        dimensions: [],
+        metrics: [
+          {
+            source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+            dataType: 'currency',
+            ...metric,
+          },
+        ],
+        resultLimit: { mode: 'top', amount: 10 },
+      }).success;
+    const colorScale = { style: 'heatmap', color: 'negative', invert: true };
+
+    expect(table({ colorScale })).toBe(true);
+    expect(
+      table({ colorScale, conditionalFormat: [{ comparator: 'gt', value: 1, color: 'positive' }] }),
+    ).toBe(false);
+  });
 });

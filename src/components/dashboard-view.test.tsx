@@ -70,6 +70,7 @@ function columnsFor(definition: QueryDefinition): QueryResultColumn[] {
       dataType: item.dataType,
       ...(item.displayFormat?.radix === undefined ? {} : { radix: item.displayFormat.radix }),
       ...(item.conditionalFormat ? { conditionalFormat: item.conditionalFormat } : {}),
+      ...(item.colorScale ? { colorScale: item.colorScale } : {}),
     })),
   ];
 }
@@ -79,6 +80,7 @@ function render(
   rows: Record<string, unknown>[],
   comparisonRows?: Record<string, unknown>[],
   summaryRow?: Record<string, unknown>,
+  scaleBounds?: Record<string, { min: number; max: number }>,
 ) {
   return renderToStaticMarkup(
     <Result
@@ -87,6 +89,7 @@ function render(
       columns={columnsFor(definition)}
       comparisonRows={comparisonRows}
       summaryRow={summaryRow}
+      scaleBounds={scaleBounds}
       page={0}
       hasMore={false}
       setPage={() => {}}
@@ -270,6 +273,49 @@ describe('widget result rendering', () => {
     expect(markup).toContain('Grand total');
     expect(markup).toContain('bg-emerald-500/20');
     expect(markup).not.toContain('__grouping');
+  });
+
+  it('shades heatmap cells from the lowest to the highest data row, leaving totals plain', () => {
+    const definition: QueryDefinition = {
+      ...base,
+      type: 'table',
+      dimensions: [{ fieldId: 'platform' }, { fieldId: 'placement' }],
+      metrics: [{ ...metric, colorScale: { style: 'heatmap', color: 'positive' } }],
+      resultLimit: { mode: 'top', amount: 20 },
+      showSubtotals: true,
+    };
+    const markup = render(definition, [
+      { dimension_1: 'Meta', dimension_2: 'Feed', metric_1: 10, __grouping: 0 },
+      { dimension_1: 'Meta', dimension_2: 'Reels', metric_1: 20, __grouping: 0 },
+      { dimension_1: 'Meta', dimension_2: 'Stories', metric_1: 30, __grouping: 0 },
+      { dimension_1: 'Meta', dimension_2: null, metric_1: 60, __grouping: 1 },
+    ]);
+
+    expect(markup.match(/var\(--color-emerald-500\) \d+%/g)).toEqual([
+      'var(--color-emerald-500) 0%',
+      'var(--color-emerald-500) 23%',
+      'var(--color-emerald-500) 45%',
+    ]);
+  });
+
+  it('draws inverted in-cell bars against whole-result bounds of a paged table', () => {
+    const definition: QueryDefinition = {
+      ...base,
+      type: 'table',
+      dimensions: [{ fieldId: 'campaign' }],
+      metrics: [{ ...metric, colorScale: { style: 'bar', color: 'warning', invert: true } }],
+      resultLimit: { mode: 'pagination', amount: 1 },
+    };
+    const markup = render(
+      definition,
+      [{ dimension_1: 'Spring', metric_1: 25 }],
+      undefined,
+      undefined,
+      { metric_1: { min: 0, max: 100 } },
+    );
+
+    expect(markup).toContain('data-slot="color-scale-bar"');
+    expect(markup).toContain('width:75%');
   });
 
   it('renders pivot values as grouped metric headers', () => {

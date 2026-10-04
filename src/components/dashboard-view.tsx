@@ -43,9 +43,12 @@ import { textBoxClasses, textStyleClasses } from '#/domain/text-style';
 import { colorsPerCategory, paletteColor } from '#/domain/chart-colors';
 import { controlDefaultValues, toggleControlValue } from '#/domain/control-state';
 import {
+  colorScaleBounds,
+  colorScalePosition,
   pieBreakdownRows,
   pivotBreakdownRows,
   pivotTableRows,
+  type ScaleBounds,
   withComparisonSeries,
 } from '#/domain/widget-results';
 import { DateRangePicker } from '#/components/date-range-picker';
@@ -487,6 +490,7 @@ function QueryCard({
   const [columns, setColumns] = useState<QueryResultColumn[]>();
   const [comparisonRows, setComparisonRows] = useState<Record<string, unknown>[]>();
   const [summaryRow, setSummaryRow] = useState<Record<string, unknown>>();
+  const [scaleBounds, setScaleBounds] = useState<Record<string, ScaleBounds>>();
   const [error, setError] = useState<string>();
   const [retry, setRetry] = useState(0);
   const [page, setPage] = useState(0);
@@ -506,6 +510,7 @@ function QueryCard({
       columns: QueryResultColumn[];
       comparisonRows?: Record<string, unknown>[];
       summaryRow?: Record<string, unknown>;
+      scaleBounds?: Record<string, ScaleBounds>;
       hasMore?: boolean;
     }>(
       widgetQueryRequest({
@@ -524,6 +529,7 @@ function QueryCard({
         setColumns(result.columns);
         setComparisonRows(result.comparisonRows);
         setSummaryRow(result.summaryRow);
+        setScaleBounds(result.scaleBounds);
         setHasMore(Boolean(result.hasMore));
         setError(undefined);
       })
@@ -579,6 +585,7 @@ function QueryCard({
               columns={columns}
               comparisonRows={comparisonRows}
               summaryRow={summaryRow}
+              scaleBounds={scaleBounds}
               page={page}
               hasMore={hasMore}
               setPage={setPage}
@@ -601,6 +608,7 @@ export function Result({
   columns,
   comparisonRows,
   summaryRow,
+  scaleBounds,
   page,
   hasMore,
   setPage,
@@ -610,6 +618,8 @@ export function Result({
   columns: QueryResultColumn[];
   comparisonRows?: Record<string, unknown>[];
   summaryRow?: Record<string, unknown>;
+  // Whole-result bounds for paged tables. Without them the scale spans the rows shown.
+  scaleBounds?: Record<string, ScaleBounds>;
   page: number;
   hasMore: boolean;
   setPage: (page: number) => void;
@@ -687,15 +697,25 @@ export function Result({
           pivotSeries,
         ).rows
       : comparisonRows;
+    const metricBounds =
+      scaleBounds ??
+      colorScaleBounds(
+        rows,
+        metricColumns.map((column) => column.key),
+      );
     const tableMetricColumns = pivotSeries
       ? pivotSeries.flatMap((series) =>
           metricColumns.map((column) => ({
             ...column,
             key: `${series.key}_${column.key}`,
+            bounds: metricBounds[column.key],
           })),
         )
-      : metricColumns;
-    const tableColumns = [...rowColumns, ...tableMetricColumns];
+      : metricColumns.map((column) => ({ ...column, bounds: metricBounds[column.key] }));
+    const tableColumns: Array<QueryResultColumn & { bounds?: ScaleBounds }> = [
+      ...rowColumns,
+      ...tableMetricColumns,
+    ];
     const summary = definition.showSummaryRow ? summaryRow : undefined;
     return (
       <div className="space-y-3">
@@ -766,6 +786,11 @@ export function Result({
                     else if (subtotal && columnIndex === definition.dimensions.length - 1)
                       value = 'Total';
                     else if ((subtotal || grandTotal) && row[column.key] == null) value = '';
+                    const scale = column.colorScale;
+                    const position =
+                      scale && !subtotal && !grandTotal
+                        ? colorScalePosition(row[column.key], column.bounds, scale.invert)
+                        : undefined;
                     return (
                       <TableCell
                         key={column.key}
@@ -774,8 +799,29 @@ export function Result({
                           column.kind === 'metric' && 'text-right tabular-nums',
                           conditionalFormatClass(row[column.key], column),
                         )}
+                        style={
+                          scale?.style === 'heatmap' && position !== undefined
+                            ? { backgroundColor: colorScaleTint(scale.color, position * 45) }
+                            : undefined
+                        }
                       >
-                        {value}
+                        {scale?.style === 'bar' && position !== undefined ? (
+                          <div className="flex items-center gap-2">
+                            <span aria-hidden className="h-3 min-w-8 flex-1">
+                              <span
+                                data-slot="color-scale-bar"
+                                className="block h-full rounded-sm"
+                                style={{
+                                  width: `${position * 100}%`,
+                                  backgroundColor: colorScaleTint(scale.color, 60),
+                                }}
+                              />
+                            </span>
+                            {value}
+                          </div>
+                        ) : (
+                          value
+                        )}
                       </TableCell>
                     );
                   })}
@@ -1197,6 +1243,20 @@ function conditionalFormatClass(value: unknown, column: QueryResultColumn) {
     negative: 'bg-red-500/20',
     neutral: 'bg-muted',
   }[rule.color];
+}
+
+// Same hues as threshold rules. Heatmaps stop at 45% so cell text keeps its contrast in both themes.
+function colorScaleTint(
+  color: NonNullable<QueryResultColumn['colorScale']>['color'],
+  percent: number,
+) {
+  const hue = {
+    positive: 'var(--color-emerald-500)',
+    warning: 'var(--color-amber-500)',
+    negative: 'var(--color-red-500)',
+    neutral: 'var(--muted-foreground)',
+  }[color];
+  return `color-mix(in oklab, ${hue} ${Math.round(percent)}%, transparent)`;
 }
 
 export function lineMetricAxis(index: number) {

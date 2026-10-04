@@ -1,4 +1,4 @@
-import type { SemanticType, WidgetDefinition } from './schema';
+import type { SemanticType, WidgetDefinition, WidgetMetric } from './schema';
 
 interface NamedField {
   id: string;
@@ -36,6 +36,7 @@ export interface QueryResultColumn {
         color: 'positive' | 'warning' | 'negative' | 'neutral';
       }
   >;
+  colorScale?: WidgetMetric['colorScale'];
 }
 
 export function queryResultColumns(
@@ -58,6 +59,7 @@ export function queryResultColumns(
     dataType: metric.dataType,
     ...(metric.displayFormat?.radix === undefined ? {} : { radix: metric.displayFormat.radix }),
     ...(metric.conditionalFormat ? { conditionalFormat: metric.conditionalFormat } : {}),
+    ...(metric.colorScale ? { colorScale: metric.colorScale } : {}),
   }));
   return [...dimensions, ...metrics];
 }
