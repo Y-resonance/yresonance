@@ -1,5 +1,11 @@
 import { type SourceDescription, aggregations } from './shared';
-import { type WidgetDefinition, type WidgetMetric, type Aggregation } from '#/domain/schema';
+import {
+  type WidgetDefinition,
+  type WidgetMetric,
+  type ComboMetric,
+  type Aggregation,
+} from '#/domain/schema';
+import { comboAxisFor } from '#/domain/widget-editing';
 import { type LibraryMetricDraft, MetricFormulaDialog } from '#/components/metric-formula-dialog';
 import { useState } from 'react';
 import { Field, FieldLabel } from '#/components/ui/field';
@@ -65,6 +71,20 @@ export function MetricSettings({
   if (!metrics.length) return null;
   function update(index: number, nextMetric: WidgetMetric) {
     if ('metric' in definition) return commit({ ...definition, metric: nextMetric });
+    if (definition.type === 'combo')
+      return commit({
+        ...definition,
+        metrics: definition.metrics.map((item, itemIndex) => {
+          if (itemIndex !== index) return item;
+          const others = definition.metrics.filter((_, otherIndex) => otherIndex !== index);
+          // A new field can change the unit, so the metric moves to an axis that still fits it.
+          return {
+            mark: item.mark,
+            ...nextMetric,
+            axis: comboAxisFor(others, nextMetric.dataType, item.axis),
+          };
+        }),
+      });
     if ('metrics' in definition)
       return commit({
         ...definition,
@@ -76,8 +96,27 @@ export function MetricSettings({
   }
   function addMetric(next: WidgetMetric, libraryMetric?: LibraryMetricDraft) {
     if ('metric' in definition) return commit({ ...definition, metric: next }, libraryMetric);
+    if (definition.type === 'combo')
+      return commit(
+        {
+          ...definition,
+          metrics: [
+            ...definition.metrics,
+            { ...next, mark: 'line', axis: comboAxisFor(definition.metrics, next.dataType) },
+          ],
+        },
+        libraryMetric,
+      );
     if ('metrics' in definition)
       return commit({ ...definition, metrics: [...definition.metrics, next] }, libraryMetric);
+    return Promise.resolve(false);
+  }
+  function removeMetric(index: number) {
+    const keep = (_: unknown, itemIndex: number) => itemIndex !== index;
+    if (definition.type === 'combo')
+      return commit({ ...definition, metrics: definition.metrics.filter(keep) });
+    if ('metrics' in definition)
+      return commit({ ...definition, metrics: definition.metrics.filter(keep) });
     return Promise.resolve(false);
   }
   function metricFor(id: string): WidgetMetric {
@@ -223,17 +262,26 @@ export function MetricSettings({
                       variant="ghost"
                       size="icon-sm"
                       aria-label={`Remove metric ${index + 1}`}
-                      onClick={() =>
-                        void commit({
-                          ...definition,
-                          metrics: definition.metrics.filter((_, itemIndex) => itemIndex !== index),
-                        })
-                      }
+                      onClick={() => void removeMetric(index)}
                     >
                       <Trash2Icon />
                     </Button>
                   ) : null}
                 </div>
+                {definition.type === 'combo' ? (
+                  <ComboMetricSettings
+                    index={index}
+                    metric={definition.metrics[index]!}
+                    onChange={(next) =>
+                      void commit({
+                        ...definition,
+                        metrics: definition.metrics.map((item, itemIndex) =>
+                          itemIndex === index ? next : item,
+                        ),
+                      })
+                    }
+                  />
+                ) : null}
                 {definition.type === 'table' ? (
                   <ConditionalFormatSettings
                     metric={metric}
@@ -274,6 +322,45 @@ export function MetricSettings({
         }
       />
     </>
+  );
+}
+
+function ComboMetricSettings({
+  index,
+  metric,
+  onChange,
+}: {
+  index: number;
+  metric: ComboMetric;
+  onChange: (metric: ComboMetric) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-1 pl-2">
+      <NativeSelect
+        className="w-full"
+        size="sm"
+        aria-label={`Chart type for metric ${index + 1}`}
+        value={metric.mark}
+        onChange={(event) =>
+          onChange({ ...metric, mark: event.target.value as ComboMetric['mark'] })
+        }
+      >
+        <NativeSelectOption value="bar">Bars</NativeSelectOption>
+        <NativeSelectOption value="line">Line</NativeSelectOption>
+      </NativeSelect>
+      <NativeSelect
+        className="w-full"
+        size="sm"
+        aria-label={`Axis for metric ${index + 1}`}
+        value={metric.axis}
+        onChange={(event) =>
+          onChange({ ...metric, axis: event.target.value as ComboMetric['axis'] })
+        }
+      >
+        <NativeSelectOption value="left">Left axis</NativeSelectOption>
+        <NativeSelectOption value="right">Right axis</NativeSelectOption>
+      </NativeSelect>
+    </div>
   );
 }
 

@@ -36,25 +36,46 @@ export async function defaultDefinition(
   }
   if (!date || !metricField)
     throw new Error('The datasource needs a date field and a metric field.');
-  const metric = {
+  const metricFor = (field: (typeof fields)[number]) => ({
     source: {
       kind: 'field' as const,
-      fieldId: metricField.id,
-      aggregation: metricField.defaultAggregation ?? 'sum',
+      fieldId: field.id,
+      aggregation: field.defaultAggregation ?? 'sum',
     },
     dataType:
-      metricField.semanticType === 'currency'
+      field.semanticType === 'currency'
         ? ('currency' as const)
-        : metricField.semanticType === 'ratio'
+        : field.semanticType === 'ratio'
           ? ('percent' as const)
           : ('number' as const),
-  };
+  });
+  const metric = metricFor(metricField);
   const base = { title: `New ${type}`, dataSourceId: source.id, dateRangeFieldId: date.id };
   if (type === 'scorecard') return { ...base, type, metric };
   if (type === 'gauge') return { ...base, type, metric };
   if (!dimension) throw new Error('The datasource needs a dimension for this widget.');
   if (type === 'line')
     return { ...base, type, dimension: { fieldId: dimension.id }, metrics: [metric] };
+  if (type === 'combo') {
+    // Starts as the volume-plus-efficiency chart it exists for: the first metric as bars, another
+    // metric as a line on the right axis, preferably one with a different unit.
+    const metrics = fields.filter(
+      (field) => field.role === 'metric' && field.id !== metricField.id,
+    );
+    const second =
+      metrics.find((field) => metricFor(field).dataType !== metric.dataType) ?? metrics[0];
+    return {
+      ...base,
+      type,
+      dimension: { fieldId: date.id },
+      metrics: [
+        { ...metric, mark: 'bar', axis: 'left' },
+        ...(second
+          ? [{ ...metricFor(second), mark: 'line' as const, axis: 'right' as const }]
+          : []),
+      ],
+    };
+  }
   if (type === 'table')
     return {
       ...base,

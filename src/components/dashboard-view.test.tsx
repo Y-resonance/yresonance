@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { QueryResultColumn } from '#/domain/query-result';
 import type { DashboardWidget } from '#/domain/schema';
 import {
+  comboChartAxes,
   formatAxisValue,
   formatDimensionLabel,
   formatValue,
@@ -37,7 +38,7 @@ const currency: QueryResultColumn = {
 
 function columnsFor(definition: QueryDefinition): QueryResultColumn[] {
   const dimensionCount =
-    definition.type === 'line'
+    definition.type === 'line' || definition.type === 'combo'
       ? 1
       : definition.type === 'bar' || definition.type === 'pie'
         ? definition.breakdownDimension
@@ -47,7 +48,7 @@ function columnsFor(definition: QueryDefinition): QueryResultColumn[] {
           ? definition.dimensions.length + (definition.pivotDimension ? 1 : 0)
           : 0;
   const metrics =
-    definition.type === 'line' || definition.type === 'table'
+    definition.type === 'line' || definition.type === 'combo' || definition.type === 'table'
       ? definition.metrics
       : definition.type === 'scorecard' ||
           definition.type === 'gauge' ||
@@ -181,6 +182,45 @@ describe('widget result rendering', () => {
       { yAxisId: 'metric_1', orientation: 'right' },
     ]);
     expect(lineMetricAxis(2)).toBe('metric_1');
+  });
+
+  it('draws combo metrics as bars and lines on the axis each one names', () => {
+    const spend = { ...metric, dataType: 'currency' as const, mark: 'bar' as const };
+    const ctr = { ...metric, dataType: 'percent' as const, mark: 'line' as const };
+    const markup = render(
+      {
+        ...base,
+        type: 'combo',
+        dimension: { fieldId: 'day' },
+        metrics: [
+          { ...spend, axis: 'left' },
+          { ...ctr, axis: 'right' },
+        ],
+        comparison: { mode: 'previousPeriod' },
+      },
+      [{ dimension_1: 'Jan', metric_1: 1200, metric_2: 0.02 }],
+      [{ dimension_1: 'Jan', metric_1: 900, metric_2: 0.03 }],
+    );
+    expect(markup).toContain('--color-chart_series_3');
+
+    const columns = [
+      { ...currency, key: 'metric_1', label: 'Spend' },
+      { ...currency, key: 'metric_2', label: 'CTR', dataType: 'percent' as const },
+      { ...currency, key: 'metric_3', label: 'Budget' },
+    ];
+    const axes = comboChartAxes(
+      [
+        { ...spend, axis: 'right' },
+        { ...ctr, axis: 'left' },
+        { ...spend, axis: 'right' },
+      ],
+      columns,
+    );
+    expect(axes.map(({ axis, column, label }) => ({ axis, key: column.key, label }))).toEqual([
+      { axis: 'left', key: 'metric_2', label: 'CTR' },
+      { axis: 'right', key: 'metric_1', label: 'Spend, Budget' },
+    ]);
+    expect(comboChartAxes([{ ...spend, axis: 'right' }], columns)).toHaveLength(1);
   });
 
   it('renders table summary, comparison label, and empty range', () => {
