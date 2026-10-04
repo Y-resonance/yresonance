@@ -93,8 +93,13 @@ widget definition, and resolved controls. Managed uploads are immutable and use 
 revision with a 24-hour cache lifetime. External inspection fingerprints the schema, not the
 contents: external rows may change without a new version.
 
+Every datasource has a query caching policy, configurable during registration and on its detail
+page. Choose the source default, a duration, or disabled. Duration applies to both managed and
+external sources; expiry runs a new query on the next request. The dashboard refresh action is
+available to editors and viewers and bypasses and replaces matching cached results.
+
 External tables default to a five-minute TTL. Set `location.cacheTtlSeconds` during registration
-to configure it from 0 to 86400 seconds. Zero bypasses KV. A timestamp in the cache entry enforces
+to configure the legacy default from 0 to 86400 seconds. Explicit `cachePolicy` takes precedence. Zero bypasses KV. A timestamp in the cache entry enforces
 TTLs shorter than KV's minimum expiration of 60 seconds. Old results become unreachable after
 changes to source configuration, and backend authorization runs before cache lookup.
 

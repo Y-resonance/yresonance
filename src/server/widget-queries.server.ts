@@ -41,6 +41,7 @@ export async function queryWidget(
   state: ControlState | undefined,
   shareToken?: string,
   page = 0,
+  refresh = false,
 ) {
   const access = await authorizeDashboard(dashboardId, 'viewer', shareToken);
   const widget = widgetById(access.document, widgetId);
@@ -67,10 +68,15 @@ export async function queryWidget(
       ? widget.definition.resultLimit.amount
       : undefined;
   const datasourceIdentity = await datasourceOperation(() => connector.cacheIdentity(dataSource));
+  const policy = dataSource.cachePolicy ?? { mode: 'default' };
   const ttlSeconds =
-    dataSource.location.kind === 'clickhouse' && dataSource.location.ownership === 'external'
-      ? dataSource.location.cacheTtlSeconds
-      : 86_400;
+    policy.mode === 'disabled'
+      ? 0
+      : policy.mode === 'duration'
+        ? policy.ttlSeconds
+        : dataSource.location.kind === 'clickhouse' && dataSource.location.ownership === 'external'
+          ? dataSource.location.cacheTtlSeconds
+          : 86_400;
   const cacheKey = await hashJson({
     workspaceId: dataSource.workspaceId,
     datasourceId: dataSource.id,
@@ -89,7 +95,7 @@ export async function queryWidget(
     page: pageSize === undefined ? 0 : page,
   });
   const cached =
-    ttlSeconds > 0
+    ttlSeconds > 0 && !refresh
       ? await env.QUERY_CACHE.get<{ cachedAt: number; result: Record<string, unknown> }>(
           cacheKey,
           'json',
@@ -99,7 +105,11 @@ export async function queryWidget(
     console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'hit' });
     return { ...cached.result, columns, cache: 'hit' };
   }
-  console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'miss' });
+  console.info('yresonance.query_cache', {
+    dashboardId,
+    widgetId,
+    outcome: ttlSeconds === 0 ? 'disabled' : refresh ? 'refresh' : 'miss',
+  });
   const pageOffset = pageSize === undefined ? undefined : page * pageSize;
   const { rows, comparisonRows: alignedComparisonRows } = await executeWidgetQuery(
     query,

@@ -3,6 +3,7 @@ import {
   aggregationSchema,
   controlStateSchema,
   dataSourceLocationSchema,
+  datasourceCachePolicySchema,
   dateRangeSchema,
   fieldRoleSchema,
   gridPlacementSchema,
@@ -101,6 +102,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     widgetId: z.string().min(1),
     controlState: controlStateSchema.optional(),
     page: z.number().int().nonnegative().optional(),
+    refresh: z.boolean().optional(),
   }),
   z.object({ action: z.literal('explainWidget'), ...dashboardRef, widgetId: z.string().min(1) }),
   z.object({
@@ -131,10 +133,16 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   datasourceUploadEventSchema.extend({ action: z.literal('trackDatasourceUpload') }),
   z.object({
     action: z.literal('registerDatasource'),
+    cachePolicy: datasourceCachePolicySchema.optional(),
     backend: z.enum(['duckdb', 'clickhouse']).optional(),
     name: z.string().trim().min(1),
     location: dataSourceLocationSchema,
     cleanupToken: z.string().min(1).optional(),
+  }),
+  z.object({
+    action: z.literal('updateDatasource'),
+    dataSourceId: z.string().min(1),
+    cachePolicy: datasourceCachePolicySchema,
   }),
   z.object({
     action: z.literal('updateFieldMetadata'),

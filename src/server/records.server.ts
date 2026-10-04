@@ -5,6 +5,7 @@ import { calculatedFields, dashboards, dataSources, fields, libraryMetrics } fro
 import {
   dashboardDocumentSchema,
   dataSourceLocationSchema,
+  datasourceCachePolicySchema,
   fieldRoleSchema,
   semanticTypeSchema,
 } from '#/domain/schema';
@@ -35,6 +36,7 @@ export async function loadDataSource(id: string, workspaceId: string): Promise<D
     name: row.name,
     connectorType: row.connectorType,
     location: dataSourceLocationSchema.parse(row.location),
+    cachePolicy: datasourceCachePolicySchema.parse(row.cachePolicy ?? { mode: 'default' }),
     version: row.version,
   };
 }

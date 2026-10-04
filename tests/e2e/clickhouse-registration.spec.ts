@@ -38,8 +38,8 @@ test('datasource registration chooses a backend and authorized external table wi
   await page.getByLabel('Name', { exact: true }).fill('External campaign data');
   await page.getByLabel('Database', { exact: true }).fill('reporting');
   await page.getByLabel('Table', { exact: true }).fill('campaigns');
-  await expect(page.getByLabel('Cache TTL in seconds')).toHaveValue('300');
-  await page.getByLabel('Cache TTL in seconds').fill('0');
+  await expect(page.getByLabel('Query caching')).toHaveValue('default');
+  await page.getByLabel('Query caching').selectOption('disabled');
   const registered = page.waitForRequest(
     (request) =>
       request.url().includes('/api/yresonance') &&
@@ -50,12 +50,13 @@ test('datasource registration chooses a backend and authorized external table wi
     action: 'registerDatasource',
     name: 'External campaign data',
     backend: 'clickhouse',
+    cachePolicy: { mode: 'disabled' },
     location: {
       kind: 'clickhouse',
       database: 'reporting',
       table: 'campaigns',
       ownership: 'external',
-      cacheTtlSeconds: 0,
+      cacheTtlSeconds: 300,
     },
   });
   await expect(page).toHaveURL(/\/datasources\/src_reporting$/);

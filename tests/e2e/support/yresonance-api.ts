@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test';
 import type { DatasourceDescription } from '#/domain/datasource-fields';
-import type { DashboardDocument, DashboardWidget } from '#/domain/schema';
+import type { DatasourceCachePolicy, DashboardDocument, DashboardWidget } from '#/domain/schema';
 
 const fixedRange = {
   startDate: { fixed: '2026-08-01' },
@@ -143,6 +143,7 @@ const description = () => ({
   id: dataSourceId,
   name: 'Reporting example',
   location,
+  cachePolicy: { mode: 'default' } as DatasourceCachePolicy,
   fields: fields.map((field) => ({ ...field })),
   calculatedFields: calculatedFields.map((field) => ({ ...field })),
   libraryMetrics: [] as DatasourceDescription['libraryMetrics'],
@@ -168,6 +169,7 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
 
   await page.route('**/api/yresonance', async (route) => {
     const request = route.request().postDataJSON() as Record<string, string> & {
+      cachePolicy?: DatasourceCachePolicy;
       definition?: DashboardWidget['definition'];
       width?: number;
       height?: number;
@@ -207,6 +209,11 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         ]);
       case 'describeDatasource':
         return ok(route, state.source);
+      case 'updateDatasource':
+        state.source.cachePolicy = request.cachePolicy!;
+        return ok(route, state.source);
+      case 'getSharedDashboard':
+        return ok(route, { dashboard: state.dashboard });
       case 'updateFieldMetadata':
         state.source = {
           ...state.source,

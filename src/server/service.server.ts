@@ -30,6 +30,7 @@ import {
   removeDatasourceUpload,
   trackDatasourceUpload,
   registerDatasource,
+  updateDatasource,
   updateFieldMetadata,
 } from './datasources.server';
 import {
@@ -104,6 +105,7 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
         request.controlState,
         request.shareToken,
         request.page,
+        request.refresh,
       );
     case 'explainWidget':
       return explainWidget(request.dashboardId, request.widgetId, request.shareToken);
@@ -128,6 +130,8 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
       return removeDatasourceUpload(request);
     case 'trackDatasourceUpload':
       return trackDatasourceUpload(request);
+    case 'updateDatasource':
+      return updateDatasource(request);
     case 'registerDatasource':
       return registerDatasource(request);
     case 'updateFieldMetadata':

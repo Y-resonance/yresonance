@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { ArrowLeftIcon, PlusIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { callApi } from '#/api/client';
+import { DatasourceCacheSettings } from '#/components/datasource-cache-settings';
 import { AppShell } from '#/components/app-shell';
 import { CalculatedFieldDialog } from '#/components/calculated-field-dialog';
 import {
@@ -36,6 +37,7 @@ import {
   semanticTypeSchema,
   type Aggregation,
   type DataSourceLocation,
+  type DatasourceCachePolicy,
   type FieldRole,
   type SemanticType,
 } from '#/domain/schema';
@@ -49,6 +51,7 @@ export const Route = createFileRoute('/datasources/$datasourceId')({
 
 interface Description extends DatasourceDescription {
   location: DataSourceLocation;
+  cachePolicy?: DatasourceCachePolicy;
 }
 
 // Emerald dimensions and blue metrics match the builder's field colour coding.
@@ -204,6 +207,18 @@ function DatasourceContent() {
               ) : null}
             </div>
           </div>
+          <DatasourceCacheSettings
+            key={`${datasourceId}:${JSON.stringify(description.cachePolicy)}`}
+            dataSourceId={datasourceId}
+            defaultTtlSeconds={
+              description.location.kind === 'clickhouse' &&
+              description.location.ownership === 'external'
+                ? description.location.cacheTtlSeconds
+                : 86_400
+            }
+            initialPolicy={description.cachePolicy ?? { mode: 'default' }}
+            onSaved={refresh}
+          />
           <DataTableSearch
             value={search}
             onChange={setSearch}

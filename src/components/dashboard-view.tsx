@@ -1,3 +1,4 @@
+import { useDashboardQueryRefresh } from './dashboard-query-refresh';
 import { DASHBOARD_GRID } from '#/domain/layout';
 import {
   Bar,
@@ -12,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ChevronsUpDown, X } from 'lucide-react';
 import type { ControlState, DashboardDocument, DashboardWidget, DateRange } from '#/domain/schema';
 import type { QueryResultColumn } from '#/domain/query-result';
@@ -476,6 +477,8 @@ function QueryCard({
   preview?: boolean;
   controlState: ControlState;
 }) {
+  const { revision, changePending } = useDashboardQueryRefresh();
+  const refreshed = useRef(revision);
   const [rows, setRows] = useState<Record<string, unknown>[]>();
   const [columns, setColumns] = useState<QueryResultColumn[]>();
   const [comparisonRows, setComparisonRows] = useState<Record<string, unknown>[]>();
@@ -487,6 +490,15 @@ function QueryCard({
   useEffect(() => setPage(0), [controlState, dashboardId, widget.definition, widget.id]);
   useEffect(() => {
     let current = true;
+    changePending(1);
+    let pending = true;
+    const finish = () => {
+      if (pending) {
+        pending = false;
+        changePending(-1);
+      }
+    };
+    const refresh = revision !== refreshed.current;
     const controller = new AbortController();
     const timeout = setTimeout(
       () => controller.abort(new Error('The widget query did not respond within 45 seconds.')),
@@ -508,11 +520,13 @@ function QueryCard({
         preview: preview ?? false,
         shareToken,
         page,
+        refresh,
       }),
       { signal: controller.signal },
     )
       .then((result) => {
         if (!current) return;
+        refreshed.current = revision;
         setRows(result.rows);
         setColumns(result.columns);
         setComparisonRows(result.comparisonRows);
@@ -525,13 +539,17 @@ function QueryCard({
       })
       .finally(() => {
         clearTimeout(timeout);
+        finish();
       });
     return () => {
+      finish();
       current = false;
       clearTimeout(timeout);
       controller.abort();
     };
   }, [
+    revision,
+    changePending,
     controlState,
     dashboardId,
     page,
