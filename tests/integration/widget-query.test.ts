@@ -184,7 +184,11 @@ describe('widget queries', () => {
       dataSourceId: source.id,
       dateRangeFieldId: source.fieldIds.day,
       dimensions: [{ fieldId: source.fieldIds.region }],
-      metrics: [revenue, { ...revenue, colorScale: { style: 'heatmap', color: 'positive' } }],
+      metrics: [
+        revenue,
+        { ...revenue, colorScale: { style: 'heatmap', color: 'positive' } },
+        { ...revenue, colorScale: { style: 'bar', color: 'neutral' } },
+      ],
       resultLimit: { mode: 'pagination', amount: 1 },
     });
     queryEngine.answerWith((request) => ({
@@ -194,7 +198,7 @@ describe('widget queries', () => {
           request.operation !== 'query'
             ? []
             : request.sql.includes('AS scaled')
-              ? [{ min_1: 1, max_1: 2, min_2: 5, max_2: 900 }]
+              ? [{ min_1: 1, max_1: 2, min_2: 5, max_2: 900, min_3: null, max_3: null }]
               : [{ dimension_1: 'north', metric_1: 50, metric_2: 50 }],
         metrics: { queryDurationMs: 1, queueDurationMs: 0, resultBytes: 2 },
       },

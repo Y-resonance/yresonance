@@ -412,20 +412,16 @@ async function colorScaleBounds(
       dateBucketTarget: query.bucketTarget,
     }),
   );
+  // Empty or non-finite bounds (all NULL, or infinity that ClickHouse sends as null) get no scale.
+  const bound = (value: unknown) => (value == null ? NaN : Number(value));
   return Object.fromEntries(
-    definition.metrics.flatMap((metric, index) =>
-      metric.colorScale
-        ? [
-            [
-              `metric_${index + 1}`,
-              {
-                min: Number(bounds?.[`min_${index + 1}`]),
-                max: Number(bounds?.[`max_${index + 1}`]),
-              },
-            ],
-          ]
-        : [],
-    ),
+    definition.metrics.flatMap((metric, index) => {
+      const min = bound(bounds?.[`min_${index + 1}`]);
+      const max = bound(bounds?.[`max_${index + 1}`]);
+      return metric.colorScale && Number.isFinite(min) && Number.isFinite(max)
+        ? [[`metric_${index + 1}`, { min, max }]]
+        : [];
+    }),
   );
 }
 
