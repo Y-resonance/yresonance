@@ -495,7 +495,11 @@ function QueryCard({
   // Clicked values per drilled level. Kept across control changes, dropped when the widget changes.
   const [drillPath, setDrillPath] = useState<DrillStep[]>([]);
   useEffect(() => setPage(0), [controlState, dashboardId, widget.definition, widget.id]);
-  useEffect(() => setDrillPath([]), [dashboardId, widget.definition, widget.id]);
+  // Keeps the same array when nothing is drilled, so mounting does not trigger a second query.
+  useEffect(
+    () => setDrillPath((path) => (path.length ? [] : path)),
+    [dashboardId, widget.definition, widget.id],
+  );
   useEffect(() => {
     let current = true;
     const controller = new AbortController();
@@ -1024,8 +1028,10 @@ export function Result({
     ...barConfig,
   };
   // Empty (null) dimension values cannot be drilled into: an equality filter never matches them.
+  // Recharts reports no index for clicks outside the plot, such as on the legend.
   const drill = onDrill
-    ? (index: unknown) => {
+    ? (index: number | string | null | undefined) => {
+        if (index == null) return;
         const row = chartRows[Number(index)];
         const value = drillPathSchema.element.safeParse(row?.[drillColumn.key]);
         if (value.success)
@@ -1086,10 +1092,7 @@ export function Result({
         className={cn('h-72 w-full md:h-full md:min-h-0', drillClass)}
         config={config}
       >
-        <BarChart
-          data={chartRows}
-          onClick={drill ? (state) => drill(state.activeIndex) : undefined}
-        >
+        <BarChart data={chartRows}>
           <CartesianGrid vertical={false} />
           <XAxis
             dataKey={dimension.key}
@@ -1100,6 +1103,7 @@ export function Result({
           {series.map((item) => (
             <Bar
               key={item.key}
+              onClick={drill ? (_, index) => drill(index) : undefined}
               dataKey={item.key}
               fill={`var(--color-${item.key})`}
               fillOpacity={item.isComparison ? 0.5 : 1}

@@ -63,16 +63,26 @@ test('a viewer drills from a campaign into its platforms and back', async ({ pag
   const card = page.locator('[data-slot="card"]', { hasText: 'Spend by campaign' });
   const bars = card.locator('.recharts-bar-rectangle');
   await expect(bars).toHaveCount(2);
+  await page.waitForLoadState('networkidle');
+  expect(drillPaths).toEqual([undefined]);
 
-  await bars.first().click();
+  // Clicks outside the plot, such as on the legend, do not drill.
+  await card.locator('.recharts-legend-wrapper').getByText('Media cost').click();
+  await page.waitForLoadState('networkidle');
+  expect(drillPaths).toEqual([undefined]);
+
+  await bars.nth(1).click();
   const breadcrumb = card.getByRole('navigation', { name: 'Drill-down' });
-  await expect(breadcrumb).toContainText('Spring sale');
+  await expect(breadcrumb).toContainText('Always on');
   await expect(card.getByRole('application')).toContainText('FB');
-  expect(drillPaths.at(-1)).toEqual(['Spring sale']);
+  expect(drillPaths.at(-1)).toEqual(['Always on']);
 
   // The last level is not clickable any further.
+  const queries = drillPaths.length;
   await bars.first().click();
-  expect(drillPaths.at(-1)).toEqual(['Spring sale']);
+  await page.waitForLoadState('networkidle');
+  expect(drillPaths).toHaveLength(queries);
+  await expect(breadcrumb.getByRole('button')).toHaveCount(1);
 
   await breadcrumb.getByRole('button', { name: 'All' }).click();
   await expect(breadcrumb).toBeHidden();
