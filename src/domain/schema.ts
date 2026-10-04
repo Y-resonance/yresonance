@@ -89,23 +89,33 @@ export const dateGranularitySchema = z.enum([
   'year',
 ]);
 
+const semanticColorSchema = z.enum(['positive', 'warning', 'negative', 'neutral']);
+
 const conditionalFormatSchema = z.discriminatedUnion('comparator', [
   z.object({
     comparator: z.enum(['gt', 'lt', 'gte', 'lte']),
     value: z.number(),
-    color: z.enum(['positive', 'warning', 'negative', 'neutral']),
+    color: semanticColorSchema,
   }),
   z
     .object({
       comparator: z.literal('between'),
       min: z.number(),
       max: z.number(),
-      color: z.enum(['positive', 'warning', 'negative', 'neutral']),
+      color: semanticColorSchema,
     })
     .refine((rule) => rule.min <= rule.max, {
       message: 'The minimum threshold must not exceed the maximum.',
     }),
 ]);
+
+// Shades a table metric relative to its own minimum and maximum in the whole result. invert gives
+// the lowest value full intensity, for metrics where lower is better such as CPA.
+const colorScaleSchema = z.object({
+  style: z.enum(['heatmap', 'bar']),
+  color: semanticColorSchema,
+  invert: z.boolean().optional(),
+});
 
 export const filterConditionSchema = z.object({
   fieldId: z.string().min(1),
@@ -131,22 +141,28 @@ export const filterSchema = z.object({
   connector: z.enum(['and', 'or']).default('and'),
 });
 
-const metricSchema = z.object({
-  source: z.discriminatedUnion('kind', [
-    z.object({
-      kind: z.literal('field'),
-      fieldId: z.string().min(1),
-      aggregation: aggregationSchema,
-    }),
-    z.object({ kind: z.literal('library'), libraryMetricId: z.string().min(1) }),
-    z.object({ kind: z.literal('expression'), expression: z.string().min(1) }),
-  ]),
-  userDefinedName: z.string().trim().min(1).optional(),
-  dataType: z.enum(['number', 'percent', 'duration', 'currency']),
-  displayFormat: z.object({ radix: z.number().int().min(0).max(10).optional() }).optional(),
-  conditionalFormat: z.array(conditionalFormatSchema).optional(),
-  styling: stylingSchema,
-});
+const metricSchema = z
+  .object({
+    source: z.discriminatedUnion('kind', [
+      z.object({
+        kind: z.literal('field'),
+        fieldId: z.string().min(1),
+        aggregation: aggregationSchema,
+      }),
+      z.object({ kind: z.literal('library'), libraryMetricId: z.string().min(1) }),
+      z.object({ kind: z.literal('expression'), expression: z.string().min(1) }),
+    ]),
+    userDefinedName: z.string().trim().min(1).optional(),
+    dataType: z.enum(['number', 'percent', 'duration', 'currency']),
+    displayFormat: z.object({ radix: z.number().int().min(0).max(10).optional() }).optional(),
+    conditionalFormat: z.array(conditionalFormatSchema).optional(),
+    colorScale: colorScaleSchema.optional(),
+    styling: stylingSchema,
+  })
+  .refine((metric) => !(metric.colorScale && metric.conditionalFormat?.length), {
+    message: 'A metric uses either conditionalFormat threshold rules or a colorScale, not both.',
+    path: ['colorScale'],
+  });
 
 const dimensionSchema = z.object({
   fieldId: z.string().min(1),

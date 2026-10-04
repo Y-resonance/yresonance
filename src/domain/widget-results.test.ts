@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   alignDateComparisonRows,
+  colorScaleBounds,
+  colorScalePosition,
   pieBreakdownRows,
   pivotBreakdownRows,
   pivotTableRows,
@@ -261,5 +263,26 @@ describe('widget result shaping', () => {
       showSummaryRow: false,
       sort: undefined,
     });
+  });
+
+  it('scales metrics over data rows only, ignoring totals and empty values', () => {
+    expect(
+      colorScaleBounds(
+        [
+          { metric_1: 10, metric_2: null },
+          { metric_1: '40', metric_2: 3 },
+          { metric_1: 500, metric_2: 900, __grouping: 1 },
+        ],
+        ['metric_1', 'metric_2', 'metric_3'],
+      ),
+    ).toEqual({ metric_1: { min: 10, max: 40 }, metric_2: { min: 3, max: 3 } });
+  });
+
+  it('places values on the scale, inverted when lower is better', () => {
+    const bounds = { min: 10, max: 30 };
+    expect(colorScalePosition(15, bounds)).toBe(0.25);
+    expect(colorScalePosition(15, bounds, true)).toBe(0.75);
+    expect(colorScalePosition(5, { min: 5, max: 5 }, true)).toBe(1);
+    expect(colorScalePosition(null, bounds)).toBeUndefined();
   });
 });

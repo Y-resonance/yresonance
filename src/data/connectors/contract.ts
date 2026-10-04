@@ -27,6 +27,7 @@ export interface WidgetDatasourceQuery {
   controlState: ControlState;
   resolvedControls?: Array<{ fieldId: string; values: unknown[] }>;
   offset?: number;
+  scaleBounds?: boolean;
   dateBucketTarget?: number;
 }
 

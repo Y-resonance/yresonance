@@ -47,6 +47,13 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('deleteDashboard'), dashboardId: z.string().min(1) }),
   z.object({
+    action: z.literal('duplicateDashboard'),
+    dashboardId: z.string().min(1),
+    name: z.string().trim().min(1),
+    // { [sourceDataSourceId]: targetDataSourceId }. Unmapped datasources stay as they are.
+    dataSourceMapping: z.record(z.string().min(1), z.string().min(1)).optional(),
+  }),
+  z.object({
     action: z.literal('addWidget'),
     dashboardId: z.string().min(1),
     definition: widgetDefinitionSchema,

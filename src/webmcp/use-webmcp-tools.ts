@@ -39,6 +39,9 @@ interface ToolSpec {
   fixed?: Record<string, unknown>;
 }
 
+const duplicateDashboardDescription =
+  'Copy a dashboard under a new name. dataSourceMapping ({ sourceId: targetId }) points widgets at another datasource, matching fields by canonical name. Fails without storing anything and lists the unmatched canonical fields per widget when the target lacks them. Share links and grants are not copied. Returns the new dashboard.';
+
 export function useWebMcpTools(options: WebMcpOptions) {
   const [available, setAvailable] = useState(false);
 
@@ -129,14 +132,14 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
+                'Validate and append a widget to the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
             {
               action: 'updateWidget',
               description:
-                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors, showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle.',
+                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors or a colorScale heatmap or in-cell bar (invert when lower is better), not both; showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle.',
               readOnly: false,
               fixed,
             },
@@ -157,6 +160,12 @@ export function useWebMcpTools(options: WebMcpOptions) {
               action: 'updateLayout',
               description:
                 'Replace every widget placement and the canvas row count on the open dashboard in one validated write. Include all placements. Empty rows are allowed, but widgets cannot overlap or leave the 12-column grid.',
+              readOnly: false,
+              fixed,
+            },
+            {
+              action: 'duplicateDashboard',
+              description: duplicateDashboardDescription,
               readOnly: false,
               fixed,
             },
@@ -244,6 +253,11 @@ export function useWebMcpTools(options: WebMcpOptions) {
               readOnly: false,
             },
             {
+              action: 'duplicateDashboard',
+              description: duplicateDashboardDescription,
+              readOnly: false,
+            },
+            {
               action: 'deleteDashboard',
               description:
                 'Permanently delete a dashboard and all its share links and user grants. Datasources are kept. Requires editor access.',
@@ -325,7 +339,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
               ...input,
             });
             options.onToolUse?.(spec.action);
-            const result = await callApi(request);
+            const result = await callApi(request, { source: 'webmcp' });
             if (!spec.readOnly) await options.onMutation?.();
             return result;
           },

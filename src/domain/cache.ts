@@ -59,6 +59,7 @@ export function widgetDependencyState(definition: WidgetDefinition, metadata: Qu
 }
 
 function queryDefinition(definition: WidgetDefinition) {
+  // colorScale stays in the key: paged results carry scale bounds only when a metric has one.
   const withoutMetricPresentation = (metric: ReturnType<typeof metricsIn>[number]) => {
     const {
       conditionalFormat: _conditionalFormat,

@@ -7,6 +7,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from '#/components/ui
 import { Input } from '#/components/ui/input';
 import { Separator } from '#/components/ui/separator';
 import { Skeleton } from '#/components/ui/skeleton';
+import { browserAnalytics } from '#/analytics/browser';
 
 type PendingAction =
   | { kind: 'invitation'; id: string }
@@ -61,7 +62,9 @@ function WorkspaceSetup() {
     setActionError(undefined);
     try {
       await operation();
+      browserAnalytics()?.capture('workspace_action', { action: action.kind, result: 'success' });
     } catch (error) {
+      browserAnalytics()?.capture('workspace_action', { action: action.kind, result: 'error' });
       setActionError(
         error instanceof Error ? error.message : 'yresonance could not update the workspace.',
       );

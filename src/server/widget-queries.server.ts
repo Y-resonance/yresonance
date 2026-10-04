@@ -122,10 +122,10 @@ export async function queryWidget(
   }
   console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'miss' });
   const pageOffset = pageSize === undefined ? undefined : page * pageSize;
-  const { rows, comparisonRows: alignedComparisonRows } = await executeWidgetQuery(
-    query,
-    pageOffset,
-  );
+  const [{ rows, comparisonRows: alignedComparisonRows }, scaleBounds] = await Promise.all([
+    executeWidgetQuery(query, pageOffset),
+    pageSize === undefined ? undefined : colorScaleBounds(query),
+  ]);
   const hasMore = pageSize !== undefined && rows.length > pageSize;
   const result = {
     rows: normalize(pageSize === undefined ? rows : rows.slice(0, pageSize)),
@@ -139,6 +139,7 @@ export async function queryWidget(
           ),
         }
       : {}),
+    ...(scaleBounds ? { scaleBounds } : {}),
     controlState,
     cache: 'miss',
     ...(pageSize === undefined ? {} : { page, hasMore }),
@@ -442,6 +443,38 @@ async function executeWidgetQuery(
         )
       : comparisonRows;
   return { rows, comparisonRows: alignedComparisonRows };
+}
+
+// A page only sees its own rows, so paged tables read color scale bounds over the whole result.
+async function colorScaleBounds(
+  query: NonNullable<Awaited<ReturnType<typeof prepareWidgetQuery>>['query']>,
+) {
+  const { definition, dataSource, connector } = query;
+  if (definition.type !== 'table' || !definition.metrics.some((metric) => metric.colorScale))
+    return undefined;
+  const [bounds] = await datasourceOperation(() =>
+    connector.executeQuery<Record<string, unknown>>(dataSource, {
+      kind: 'widget',
+      dashboard: query.dashboard,
+      definition,
+      metadata: query.metadata,
+      controlState: query.resolvedControlState,
+      resolvedControls: query.resolvedControls,
+      scaleBounds: true,
+      dateBucketTarget: query.bucketTarget,
+    }),
+  );
+  // Empty or non-finite bounds (all NULL, or infinity that ClickHouse sends as null) get no scale.
+  const bound = (value: unknown) => (value == null ? NaN : Number(value));
+  return Object.fromEntries(
+    definition.metrics.flatMap((metric, index) => {
+      const min = bound(bounds?.[`min_${index + 1}`]);
+      const max = bound(bounds?.[`max_${index + 1}`]);
+      return metric.colorScale && Number.isFinite(min) && Number.isFinite(max)
+        ? [[`metric_${index + 1}`, { min, max }]]
+        : [];
+    }),
+  );
 }
 
 export async function compiledSql(dashboard: DashboardDocument, widget: DashboardWidget) {
