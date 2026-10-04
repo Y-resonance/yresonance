@@ -42,6 +42,8 @@ test('a viewer drills from a campaign into its platforms and back', async ({ pag
                 { dimension_1: 'IG', metric_1: 434.5 },
               ]
             : [
+                // Recharts draws no bar for a zero value, so later bars shift in its click index.
+                { dimension_1: 'Paused', metric_1: 0 },
                 { dimension_1: 'Spring sale', metric_1: 1234.5 },
                 { dimension_1: 'Always on', metric_1: 987.25 },
               ],
@@ -62,17 +64,17 @@ test('a viewer drills from a campaign into its platforms and back', async ({ pag
   await page.goto('/dashboards/dash_demo');
   const card = page.locator('[data-slot="card"]', { hasText: 'Spend by campaign' });
   const bars = card.locator('.recharts-bar-rectangle');
+  const breadcrumb = card.getByRole('navigation', { name: 'Drill-down' });
   await expect(bars).toHaveCount(2);
   await page.waitForLoadState('networkidle');
-  expect(drillPaths).toEqual([undefined]);
 
   // Clicks outside the plot, such as on the legend, do not drill.
   await card.locator('.recharts-legend-wrapper').getByText('Media cost').click();
   await page.waitForLoadState('networkidle');
-  expect(drillPaths).toEqual([undefined]);
+  await expect(breadcrumb).toBeHidden();
+  expect(drillPaths.filter((path) => path !== undefined)).toHaveLength(0);
 
   await bars.nth(1).click();
-  const breadcrumb = card.getByRole('navigation', { name: 'Drill-down' });
   await expect(breadcrumb).toContainText('Always on');
   await expect(card.getByRole('application')).toContainText('FB');
   expect(drillPaths.at(-1)).toEqual(['Always on']);

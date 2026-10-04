@@ -1027,12 +1027,11 @@ export function Result({
     ...pieConfig,
     ...barConfig,
   };
-  // Empty (null) dimension values cannot be drilled into: an equality filter never matches them.
-  // Recharts reports no index for clicks outside the plot, such as on the legend.
+  // Takes the clicked row itself: Recharts indexes bars and slices after dropping empty ones, so
+  // their click index does not point into chartRows. Empty (null) dimension values cannot be
+  // drilled into, because an equality filter never matches them.
   const drill = onDrill
-    ? (index: number | string | null | undefined) => {
-        if (index == null) return;
-        const row = chartRows[Number(index)];
+    ? (row: Record<string, unknown> | undefined) => {
         const value = drillPathSchema.element.safeParse(row?.[drillColumn.key]);
         if (value.success)
           onDrill({ value: value.data, label: formatDimensionLabel(value.data, drillColumn) });
@@ -1073,7 +1072,7 @@ export function Result({
         <PieChart>
           {tooltip}
           <Pie
-            onClick={drill ? (_, index) => drill(index) : undefined}
+            onClick={drill ? (item) => drill(item.payload) : undefined}
             data={chartRows}
             dataKey={series[0]?.key ?? ''}
             nameKey={pieLegendKey}
@@ -1103,7 +1102,7 @@ export function Result({
           {series.map((item) => (
             <Bar
               key={item.key}
-              onClick={drill ? (_, index) => drill(index) : undefined}
+              onClick={drill ? (item) => drill(item.payload) : undefined}
               dataKey={item.key}
               fill={`var(--color-${item.key})`}
               fillOpacity={item.isComparison ? 0.5 : 1}
@@ -1129,7 +1128,16 @@ export function Result({
       className={cn('h-72 w-full md:h-full md:min-h-0', drillClass)}
       config={config}
     >
-      <LineChart data={chartRows} onClick={drill ? (state) => drill(state.activeIndex) : undefined}>
+      <LineChart
+        data={chartRows}
+        // No active index means the click was outside the plot, for example on the legend.
+        onClick={
+          drill
+            ? (state) =>
+                state.activeIndex == null ? undefined : drill(chartRows[Number(state.activeIndex)])
+            : undefined
+        }
+      >
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={dimension.key}
