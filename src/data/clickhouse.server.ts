@@ -156,6 +156,7 @@ export async function clickhouseRequest(
   url.searchParams.set('output_format_json_quote_decimals', '1');
   url.searchParams.set('group_by_use_nulls', '1');
   url.searchParams.set('aggregate_functions_null_for_empty', '1');
+  url.searchParams.set('cast_keep_nullable', '1');
   if (options.readonly !== false) url.searchParams.set('readonly', '1');
   for (const [key, value] of Object.entries(bound.values)) url.searchParams.set(key, value);
   if (options.body) url.searchParams.set('query', bound.sql);

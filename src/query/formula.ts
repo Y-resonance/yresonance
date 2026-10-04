@@ -121,6 +121,9 @@ export function compileFormula(
       if (['+', '-', '*', '/', '%'].includes(current.operator)) {
         requireType(left.type, 'number', current.operator);
         requireType(right.type, 'number', current.operator);
+        if (current.operator === '/' && options.dialect === 'clickhouse')
+          // DuckDB division returns floating-point ratios, including decimal operands.
+          return { sql: `divide(toFloat64(${left.sql}), toFloat64(${right.sql}))`, type: 'number' };
         return { sql: `(${left.sql} ${current.operator} ${right.sql})`, type: 'number' };
       }
       requireComparable(left.type, right.type, current.operator);

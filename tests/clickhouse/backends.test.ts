@@ -388,6 +388,48 @@ test('decimal and integer aggregates preserve numeric JSON types', async () => {
       });
     }
   }
+  for (const expression of [
+    'sum(money) / 1000',
+    'sum(money / 1000)',
+    'sum(money) / sum(impressions)',
+  ]) {
+    await expectParity({
+      kind: 'widget',
+      dashboard,
+      definition: {
+        ...definition(),
+        metric: { source: { kind: 'expression', expression }, dataType: 'number' },
+      },
+      metadata,
+      controlState: {},
+    });
+  }
+});
+
+// oxlint-disable-next-line vitest/expect-expect -- expectParity compares real engine results.
+test('nullable fields cast to text retain null dimensions and formula inputs', async () => {
+  await expectParity({
+    kind: 'widget',
+    dashboard,
+    definition: {
+      type: 'table',
+      title: 'Nullable identifiers',
+      dataSourceId: id,
+      dateRangeFieldId: 'day',
+      dimensions: [{ fieldId: 'money' }],
+      metrics: [{ source: { kind: 'expression', expression: 'count(money)' }, dataType: 'number' }],
+      resultLimit: { mode: 'top', amount: 10 },
+    },
+    metadata: {
+      ...metadata,
+      fields: fields.map((field) =>
+        field.id === 'money'
+          ? { ...field, role: 'dimension' as const, semanticType: 'id' as const, castTo: 'VARCHAR' }
+          : field,
+      ),
+    },
+    controlState: {},
+  });
 });
 
 // oxlint-disable-next-line vitest/expect-expect -- expectParity compares real engine results.
