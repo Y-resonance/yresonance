@@ -372,6 +372,12 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
     target: 'draft-07',
     unrepresentable: 'any',
     reused: 'ref',
+    // Zod writes JavaScript's safe-integer range onto every `.int()`. It tells an agent nothing
+    // and costs descriptor budget, and the API still validates the input with the same schema.
+    override: ({ jsonSchema }) => {
+      if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER) delete jsonSchema.maximum;
+      if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;
+    },
   });
   const removed = new Set(['action', ...Object.keys(fixed ?? {})]);
   if (json.properties) for (const key of removed) delete json.properties[key];
