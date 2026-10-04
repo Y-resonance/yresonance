@@ -2,6 +2,7 @@ import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { LoggerProvider, SimpleLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { PostHog } from 'posthog-node';
+import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { waitUntil } from 'cloudflare:workers';
 import type { ApiRequest } from '#/api/contracts';
 import { analyticsConfig } from './config.server';
@@ -73,7 +74,8 @@ function exportApiRequest({
   if (distinctId) {
     client.capture({ distinctId, event: 'product_action', properties });
   }
-  if (status >= 500 && error) client.captureException(error, distinctId, properties);
+  if (status >= 500 && error)
+    client.captureException(analyticsException(error), distinctId, properties);
 
   const logs = new LoggerProvider({
     resource: resourceFromAttributes({
@@ -104,4 +106,22 @@ function exportApiRequest({
         console.warn('yresonance.telemetry_export_failed');
     }),
   );
+}
+
+// Drizzle embeds SQL and bound values in the message. Keep stack locations, not parameters or causes.
+function analyticsException(error: unknown): unknown {
+  if (!(error instanceof Error)) return error;
+  if (error instanceof DrizzleQueryError) {
+    const safe = new Error('Database query failed');
+    safe.name = 'DrizzleQueryError';
+    safe.stack = error.stack?.replace(error.message, safe.message);
+    return safe;
+  }
+  if (error.cause instanceof Error) {
+    const safe = new Error(error.message, { cause: analyticsException(error.cause) });
+    safe.name = error.name;
+    safe.stack = error.stack;
+    return safe;
+  }
+  return error;
 }

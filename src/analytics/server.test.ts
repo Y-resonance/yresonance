@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { gunzipSync } from 'node:zlib';
 import { z } from 'zod';
+import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { trackApiRequest } from './server';
 
@@ -19,7 +20,12 @@ vi.mock('cloudflare:workers', () => ({
 }));
 
 const requests: Array<{ url: string; body: string; authorization?: string }> = [];
-const outage = new Error('Database unavailable');
+const outage = new DrizzleQueryError(
+  'select * from share_links where token = ?',
+  ['secret-share-token', 'Confidential Client Report', 'sum(cost)/impressions'],
+  new Error('D1 unavailable: secret-share-token'),
+);
+outage.stack = `${outage.name}: ${outage.message}\n    at executeQuery (/app/dist/server/index.js:23:7)`;
 const server = createServer(async (request, response) => {
   const chunks: Uint8Array[] = [];
   for await (const chunk of request) chunks.push(chunk);
@@ -103,7 +109,6 @@ describe('server analytics delivery', () => {
           }),
         }),
       );
-      expect(events.some((event) => event.event === '$exception')).toBe(status === 500);
       const logRequest = requests.find((request) => request.url === '/i/v1/logs');
       expect(logRequest?.authorization).toBe('Bearer phc_test');
       const logs = JSON.parse(logRequest!.body).resourceLogs[0].scopeLogs[0].logRecords;
@@ -113,6 +118,24 @@ describe('server analytics delivery', () => {
       );
       expect(logRequest!.body).toContain('session_123');
       expect(JSON.stringify(requests)).not.toContain('secret-share-token');
+      expect(JSON.stringify(requests)).not.toContain('Confidential Client Report');
+      expect(JSON.stringify(requests)).not.toContain('sum(cost)/impressions');
+      const expectedException = expect.objectContaining({
+        properties: expect.objectContaining({
+          $exception_list: expect.arrayContaining([
+            expect.objectContaining({
+              stacktrace: expect.objectContaining({
+                frames: expect.arrayContaining([
+                  expect.objectContaining({ function: 'executeQuery' }),
+                ]),
+              }),
+            }),
+          ]),
+        }),
+      });
+      expect(events.filter((event) => event.event === '$exception')).toEqual(
+        status === 500 ? [expectedException] : [],
+      );
       expect(JSON.stringify(requests)).not.toContain('untrusted-browser-user');
     },
   );

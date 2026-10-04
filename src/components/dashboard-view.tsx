@@ -1,3 +1,4 @@
+import { DASHBOARD_GRID } from '#/domain/layout';
 import {
   Bar,
   BarChart,
@@ -100,7 +101,15 @@ export function DashboardView({
     </div>
   );
   return (
-    <div className="grid grid-cols-1 gap-4 md:auto-rows-[4rem] md:grid-cols-12">
+    <div
+      className="grid grid-cols-1 gap-4 md:auto-rows-[var(--grid-row-height)] md:grid-cols-12 md:gap-[var(--grid-gap)] md:p-[var(--grid-gap)]"
+      style={
+        {
+          '--grid-row-height': `${DASHBOARD_GRID.rowHeight}px`,
+          '--grid-gap': `${DASHBOARD_GRID.margin[0]}px`,
+        } as CSSProperties
+      }
+    >
       {/*
         Below md the controls sit in a sticky bar above the widgets. `md:contents` dissolves both
         wrappers on larger screens so each control keeps its stored grid placement, and each control

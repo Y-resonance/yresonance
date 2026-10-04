@@ -7,6 +7,12 @@ export interface LayoutUpdate {
 
 export const MIN_CANVAS_ROWS = 10;
 
+export const DASHBOARD_GRID = {
+  cols: 12,
+  rowHeight: 56,
+  margin: [8, 8] as [number, number],
+};
+
 /** Why a single placement was rejected, with the widget or grid bound that caused it. */
 export type PlacementCheck =
   | { ok: true }

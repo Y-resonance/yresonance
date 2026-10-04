@@ -29,6 +29,7 @@ export function sanitizeAnalyticsProperties(
     Object.entries(properties).flatMap(([key, value]) => {
       if (
         [
+          'title',
           '$title',
           '$initial_title',
           '$search',

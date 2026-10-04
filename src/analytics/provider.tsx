@@ -3,8 +3,8 @@ import { PostHogProvider } from '@posthog/react';
 import { useRouter } from '@tanstack/react-router';
 import { useEffect, useRef, type ReactNode } from 'react';
 import posthog from 'posthog-js';
-import { sanitizeAnalyticsProperties, type AnalyticsConfig } from './config';
-import { browserAnalytics, setBrowserAnalytics } from './browser';
+import type { AnalyticsConfig } from './config';
+import { initializeBrowserAnalytics } from './browser';
 
 export function AnalyticsProvider({
   config,
@@ -19,29 +19,7 @@ export function AnalyticsProvider({
 
   useEffect(() => {
     if (!config || !isLoaded) return;
-    if (!browserAnalytics()) {
-      posthog.init(config.token, {
-        api_host: config.host,
-        ui_host: 'https://eu.posthog.com',
-        defaults: '2026-05-30',
-        capture_pageview: false,
-        capture_pageleave: true,
-        capture_exceptions: { capture_unhandled_errors: true, capture_unhandled_rejections: true },
-        capture_performance: { web_vitals: true },
-        disable_session_recording: true,
-        mask_all_text: true,
-        mask_all_element_attributes: true,
-        logs: { serviceName: 'yresonance-web', environment: config.environment },
-        before_send: (event) => {
-          if (!event) return event;
-          event.properties = sanitizeAnalyticsProperties(event.properties);
-          return event;
-        },
-      });
-      posthog.register({ environment: config.environment });
-      setBrowserAnalytics(posthog);
-    }
-    const client = browserAnalytics()!;
+    const client = initializeBrowserAnalytics(config);
     // Clerk owns identity. Reset before an account switch or logout.
     const previousUser = client.get_property('clerk_user_id');
     const previousOrg = client.get_property('workspace_id');
