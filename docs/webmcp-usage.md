@@ -12,12 +12,13 @@ filled in by the page and removed from the schema the agent sees.
 
 Tools by page, read-only first, then writes:
 
-- Dashboards list: `listDashboards`, `listLibraryMetrics`. Writes: `createDashboard`.
+- Dashboards list: `listDashboards`, `listLibraryMetrics`. Writes: `createDashboard`,
+  `updateDashboard`, `duplicateDashboard`, `shareDashboard`, `deleteDashboard`.
 - Dashboard editor: `listDashboards`, `listLibraryMetrics`, `getDashboard`, `queryWidget`,
   `explainWidget`, `getControlOptions`, `describeDatasource`, `previewWidget`. Writes:
   `updateDashboard`, `addWidget`, `updateWidget`, `removeWidget`, `moveWidget`, `updateLayout`,
-  `copyWidget`, `upsertCalculatedField`, `updateFieldMetadata`, `upsertLibraryMetric`,
-  `shareDashboard`, `createDashboard`.
+  `copyWidget`, `duplicateDashboard`, `upsertCalculatedField`, `updateFieldMetadata`,
+  `upsertLibraryMetric`, `shareDashboard`, `createDashboard`.
 - Unlisted link: `getDashboard`, `queryWidget`, `explainWidget`, `getControlOptions`,
   `describeDatasource`. No writes.
 - Datasources: `listDataSources`, `listR2Objects`. Writes: `registerDatasource`.

@@ -2,6 +2,7 @@ import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { callApi } from '#/api/client';
 import { DashboardSharing, type SharingState } from '#/components/dashboard-sharing';
+import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { Button } from '#/components/ui/button';
 import {
   Dialog,
@@ -16,9 +17,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '#/components/ui/tooltip
 
 export function DashboardOverviewActions({
   dashboard,
+  dataSources,
   onMutation,
 }: {
-  dashboard: { id: string; name: string };
+  dashboard: { id: string; name: string; dataSourceIds: string[] };
+  dataSources: Array<{ id: string; name: string }>;
   onMutation: () => Promise<void>;
 }) {
   const [action, setAction] = useState<'rename' | 'delete'>();
@@ -89,6 +92,7 @@ export function DashboardOverviewActions({
           </TooltipTrigger>
           <TooltipContent>Rename</TooltipContent>
         </Tooltip>
+        <DuplicateDashboard dashboard={dashboard} dataSources={dataSources} compact />
         <DashboardSharing
           dashboardId={dashboard.id}
           sharing={sharing}
