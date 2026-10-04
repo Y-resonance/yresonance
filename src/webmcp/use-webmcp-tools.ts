@@ -325,7 +325,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
               ...input,
             });
             options.onToolUse?.(spec.action);
-            const result = await callApi(request);
+            const result = await callApi(request, { source: 'webmcp' });
             if (!spec.readOnly) await options.onMutation?.();
             return result;
           },

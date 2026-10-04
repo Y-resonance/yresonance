@@ -391,3 +391,36 @@ wrangler r2 bucket create yresonance-data-preview --location weur
 Store objects under `ws/<workspaceId>/`. Datasource registration rejects keys outside the active
 workspace prefix. Apply the D1 migration to preview before opening a preview build; applying it to
 production remains a separate explicit step.
+
+## PostHog
+
+The public project token and EU ingestion host are Worker variables in `wrangler.jsonc`.
+Production enables tracking. Development and previews disable it so test traffic stays out of
+product reports. To test locally, run `POSTHOG_ENABLED=true bun run dev`. The token is an ingestion
+key, not a personal API key.
+
+- Web analytics capture pageviews, page exits, campaign attribution, and Web Vitals.
+- `product_action` records API actions with `action`, `result`, `duration_ms`, `source` (`gui` or
+  `webmcp`), resource IDs, and Clerk organization ID as `workspace_id`.
+- `workspace_action` records onboarding actions and their outcomes.
+- Clerk user IDs identify signed-in visitors. Logout and account switches reset the browser identity.
+- PostHog Logs receive `api_request_completed` from `yresonance-api` and API failures from
+  `yresonance-web`. Only these explicit log records are exported. Existing console logs remain in
+  Cloudflare. Server exports finish through `waitUntil` without delaying API responses.
+- Error tracking captures browser errors, route rendering errors, API transport failures, server
+  API errors with status 500 or higher, and uncaught Worker errors.
+
+Share-link tokens and non-campaign URL parameters are redacted. Autocapture masks text and element
+attributes. Report names, formulas, request bodies, and query results are not event properties.
+Session recording is disabled.
+
+Source map upload is wired into Vite but requires credentials beyond the public ingestion token.
+Set `POSTHOG_UPLOAD_SOURCEMAPS=true`, `POSTHOG_PROJECT_ID` for this project, and `POSTHOG_API_KEY`
+with the PostHog "Source map upload" permission preset in the production build environment.
+The build injects chunk IDs, uploads maps to EU PostHog, and deletes maps after upload. Until
+configured, minified errors have limited source context. Builds without upload credentials still work.
+
+After deployment, create a dashboard, add a widget through both GUI and WebMCP, and change workspace.
+Check the matching `product_action` and `workspace_action` events, pageviews in Web Analytics, and
+`api_request_completed` in Logs. Verify errors in Error Tracking and check that a shared URL has
+`/share/[redacted]` rather than its token. No production telemetry was sent during local verification.
