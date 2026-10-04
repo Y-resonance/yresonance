@@ -118,6 +118,8 @@ export function axisLabel(
   const label = `${role === 'dimension' ? 'Dimension' : 'Metric'}${plural ? 's' : ''}`;
   if (type === 'line' || type === 'bar')
     return `${label} · ${role === 'dimension' ? 'X' : 'Y'} axis`;
+  // Combo metrics pick their own axis per row.
+  if (type === 'combo' && role === 'dimension') return `${label} · X axis`;
   return label;
 }
 

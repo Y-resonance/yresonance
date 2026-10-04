@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { QueryResultColumn } from '#/domain/query-result';
 import type { DashboardWidget } from '#/domain/schema';
 import {
+  comboChartAxes,
   formatAxisValue,
   formatDimensionLabel,
   formatValue,
@@ -37,7 +38,7 @@ const currency: QueryResultColumn = {
 
 function columnsFor(definition: QueryDefinition): QueryResultColumn[] {
   const dimensionCount =
-    definition.type === 'line'
+    definition.type === 'line' || definition.type === 'combo'
       ? 1
       : definition.type === 'bar' || definition.type === 'pie'
         ? definition.breakdownDimension
@@ -47,7 +48,7 @@ function columnsFor(definition: QueryDefinition): QueryResultColumn[] {
           ? definition.dimensions.length + (definition.pivotDimension ? 1 : 0)
           : 0;
   const metrics =
-    definition.type === 'line' || definition.type === 'table'
+    definition.type === 'line' || definition.type === 'combo' || definition.type === 'table'
       ? definition.metrics
       : definition.type === 'scorecard' ||
           definition.type === 'gauge' ||
@@ -69,6 +70,7 @@ function columnsFor(definition: QueryDefinition): QueryResultColumn[] {
       dataType: item.dataType,
       ...(item.displayFormat?.radix === undefined ? {} : { radix: item.displayFormat.radix }),
       ...(item.conditionalFormat ? { conditionalFormat: item.conditionalFormat } : {}),
+      ...(item.colorScale ? { colorScale: item.colorScale } : {}),
     })),
   ];
 }
@@ -78,6 +80,7 @@ function render(
   rows: Record<string, unknown>[],
   comparisonRows?: Record<string, unknown>[],
   summaryRow?: Record<string, unknown>,
+  scaleBounds?: Record<string, { min: number; max: number }>,
 ) {
   return renderToStaticMarkup(
     <Result
@@ -86,6 +89,7 @@ function render(
       columns={columnsFor(definition)}
       comparisonRows={comparisonRows}
       summaryRow={summaryRow}
+      scaleBounds={scaleBounds}
       page={0}
       hasMore={false}
       setPage={() => {}}
@@ -180,6 +184,45 @@ describe('widget result rendering', () => {
     expect(lineMetricAxis(2)).toBe('metric_1');
   });
 
+  it('draws combo metrics as bars and lines on the axis each one names', () => {
+    const spend = { ...metric, dataType: 'currency' as const, mark: 'bar' as const };
+    const ctr = { ...metric, dataType: 'percent' as const, mark: 'line' as const };
+    const markup = render(
+      {
+        ...base,
+        type: 'combo',
+        dimension: { fieldId: 'day' },
+        metrics: [
+          { ...spend, axis: 'left' },
+          { ...ctr, axis: 'right' },
+        ],
+        comparison: { mode: 'previousPeriod' },
+      },
+      [{ dimension_1: 'Jan', metric_1: 1200, metric_2: 0.02 }],
+      [{ dimension_1: 'Jan', metric_1: 900, metric_2: 0.03 }],
+    );
+    expect(markup).toContain('--color-chart_series_3');
+
+    const columns = [
+      { ...currency, key: 'metric_1', label: 'Spend' },
+      { ...currency, key: 'metric_2', label: 'CTR', dataType: 'percent' as const },
+      { ...currency, key: 'metric_3', label: 'Budget' },
+    ];
+    const axes = comboChartAxes(
+      [
+        { ...spend, axis: 'right' },
+        { ...ctr, axis: 'left' },
+        { ...spend, axis: 'right' },
+      ],
+      columns,
+    );
+    expect(axes.map(({ axis, column, label }) => ({ axis, key: column.key, label }))).toEqual([
+      { axis: 'left', key: 'metric_2', label: 'CTR' },
+      { axis: 'right', key: 'metric_1', label: 'Spend, Budget' },
+    ]);
+    expect(comboChartAxes([{ ...spend, axis: 'right' }], columns)).toHaveLength(1);
+  });
+
   it('renders table summary, comparison label, and empty range', () => {
     const definition: QueryDefinition = {
       ...base,
@@ -230,6 +273,49 @@ describe('widget result rendering', () => {
     expect(markup).toContain('Grand total');
     expect(markup).toContain('bg-emerald-500/20');
     expect(markup).not.toContain('__grouping');
+  });
+
+  it('shades heatmap cells from the lowest to the highest data row, leaving totals plain', () => {
+    const definition: QueryDefinition = {
+      ...base,
+      type: 'table',
+      dimensions: [{ fieldId: 'platform' }, { fieldId: 'placement' }],
+      metrics: [{ ...metric, colorScale: { style: 'heatmap', color: 'positive' } }],
+      resultLimit: { mode: 'top', amount: 20 },
+      showSubtotals: true,
+    };
+    const markup = render(definition, [
+      { dimension_1: 'Meta', dimension_2: 'Feed', metric_1: 10, __grouping: 0 },
+      { dimension_1: 'Meta', dimension_2: 'Reels', metric_1: 20, __grouping: 0 },
+      { dimension_1: 'Meta', dimension_2: 'Stories', metric_1: 30, __grouping: 0 },
+      { dimension_1: 'Meta', dimension_2: null, metric_1: 60, __grouping: 1 },
+    ]);
+
+    expect(markup.match(/var\(--color-emerald-500\) \d+%/g)).toEqual([
+      'var(--color-emerald-500) 0%',
+      'var(--color-emerald-500) 23%',
+      'var(--color-emerald-500) 45%',
+    ]);
+  });
+
+  it('draws inverted in-cell bars against whole-result bounds of a paged table', () => {
+    const definition: QueryDefinition = {
+      ...base,
+      type: 'table',
+      dimensions: [{ fieldId: 'campaign' }],
+      metrics: [{ ...metric, colorScale: { style: 'bar', color: 'warning', invert: true } }],
+      resultLimit: { mode: 'pagination', amount: 1 },
+    };
+    const markup = render(
+      definition,
+      [{ dimension_1: 'Spring', metric_1: 25 }],
+      undefined,
+      undefined,
+      { metric_1: { min: 0, max: 100 } },
+    );
+
+    expect(markup).toContain('data-slot="color-scale-bar"');
+    expect(markup).toContain('width:75%');
   });
 
   it('renders pivot values as grouped metric headers', () => {

@@ -250,19 +250,23 @@ describe('query compiler', () => {
     expect(result.sql).toContain('ORDER BY 1 ASC');
   });
 
-  it('buckets date dimensions to the widget target', () => {
+  const cost = {
+    source: { kind: 'field' as const, fieldId: 'cost', aggregation: 'sum' as const },
+    dataType: 'currency' as const,
+  };
+  const dateChart = {
+    title: 'Cost by date',
+    dataSourceId: 'source',
+    dateRangeFieldId: 'date',
+    dimension: { fieldId: 'date', dateGranularity: 'auto' as const },
+  };
+  it.each<WidgetDefinition>([
+    { ...dateChart, type: 'line', metrics: [cost] },
+    { ...dateChart, type: 'combo', metrics: [{ ...cost, mark: 'bar', axis: 'left' }] },
+  ])('buckets $type date dimensions to the widget target', (definition) => {
     const result = compileWidgetQuery({
       dashboard,
-      definition: {
-        type: 'line',
-        title: 'Cost by date',
-        dataSourceId: 'source',
-        dateRangeFieldId: 'date',
-        dimension: { fieldId: 'date', dateGranularity: 'auto' },
-        metrics: [
-          { source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' }, dataType: 'currency' },
-        ],
-      },
+      definition,
       dataSource,
       fields,
       calculatedFields: [],
@@ -357,6 +361,61 @@ describe('query compiler', () => {
         instance.closeSync();
       }
     });
+  });
+
+  it('computes color scale bounds over every pivot cell of the whole result, without totals', async () => {
+    const instance = await DuckDBInstance.create(':memory:');
+    const connection = await instance.connect();
+    try {
+      const compiled = compileWidgetQuery({
+        dashboard: {
+          ...dashboard,
+          defaultDateRange: {
+            startDate: { fixed: '2026-08-01' },
+            endDate: { fixed: '2026-08-31' },
+          },
+        },
+        definition: {
+          type: 'table',
+          title: 'Cost',
+          dataSourceId: 'source',
+          dateRangeFieldId: 'date',
+          dimensions: [{ fieldId: 'platform' }, { fieldId: 'campaign' }],
+          pivotDimension: { fieldId: 'date' },
+          metrics: [
+            {
+              source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+              dataType: 'currency',
+              colorScale: { style: 'heatmap', color: 'positive' },
+            },
+          ],
+          resultLimit: { mode: 'pagination', amount: 1 },
+          showSubtotals: true,
+          showSummaryRow: true,
+        },
+        dataSource,
+        fields,
+        calculatedFields: [],
+        libraryMetrics: [],
+        controlState: {},
+        bucketName: 'bucket',
+        sourceSql: `(VALUES
+          ('Meta', 'Feed', DATE '2026-08-01', 10),
+          ('Meta', 'Feed', DATE '2026-08-02', 20),
+          ('Meta', 'Stories', DATE '2026-08-01', 30),
+          ('Search', 'Feed', DATE '2026-08-01', 40)
+        ) AS source("Platform", "Campaign", "DateStart", "MediaCost")`,
+        offset: 1,
+        scaleBounds: true,
+      });
+      const rows = (
+        await connection.runAndReadAll(compiled.sql, compiled.parameters.map(String))
+      ).getRowObjectsJson();
+      expect(rows.map((row) => [Number(row.min_1), Number(row.max_1)])).toEqual([[10, 40]]);
+    } finally {
+      connection.closeSync();
+      instance.closeSync();
+    }
   });
 
   it('selects a library-driven gauge upper limit', () => {

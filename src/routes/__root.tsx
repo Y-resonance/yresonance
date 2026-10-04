@@ -2,10 +2,15 @@ import { ClerkProvider } from '@clerk/tanstack-react-start';
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { TooltipProvider } from '#/components/ui/tooltip';
+import { AnalyticsProvider } from '#/analytics/provider';
+import { getAnalyticsConfig } from '#/analytics/config-function';
+import { browserAnalytics } from '#/analytics/browser';
 
 import appCss from '../styles.css?url';
 
 export const Route = createRootRoute({
+  loader: () => getAnalyticsConfig(),
+  onCatch: (error) => browserAnalytics()?.captureException(error),
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -27,6 +32,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
+  const analytics = Route.useLoaderData();
   return (
     <html lang="en">
       <head>
@@ -43,10 +49,12 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up">
-          <TooltipProvider>
-            {children}
-            <Scripts />
-          </TooltipProvider>
+          <AnalyticsProvider config={analytics ?? null}>
+            <TooltipProvider>
+              {children}
+              <Scripts />
+            </TooltipProvider>
+          </AnalyticsProvider>
         </ClerkProvider>
       </body>
     </html>

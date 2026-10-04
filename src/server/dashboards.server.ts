@@ -19,7 +19,8 @@ import {
 import { placementMessage, layoutMessage, canvasRowsMessage } from '#/domain/layout-messages';
 import { widgetLabel } from '#/domain/widget-label';
 import { loadDataSource, loadQueryMetadata } from './records.server';
-import { remapWidgetDefinition } from '#/domain/remap';
+import { remapWidgetDefinition, UnmatchedFieldsError } from '#/domain/remap';
+import { recordProductMetric } from '#/observability';
 import { yearToDateRange } from '#/domain/dates';
 import { seedPreviewWorkspace } from './preview-seed.server';
 import { visibleDashboardRows, authorizeDashboard } from './dashboard-access.server';
@@ -141,24 +142,184 @@ export async function createDashboard(request: Extract<ApiRequest, { action: 'cr
     createdAt: now,
     updatedAt: now,
   };
+  await insertDashboard(document);
+  return document;
+}
+
+// Stores a new dashboard and grants its creator editor access in one batch.
+async function insertDashboard(document: DashboardDocument) {
   await database().batch([
     database().insert(dashboards).values({
-      id,
-      workspaceId: session.workspace.id,
-      name: request.name,
+      id: document.id,
+      workspaceId: document.workspaceId,
+      name: document.name,
       document,
-      createdBy: session.userId,
-      createdAt: now,
-      updatedAt: now,
+      createdBy: document.createdBy,
+      createdAt: document.createdAt,
+      updatedAt: document.updatedAt,
     }),
     database().insert(dashboardGrants).values({
-      dashboardId: id,
-      clerkUserId: session.userId,
+      dashboardId: document.id,
+      clerkUserId: document.createdBy,
       role: 'editor',
-      grantedBy: session.userId,
-      grantedAt: now,
+      grantedBy: document.createdBy,
+      grantedAt: document.createdAt,
     }),
   ]);
+}
+
+/**
+ * Copies a dashboard inside its workspace under a new name. `dataSourceMapping` points every
+ * widget that uses a mapped datasource at its target, matching fields by canonical name. A single
+ * unmatched field fails the whole copy and lists the gaps per widget, so no half-working copy is
+ * stored. Share links and grants stay with the original; the caller becomes the only editor.
+ */
+export async function duplicateDashboard(
+  request: Extract<ApiRequest, { action: 'duplicateDashboard' }>,
+) {
+  const original = await authorizeDashboard(request.dashboardId, 'editor');
+  const session = original.session!;
+  const workspaceId = original.document.workspaceId;
+  const mapping = new Map(
+    Object.entries(request.dataSourceMapping ?? {}).filter(([from, to]) => from !== to),
+  );
+  const targetIds = [...new Set(mapping.values())];
+  if (targetIds.length) {
+    const owned = await database()
+      .select({ id: dataSources.id })
+      .from(dataSources)
+      .where(and(eq(dataSources.workspaceId, workspaceId), inArray(dataSources.id, targetIds)));
+    if (owned.length !== targetIds.length)
+      throw new ApiError(
+        400,
+        'invalid_datasource',
+        'One or more target datasources do not belong to this workspace.',
+      );
+  }
+  const usedIds = new Set(
+    original.document.widgets.flatMap((widget) =>
+      'dataSourceId' in widget.definition ? [widget.definition.dataSourceId] : [],
+    ),
+  );
+  const unusedId = [...mapping.keys()].find((id) => !usedIds.has(id));
+  if (unusedId)
+    throw new ApiError(
+      400,
+      'invalid_datasource',
+      `The dashboard does not use datasource ${unusedId}.`,
+    );
+  const metadata = new Map(
+    await Promise.all(
+      [...new Set([...mapping.keys(), ...targetIds])].map(
+        async (id) => [id, await loadQueryMetadata(id, workspaceId)] as const,
+      ),
+    ),
+  );
+
+  // Remap every widget before failing, so one response lists all gaps.
+  const unmatched: Array<{ widgetId: string; widget: string; canonicalNames: string[] }> = [];
+  const remapped = original.document.widgets.map((widget) => {
+    const from = 'dataSourceId' in widget.definition ? widget.definition.dataSourceId : undefined;
+    const to = from && mapping.get(from);
+    if (!from || !to) return { widget, remapped: false };
+    try {
+      const definition = remapWidgetDefinition(
+        widget.definition,
+        metadata.get(from)!,
+        to,
+        metadata.get(to)!,
+      );
+      // Default filter values belong to the original datasource, as when switching it in the builder.
+      return {
+        widget: {
+          ...widget,
+          definition:
+            definition.type === 'control'
+              ? { ...definition, defaultValues: undefined }
+              : definition,
+        },
+        remapped: true,
+      };
+    } catch (error) {
+      if (!(error instanceof UnmatchedFieldsError))
+        throw new ApiError(
+          400,
+          'incompatible_datasource',
+          `${widgetLabel(widget)}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      unmatched.push({
+        widgetId: widget.id,
+        widget: widgetLabel(widget),
+        canonicalNames: error.canonicalNames,
+      });
+      return { widget, remapped: false };
+    }
+  });
+  if (unmatched.length) {
+    console.info('yresonance.dashboard_duplicate', {
+      dashboardId: original.document.id,
+      result: 'unmatched_fields',
+      unmatchedWidgetCount: unmatched.length,
+      canonicalNames: [...new Set(unmatched.flatMap((item) => item.canonicalNames))],
+    });
+    recordProductMetric('dashboard_duplicate', {
+      labels: ['mapped', 'unmatched_fields'],
+      numbers: [original.document.widgets.length, unmatched.length],
+      index: workspaceId,
+    });
+    throw new ApiError(
+      400,
+      'canonical_field_missing',
+      `The target datasource is missing canonical fields for: ${unmatched
+        .map((item) => `${item.widget} (${item.widgetId}): ${item.canonicalNames.join(', ')}`)
+        .join('; ')}. Add or rename these fields on the target datasource and retry.`,
+      unmatched,
+    );
+  }
+  const widgets = await Promise.all(
+    remapped.map(async (item): Promise<DashboardWidget> => {
+      const id = `widget_${crypto.randomUUID()}`;
+      if (!item.remapped) return { ...item.widget, id };
+      const { definition } = item.widget;
+      try {
+        await validateDefinition(original.document, definition);
+      } catch (error) {
+        if (!(error instanceof ApiError)) throw error;
+        throw new ApiError(
+          error.status,
+          error.code,
+          `${widgetLabel(item.widget)}: ${error.message}`,
+        );
+      }
+      return { ...item.widget, id, definitionHash: await definitionHash(definition, workspaceId) };
+    }),
+  );
+  const remappedCount = remapped.filter((item) => item.remapped).length;
+
+  const now = new Date().toISOString();
+  const document: DashboardDocument = {
+    ...original.document,
+    id: `dash_${crypto.randomUUID()}`,
+    name: request.name,
+    widgets,
+    createdBy: session.userId,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await insertDashboard(document);
+  console.info('yresonance.dashboard_duplicate', {
+    dashboardId: original.document.id,
+    result: 'success',
+    duplicateId: document.id,
+    widgetCount: widgets.length,
+    remappedWidgetCount: remappedCount,
+    mapped: mapping.size > 0,
+  });
+  recordProductMetric('dashboard_duplicate', {
+    labels: [mapping.size ? 'mapped' : 'plain', 'success'],
+    numbers: [widgets.length, remappedCount],
+    index: workspaceId,
+  });
   return document;
 }
 

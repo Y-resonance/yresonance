@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   clearControlValue,
+  comboAxisFor,
   filterInputValue,
   filterValueFromInput,
   patchFilterCondition,
@@ -46,5 +47,28 @@ describe('widget filter editing', () => {
 
     expect(input).toBe('DE, FR');
     expect(filterValueFromInput(input, true)).toEqual(['DE', 'FR']);
+  });
+});
+
+describe('combo axis choice', () => {
+  const metric = (dataType: 'currency' | 'percent' | 'number', axis: 'left' | 'right') => ({
+    source: { kind: 'library' as const, libraryMetricId: dataType },
+    dataType,
+    mark: 'line' as const,
+    axis,
+  });
+
+  it('joins the axis that already shows the unit, otherwise an empty one', () => {
+    const spend = metric('currency', 'left');
+    expect(comboAxisFor([spend], 'currency')).toBe('left');
+    expect(comboAxisFor([spend], 'percent')).toBe('right');
+    expect(comboAxisFor([metric('percent', 'right')], 'number')).toBe('left');
+  });
+
+  it('keeps an edited metric on its axis while the unit still fits there', () => {
+    const ctr = metric('percent', 'right');
+    expect(comboAxisFor([metric('currency', 'left')], 'currency', 'right')).toBe('right');
+    expect(comboAxisFor([metric('currency', 'left'), ctr], 'currency', 'right')).toBe('left');
+    expect(comboAxisFor([metric('currency', 'left'), ctr], 'number', 'right')).toBe('right');
   });
 });

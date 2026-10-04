@@ -15,6 +15,7 @@ import {
 } from '#/components/dashboard-builder';
 import { DashboardSharing, type SharingState } from '#/components/dashboard-sharing';
 import { DashboardView, dashboardDateControlRange } from '#/components/dashboard-view';
+import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { ErrorState, LoadingState } from '#/components/request-state';
 import { Badge } from '#/components/ui/badge';
 import { Label } from '#/components/ui/label';
@@ -142,6 +143,23 @@ function DashboardContent() {
                       />
                     </Label>
                     <SaveStatusIndicator status={saveStatus} />
+                    <DuplicateDashboard
+                      dashboard={{
+                        id: dashboardId,
+                        name: payload.dashboard.name,
+                        dataSourceIds: [
+                          ...new Set(
+                            payload.dashboard.widgets.flatMap((widget) =>
+                              'dataSourceId' in widget.definition
+                                ? [widget.definition.dataSourceId]
+                                : [],
+                            ),
+                          ),
+                        ],
+                      }}
+                      dataSources={payload.dataSources}
+                      disabled={saveStatus !== 'saved'}
+                    />
                     <DashboardSharing
                       dashboardId={dashboardId}
                       sharing={payload.sharing ?? { links: [], grants: [] }}

@@ -1,5 +1,11 @@
 import { type SourceDescription, aggregations } from './shared';
-import { type WidgetDefinition, type WidgetMetric, type Aggregation } from '#/domain/schema';
+import {
+  type WidgetDefinition,
+  type WidgetMetric,
+  type ComboMetric,
+  type Aggregation,
+} from '#/domain/schema';
+import { comboAxisFor } from '#/domain/widget-editing';
 import { type LibraryMetricDraft, MetricFormulaDialog } from '#/components/metric-formula-dialog';
 import { useState } from 'react';
 import { Field, FieldLabel } from '#/components/ui/field';
@@ -16,6 +22,7 @@ import { CircleHelpIcon, Trash2Icon, PlusIcon } from 'lucide-react';
 import { Button } from '#/components/ui/button';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
 import { Input } from '#/components/ui/input';
+import { Switch } from '#/components/ui/switch';
 import { type QuerySettingsProps } from './shared';
 import {
   fieldChoices,
@@ -64,6 +71,20 @@ export function MetricSettings({
   if (!metrics.length) return null;
   function update(index: number, nextMetric: WidgetMetric) {
     if ('metric' in definition) return commit({ ...definition, metric: nextMetric });
+    if (definition.type === 'combo')
+      return commit({
+        ...definition,
+        metrics: definition.metrics.map((item, itemIndex) => {
+          if (itemIndex !== index) return item;
+          const others = definition.metrics.filter((_, otherIndex) => otherIndex !== index);
+          // A new field can change the unit, so the metric moves to an axis that still fits it.
+          return {
+            mark: item.mark,
+            ...nextMetric,
+            axis: comboAxisFor(others, nextMetric.dataType, item.axis),
+          };
+        }),
+      });
     if ('metrics' in definition)
       return commit({
         ...definition,
@@ -75,8 +96,27 @@ export function MetricSettings({
   }
   function addMetric(next: WidgetMetric, libraryMetric?: LibraryMetricDraft) {
     if ('metric' in definition) return commit({ ...definition, metric: next }, libraryMetric);
+    if (definition.type === 'combo')
+      return commit(
+        {
+          ...definition,
+          metrics: [
+            ...definition.metrics,
+            { ...next, mark: 'line', axis: comboAxisFor(definition.metrics, next.dataType) },
+          ],
+        },
+        libraryMetric,
+      );
     if ('metrics' in definition)
       return commit({ ...definition, metrics: [...definition.metrics, next] }, libraryMetric);
+    return Promise.resolve(false);
+  }
+  function removeMetric(index: number) {
+    const keep = (_: unknown, itemIndex: number) => itemIndex !== index;
+    if (definition.type === 'combo')
+      return commit({ ...definition, metrics: definition.metrics.filter(keep) });
+    if ('metrics' in definition)
+      return commit({ ...definition, metrics: definition.metrics.filter(keep) });
     return Promise.resolve(false);
   }
   function metricFor(id: string): WidgetMetric {
@@ -222,22 +262,32 @@ export function MetricSettings({
                       variant="ghost"
                       size="icon-sm"
                       aria-label={`Remove metric ${index + 1}`}
-                      onClick={() =>
-                        void commit({
-                          ...definition,
-                          metrics: definition.metrics.filter((_, itemIndex) => itemIndex !== index),
-                        })
-                      }
+                      onClick={() => void removeMetric(index)}
                     >
                       <Trash2Icon />
                     </Button>
                   ) : null}
                 </div>
+                {definition.type === 'combo' ? (
+                  <ComboMetricSettings
+                    index={index}
+                    metric={definition.metrics[index]!}
+                    onChange={(next) =>
+                      void commit({
+                        ...definition,
+                        metrics: definition.metrics.map((item, itemIndex) =>
+                          itemIndex === index ? next : item,
+                        ),
+                      })
+                    }
+                  />
+                ) : null}
                 {definition.type === 'table' ? (
                   <ConditionalFormatSettings
                     metric={metric}
-                    onChange={async (conditionalFormat) => {
-                      await update(index, { ...metric, conditionalFormat });
+                    metricLabel={`metric ${index + 1}`}
+                    onChange={async (next) => {
+                      await update(index, next);
                     }}
                   />
                 ) : null}
@@ -275,32 +325,119 @@ export function MetricSettings({
   );
 }
 
-type ConditionalFormat = NonNullable<WidgetMetric['conditionalFormat']>;
-
-function ConditionalFormatSettings({
+function ComboMetricSettings({
+  index,
   metric,
   onChange,
 }: {
+  index: number;
+  metric: ComboMetric;
+  onChange: (metric: ComboMetric) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-1 pl-2">
+      <NativeSelect
+        className="w-full"
+        size="sm"
+        aria-label={`Chart type for metric ${index + 1}`}
+        value={metric.mark}
+        onChange={(event) =>
+          onChange({ ...metric, mark: event.target.value as ComboMetric['mark'] })
+        }
+      >
+        <NativeSelectOption value="bar">Bars</NativeSelectOption>
+        <NativeSelectOption value="line">Line</NativeSelectOption>
+      </NativeSelect>
+      <NativeSelect
+        className="w-full"
+        size="sm"
+        aria-label={`Axis for metric ${index + 1}`}
+        value={metric.axis}
+        onChange={(event) =>
+          onChange({ ...metric, axis: event.target.value as ComboMetric['axis'] })
+        }
+      >
+        <NativeSelectOption value="left">Left axis</NativeSelectOption>
+        <NativeSelectOption value="right">Right axis</NativeSelectOption>
+      </NativeSelect>
+    </div>
+  );
+}
+
+type ConditionalFormat = NonNullable<WidgetMetric['conditionalFormat']>;
+type ColorScale = NonNullable<WidgetMetric['colorScale']>;
+
+// A metric is formatted by threshold rules or by a scale over its values, never both.
+function ConditionalFormatSettings({
+  metric,
+  metricLabel,
+  onChange,
+}: {
   metric: WidgetMetric;
-  onChange: (rules: ConditionalFormat | undefined) => Promise<void>;
+  metricLabel: string;
+  onChange: (metric: WidgetMetric) => Promise<void>;
 }) {
   const rules = metric.conditionalFormat ?? [];
+  const scale = metric.colorScale;
+  const setRules = (next: ConditionalFormat) =>
+    onChange({ ...metric, conditionalFormat: next.length ? next : undefined });
   const update = (index: number, rule: ConditionalFormat[number]) =>
-    onChange(rules.map((item, itemIndex) => (itemIndex === index ? rule : item)));
+    setRules(rules.map((item, itemIndex) => (itemIndex === index ? rule : item)));
+  const setScale = (next: ColorScale) =>
+    onChange({ ...metric, conditionalFormat: undefined, colorScale: next });
   return (
     <div className="grid gap-2 pl-2">
       <div className="flex items-center justify-between gap-2">
         <FieldLabel>Conditional formatting</FieldLabel>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() =>
-            void onChange([...rules, { comparator: 'gte', value: 0, color: 'positive' }])
-          }
-        >
-          <PlusIcon data-icon="inline-start" /> Add rule
-        </Button>
+        <div className="flex items-center gap-1">
+          <NativeSelect
+            size="sm"
+            aria-label={`Formatting style for ${metricLabel}`}
+            value={scale?.style ?? 'rules'}
+            onChange={(event) => {
+              const style = event.target.value;
+              void (style === 'heatmap' || style === 'bar'
+                ? setScale({ ...scale, style, color: scale?.color ?? 'positive' })
+                : onChange({ ...metric, colorScale: undefined }));
+            }}
+          >
+            <NativeSelectOption value="rules">Rules</NativeSelectOption>
+            <NativeSelectOption value="heatmap">Heatmap</NativeSelectOption>
+            <NativeSelectOption value="bar">Bar</NativeSelectOption>
+          </NativeSelect>
+          {scale ? null : (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() =>
+                void setRules([...rules, { comparator: 'gte', value: 0, color: 'positive' }])
+              }
+            >
+              <PlusIcon data-icon="inline-start" /> Add rule
+            </Button>
+          )}
+        </div>
       </div>
+      {scale ? (
+        <div className="flex items-center gap-3">
+          <NativeSelect
+            aria-label={`Scale color for ${metricLabel}`}
+            value={scale.color}
+            onChange={(event) =>
+              void setScale({ ...scale, color: event.target.value as ColorScale['color'] })
+            }
+          >
+            <SemanticColorOptions />
+          </NativeSelect>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={scale.invert ?? false}
+              onCheckedChange={(invert) => void setScale({ ...scale, invert: invert || undefined })}
+            />
+            Lower is better
+          </label>
+        </div>
+      ) : null}
       {rules.map((rule, index) => (
         <div key={index} className="grid grid-cols-[1fr_5rem_6rem_auto] items-center gap-1">
           <NativeSelect
@@ -337,25 +474,30 @@ function ConditionalFormatSettings({
               })
             }
           >
-            <NativeSelectOption value="positive">Positive</NativeSelectOption>
-            <NativeSelectOption value="warning">Warning</NativeSelectOption>
-            <NativeSelectOption value="negative">Negative</NativeSelectOption>
-            <NativeSelectOption value="neutral">Neutral</NativeSelectOption>
+            <SemanticColorOptions />
           </NativeSelect>
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label={`Remove rule ${index + 1}`}
-            onClick={() => {
-              const next = rules.filter((_, itemIndex) => itemIndex !== index);
-              void onChange(next.length ? next : undefined);
-            }}
+            onClick={() => void setRules(rules.filter((_, itemIndex) => itemIndex !== index))}
           >
             <Trash2Icon />
           </Button>
         </div>
       ))}
     </div>
+  );
+}
+
+function SemanticColorOptions() {
+  return (
+    <>
+      <NativeSelectOption value="positive">Positive</NativeSelectOption>
+      <NativeSelectOption value="warning">Warning</NativeSelectOption>
+      <NativeSelectOption value="negative">Negative</NativeSelectOption>
+      <NativeSelectOption value="neutral">Neutral</NativeSelectOption>
+    </>
   );
 }
 
