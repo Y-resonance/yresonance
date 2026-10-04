@@ -46,7 +46,29 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('deleteDashboard'), dashboardId: z.string().min(1) }),
   z.object({
+    action: z.literal('addPage'),
+    hidden: z.boolean().default(false),
+    dashboardId: z.string().min(1),
+    name: z.string().trim().min(1),
+  }),
+  z.object({
+    action: z.literal('updatePage'),
+    hidden: z.boolean().optional(),
+    dashboardId: z.string().min(1),
+    pageId: z.string().min(1),
+    name: z.string().trim().min(1).optional(),
+    position: z.number().int().nonnegative().optional(),
+  }),
+  z.object({
+    action: z.literal('removePage'),
+    dashboardId: z.string().min(1),
+    pageId: z.string().min(1),
+    confirm: z.boolean().default(false),
+  }),
+  z.object({ action: z.literal('trackPageView'), ...dashboardRef, pageId: z.string().min(1) }),
+  z.object({
     action: z.literal('addWidget'),
+    pageId: z.string().min(1),
     dashboardId: z.string().min(1),
     definition: widgetDefinitionSchema,
     width: z.number().int().positive(),
@@ -66,12 +88,14 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({
     action: z.literal('moveWidget'),
+    pageId: z.string().min(1).optional(),
     dashboardId: z.string().min(1),
     widgetId: z.string().min(1),
     placement: gridPlacementSchema,
   }),
   z.object({
     action: z.literal('updateLayout'),
+    pageId: z.string().min(1),
     dashboardId: z.string().min(1),
     canvasRows: z.number().int().min(10),
     placements: z.array(
@@ -83,6 +107,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({
     action: z.literal('copyWidget'),
+    pageId: z.string().min(1),
     dashboardId: z.string().min(1),
     fromDashboardId: z.string().min(1),
     widgetId: z.string().min(1),

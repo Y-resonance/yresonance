@@ -6,8 +6,8 @@ test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true
 
 test('mobile widget settings remove an empty desktop layout row', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
-  state.dashboard.canvasRows = 11;
-  state.dashboard.widgets = state.dashboard.widgets.map((widget) =>
+  state.dashboard.pages[0].canvasRows = 11;
+  state.dashboard.pages[0].widgets = state.dashboard.pages[0].widgets.map((widget) =>
     widget.layout.y >= 2
       ? { ...widget, layout: { ...widget.layout, y: widget.layout.y + 1 } }
       : widget,
@@ -18,7 +18,9 @@ test('mobile widget settings remove an empty desktop layout row', async ({ page 
   const settings = page.getByRole('dialog', { name: 'Widget settings' });
   await settings.getByRole('button', { name: 'Remove empty row above' }).click();
   await expect
-    .poll(() => state.dashboard.widgets.find((widget) => widget.id === 'w_spend')?.layout.y)
+    .poll(
+      () => state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.layout.y,
+    )
     .toBe(2);
-  expect(state.dashboard.canvasRows).toBe(10);
+  expect(state.dashboard.pages[0].canvasRows).toBe(10);
 });

@@ -1,3 +1,4 @@
+import { dashboardWidgets } from '#/domain/schema';
 import { loadDashboard } from './records.server';
 import { and, eq, isNull, getTableColumns, sql } from 'drizzle-orm';
 import { shareLinks, dashboardGrants, dashboards } from '#/db/schema';
@@ -28,7 +29,12 @@ export async function authorizeDashboard(
       );
     if (required === 'editor')
       throw new ApiError(403, 'read_only_link', 'Share links are read-only.');
-    return { ...loaded, role: 'viewer' as const, session: null };
+    return {
+      ...loaded,
+      document: viewerDocument(loaded.document),
+      role: 'viewer' as const,
+      session: null,
+    };
   }
   const session = await requireSession();
   if (loaded.document.workspaceId !== session.workspace.id)
@@ -46,7 +52,12 @@ export async function authorizeDashboard(
       'dashboard_access_denied',
       `You need ${required} access to this dashboard.`,
     );
-  return { ...loaded, role: grant.role as 'editor' | 'viewer', session };
+  return {
+    ...loaded,
+    document: grant.role === 'viewer' ? viewerDocument(loaded.document) : loaded.document,
+    role: grant.role as 'editor' | 'viewer',
+    session,
+  };
 }
 
 export async function visibleDashboardRows(session: SessionContext) {
@@ -77,8 +88,12 @@ export async function visibleDashboardRows(session: SessionContext) {
 }
 
 export function dashboardUsesDataSource(dashboard: DashboardDocument, dataSourceId: string) {
-  return dashboard.widgets.some(
+  return dashboardWidgets(dashboard).some(
     (widget) =>
       'dataSourceId' in widget.definition && widget.definition.dataSourceId === dataSourceId,
   );
+}
+
+export function viewerDocument(document: DashboardDocument): DashboardDocument {
+  return { ...document, pages: document.pages.filter((page) => !page.hidden) };
 }

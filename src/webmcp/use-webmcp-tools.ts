@@ -73,7 +73,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'getDashboard',
               description:
-                'Read the open dashboard, including widget definitions, controls, placements, canvas row count, timezone, and datasource names.',
+                'Read the open dashboard, including pages, their widget definitions, controls, placements, canvas row counts, timezone, and datasource names.',
               readOnly: true,
               fixed,
             },
@@ -127,9 +127,30 @@ export function useWebMcpTools(options: WebMcpOptions) {
               fixed,
             },
             {
+              action: 'addPage',
+              description:
+                'Add a named page, optionally hidden as a draft. Returns the stored dashboard.',
+              readOnly: false,
+              fixed,
+            },
+            {
+              action: 'updatePage',
+              description:
+                'Rename, hide, publish, or reorder a page using its zero-based position. Returns the stored dashboard.',
+              readOnly: false,
+              fixed,
+            },
+            {
+              action: 'removePage',
+              description:
+                'Permanently delete a page and its widgets. Populated pages require confirm: true. The last page cannot be removed. Returns the stored dashboard.',
+              readOnly: false,
+              fixed,
+            },
+            {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
+                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
@@ -149,21 +170,21 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'moveWidget',
               description:
-                'Move or resize a widget on the open dashboard. The placement must stay inside the grid and cannot overlap.',
+                'Move or resize a widget, optionally to another pageId on the open dashboard. The placement must stay inside the grid and cannot overlap.',
               readOnly: false,
               fixed,
             },
             {
               action: 'updateLayout',
               description:
-                'Replace every widget placement and the canvas row count on the open dashboard in one validated write. Include all placements. Empty rows are allowed, but widgets cannot overlap or leave the 12-column grid.',
+                'Replace every widget placement and the canvas row count on the specified page in one validated write. Include all placements on that page. Empty rows are allowed, but widgets cannot overlap or leave the 12-column grid.',
               readOnly: false,
               fixed,
             },
             {
               action: 'copyWidget',
               description:
-                'Copy a widget from another visible dashboard into the open dashboard. Optionally select a target datasource; referenced fields are remapped by canonical name.',
+                'Copy a widget from another visible dashboard into the specified page of the open dashboard. Optionally select a target datasource; referenced fields are remapped by canonical name.',
               readOnly: false,
               fixed,
             },

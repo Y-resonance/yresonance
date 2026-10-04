@@ -15,7 +15,7 @@ Tools by page, read-only first, then writes:
 - Dashboards list: `listDashboards`, `listLibraryMetrics`. Writes: `createDashboard`.
 - Dashboard editor: `listDashboards`, `listLibraryMetrics`, `getDashboard`, `queryWidget`,
   `explainWidget`, `getControlOptions`, `describeDatasource`, `previewWidget`. Writes:
-  `updateDashboard`, `addWidget`, `updateWidget`, `removeWidget`, `moveWidget`, `updateLayout`,
+  `updateDashboard`, `addPage`, `updatePage`, `removePage`, `addWidget`, `updateWidget`, `removeWidget`, `moveWidget`, `updateLayout`,
   `copyWidget`, `upsertCalculatedField`, `updateFieldMetadata`, `upsertLibraryMetric`,
   `shareDashboard`, `createDashboard`.
 - Unlisted link: `getDashboard`, `queryWidget`, `explainWidget`, `getControlOptions`,
@@ -33,3 +33,9 @@ Security model: clients never send SQL or column names. The only query path is
 `queryWidget(widgetId, controlState)`, used by the GUI and the WebMCP tool alike. Viewers and agents
 on a shared link can only run queries the dashboard already defines. Formulas are written in
 yresonance's own text syntax, parsed to an AST, validated, and compiled to SQL on the server.
+
+Page writes return the stored dashboard. `addWidget`, `copyWidget`, and `updateLayout` require a
+`pageId`; `moveWidget` accepts one to move across pages. `updateLayout` replaces only that page's
+placements. `updatePage` renames, changes draft status, or moves a page to a zero-based position.
+`removePage` requires `confirm: true` when it contains widgets and cannot remove the last page.
+View tools on shared links and viewer grants can read and query only published pages.

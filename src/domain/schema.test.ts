@@ -27,7 +27,19 @@ describe('dashboard document schema', () => {
       updatedAt: '2026-08-01T00:00:00.000Z',
     });
 
-    expect(dashboard.canvasRows).toBe(16);
+    expect(dashboard.schemaVersion).toBe(3);
+    expect(dashboard.pages[0]).toMatchObject({
+      id: 'dashboard_page',
+      name: 'Overview',
+      hidden: false,
+      canvasRows: 16,
+    });
+    expect(dashboard.pages[0].widgets[0]).toMatchObject({
+      id: 'widget',
+      layout: { x: 0, y: 12, width: 6, height: 2 },
+      definitionHash: 'hash',
+    });
+    expect(dashboardDocumentSchema.parse(dashboard)).toEqual(dashboard);
   });
 
   it('rejects a stored canvas that does not contain its widgets', () => {

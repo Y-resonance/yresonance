@@ -1,3 +1,4 @@
+import { dashboardWidgets } from '#/domain/schema';
 import type { ManagedUploadImport } from '#/data/analytics-data-backend';
 import { requireSession, type SessionContext } from './auth.server';
 import { eq, count, and, or, inArray, lt } from 'drizzle-orm';
@@ -93,7 +94,7 @@ async function sharedDatasourceWorkspace(
   if (!dashboardId)
     throw new ApiError(400, 'dashboard_required', 'Shared datasource access needs a dashboard.');
   const access = await authorizeDashboard(dashboardId, 'viewer', shareToken);
-  const referenced = access.document.widgets.some(
+  const referenced = dashboardWidgets(access.document).some(
     (widget) =>
       'dataSourceId' in widget.definition && widget.definition.dataSourceId === dataSourceId,
   );

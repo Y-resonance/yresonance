@@ -1,3 +1,4 @@
+import { apiRequestSchema } from '#/api/contracts';
 import type { Page, Route } from '@playwright/test';
 import type { DatasourceDescription } from '#/domain/datasource-fields';
 import type { DashboardDocument, DashboardWidget } from '#/domain/schema';
@@ -22,59 +23,67 @@ export function buildDashboard(): DashboardDocument {
     id: 'dash_demo',
     workspaceId: 'ws_demo',
     name: 'Client weekly',
-    schemaVersion: 2,
+    schemaVersion: 3,
     timezone: 'Europe/Berlin',
     defaultDateRange: fixedRange,
     columns: 12,
-    canvasRows: 10,
+
     createdBy: 'user_demo',
     createdAt: '2026-08-01T00:00:00.000Z',
     updatedAt: '2026-08-01T00:00:00.000Z',
-    widgets: [
-      widget('w_date', { x: 0, y: 0, width: 4, height: 2 }, { type: 'dateControl' }),
-      widget(
-        'w_platform',
-        { x: 4, y: 0, width: 4, height: 2 },
-        {
-          type: 'control',
-          dataSourceId,
-          fieldId: 'f_platform',
-          userDefinedName: 'Platform',
-          allowMultiple: true,
-        },
-      ),
-      widget(
-        'w_spend',
-        { x: 0, y: 2, width: 4, height: 3 },
-        {
-          type: 'scorecard',
-          title: 'Media spend',
-          dataSourceId,
-          dateRangeFieldId: 'f_date',
-          metric: {
-            source: { kind: 'field', fieldId: 'f_spend', aggregation: 'sum' },
-            dataType: 'currency',
-          },
-        },
-      ),
-      widget(
-        'w_campaigns',
-        { x: 4, y: 2, width: 8, height: 5 },
-        {
-          type: 'table',
-          title: 'Campaigns',
-          dataSourceId,
-          dateRangeFieldId: 'f_date',
-          dimensions: [{ fieldId: 'f_campaign' }],
-          metrics: [
+    pages: [
+      {
+        id: 'page_overview',
+        name: 'Overview',
+        hidden: false,
+        canvasRows: 10,
+        widgets: [
+          widget('w_date', { x: 0, y: 0, width: 4, height: 2 }, { type: 'dateControl' }),
+          widget(
+            'w_platform',
+            { x: 4, y: 0, width: 4, height: 2 },
             {
-              source: { kind: 'field', fieldId: 'f_spend', aggregation: 'sum' },
-              dataType: 'currency',
+              type: 'control',
+              dataSourceId,
+              fieldId: 'f_platform',
+              userDefinedName: 'Platform',
+              allowMultiple: true,
             },
-          ],
-          resultLimit: { mode: 'top', amount: 10 },
-        },
-      ),
+          ),
+          widget(
+            'w_spend',
+            { x: 0, y: 2, width: 4, height: 3 },
+            {
+              type: 'scorecard',
+              title: 'Media spend',
+              dataSourceId,
+              dateRangeFieldId: 'f_date',
+              metric: {
+                source: { kind: 'field', fieldId: 'f_spend', aggregation: 'sum' },
+                dataType: 'currency',
+              },
+            },
+          ),
+          widget(
+            'w_campaigns',
+            { x: 4, y: 2, width: 8, height: 5 },
+            {
+              type: 'table',
+              title: 'Campaigns',
+              dataSourceId,
+              dateRangeFieldId: 'f_date',
+              dimensions: [{ fieldId: 'f_campaign' }],
+              metrics: [
+                {
+                  source: { kind: 'field', fieldId: 'f_spend', aggregation: 'sum' },
+                  dataType: 'currency',
+                },
+              ],
+              resultLimit: { mode: 'top', amount: 10 },
+            },
+          ),
+        ],
+      },
     ],
   };
 }
@@ -167,20 +176,54 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
     });
 
   await page.route('**/api/yresonance', async (route) => {
-    const request = route.request().postDataJSON() as Record<string, string> & {
-      definition?: DashboardWidget['definition'];
-      width?: number;
-      height?: number;
-      placements?: Array<{ widgetId: string; placement: DashboardWidget['layout'] }>;
-      canvasRows?: number;
-      patch?: Record<string, unknown>;
-      libraryMetric?: {
-        name: string;
-        expression: string;
-        semanticType: 'count';
-      };
-    };
+    const request = apiRequestSchema.parse(route.request().postDataJSON());
+    const targetPage =
+      state.dashboard.pages.find((page) =>
+        'pageId' in request && request.pageId
+          ? page.id === request.pageId
+          : 'widgetId' in request && page.widgets.some((widget) => widget.id === request.widgetId),
+      ) ?? state.dashboard.pages[0]!;
     switch (request.action) {
+      case 'addPage': {
+        state.dashboard.pages.push({
+          id: `page_${state.dashboard.pages.length}`,
+          name: request.name!,
+          hidden: request.hidden ?? false,
+          canvasRows: 10,
+          widgets: [],
+        });
+        return ok(route, state.dashboard);
+      }
+      case 'updatePage': {
+        const index = state.dashboard.pages.indexOf(targetPage);
+        const updated = {
+          ...targetPage,
+          name: request.name ?? targetPage.name,
+          hidden: request.hidden ?? targetPage.hidden,
+        };
+        state.dashboard.pages.splice(index, 1);
+        state.dashboard.pages.splice(request.position ?? index, 0, updated);
+        return ok(route, state.dashboard);
+      }
+      case 'removePage': {
+        state.dashboard.pages = state.dashboard.pages.filter((page) => page.id !== request.pageId);
+        return ok(route, state.dashboard);
+      }
+      case 'moveWidget': {
+        const original = state.dashboard.pages
+          .flatMap((page) => page.widgets)
+          .find((widget) => widget.id === request.widgetId)!;
+        state.dashboard.pages.forEach((page) => {
+          page.widgets = page.widgets.filter((widget) => widget.id !== original.id);
+        });
+        targetPage.widgets.push({
+          ...original,
+          layout: request.placement as DashboardWidget['layout'],
+        });
+        return ok(route, original);
+      }
+      case 'trackPageView':
+        return ok(route, { pageId: request.pageId });
       case 'bootstrap':
         return ok(route, {
           isAdmin: options.isAdmin ?? true,
@@ -188,9 +231,13 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         });
       case 'listDashboards':
         return ok(route, [{ id: state.dashboard.id, name: state.dashboard.name }]);
+      case 'getSharedDashboard':
       case 'getDashboard':
         return ok(route, {
-          dashboard: state.dashboard,
+          dashboard:
+            options.role === 'viewer' || request.action === 'getSharedDashboard'
+              ? { ...state.dashboard, pages: state.dashboard.pages.filter((page) => !page.hidden) }
+              : state.dashboard,
           role: options.role ?? 'editor',
           dataSources: [{ id: dataSourceId, name: state.source.name }],
           sharing: { links: [], grants: [] },
@@ -211,7 +258,13 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         state.source = {
           ...state.source,
           fields: state.source.fields.map((field) =>
-            field.columnName === request.columnName ? { ...field, ...request.patch } : field,
+            field.columnName === request.columnName
+              ? {
+                  ...field,
+                  ...request.patch,
+                  defaultAggregation: request.patch.defaultAggregation ?? field.defaultAggregation,
+                }
+              : field,
           ),
         };
         return ok(route, { ok: true });
@@ -267,10 +320,17 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         );
         state.dashboard = {
           ...state.dashboard,
-          widgets: [...state.dashboard.widgets, added],
-          canvasRows: Math.max(
-            state.dashboard.canvasRows,
-            added.layout.y + added.layout.height + 2,
+          pages: state.dashboard.pages.map((page) =>
+            page.id === targetPage.id
+              ? {
+                  ...page,
+                  widgets: [...targetPage.widgets, added],
+                  canvasRows: Math.max(
+                    targetPage.canvasRows,
+                    added.layout.y + added.layout.height + 2,
+                  ),
+                }
+              : page,
           ),
         };
         return ok(route, { widget: added });
@@ -278,10 +338,21 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
       case 'updateWidget': {
         state.dashboard = {
           ...state.dashboard,
-          widgets: state.dashboard.widgets.map((item) =>
-            item.id === request.widgetId
-              ? { ...item, definition: request.definition!, definitionHash: `hash_${Date.now()}` }
-              : item,
+          pages: state.dashboard.pages.map((page) =>
+            page.id === targetPage.id
+              ? {
+                  ...page,
+                  widgets: targetPage.widgets.map((item) =>
+                    item.id === request.widgetId
+                      ? {
+                          ...item,
+                          definition: request.definition!,
+                          definitionHash: `hash_${Date.now()}`,
+                        }
+                      : item,
+                  ),
+                }
+              : page,
           ),
         };
         if (request.libraryMetric) {
@@ -299,7 +370,7 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
           };
         }
         return ok(route, {
-          widget: state.dashboard.widgets.find((i) => i.id === request.widgetId),
+          widget: targetPage.widgets.find((i) => i.id === request.widgetId),
         });
       }
       case 'updateLayout': {
@@ -308,9 +379,16 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         );
         state.dashboard = {
           ...state.dashboard,
-          canvasRows: request.canvasRows ?? state.dashboard.canvasRows,
-          widgets: state.dashboard.widgets.map((item) =>
-            byId.has(item.id) ? { ...item, layout: byId.get(item.id)! } : item,
+          pages: state.dashboard.pages.map((page) =>
+            page.id === targetPage.id
+              ? {
+                  ...page,
+                  canvasRows: request.canvasRows ?? targetPage.canvasRows,
+                  widgets: targetPage.widgets.map((item) =>
+                    byId.has(item.id) ? { ...item, layout: byId.get(item.id)! } : item,
+                  ),
+                }
+              : page,
           ),
         };
         return ok(route, { ok: true });
@@ -318,7 +396,14 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
       case 'removeWidget':
         state.dashboard = {
           ...state.dashboard,
-          widgets: state.dashboard.widgets.filter((item) => item.id !== request.widgetId),
+          pages: state.dashboard.pages.map((page) =>
+            page.id === targetPage.id
+              ? {
+                  ...page,
+                  widgets: targetPage.widgets.filter((item) => item.id !== request.widgetId),
+                }
+              : page,
+          ),
         };
         return ok(route, { ok: true });
       case 'listLibraryMetrics':

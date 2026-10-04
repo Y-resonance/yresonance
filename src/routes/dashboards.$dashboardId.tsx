@@ -1,6 +1,8 @@
+import { DashboardPages } from '#/components/dashboard-pages';
+import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { createFileRoute } from '@tanstack/react-router';
 import { CloudAlertIcon, CloudCheckIcon, LoaderCircleIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
 import { callApi } from '#/api/client';
 import { AppShell } from '#/components/app-shell';
@@ -10,7 +12,11 @@ import {
   type DashboardSaveStatus,
 } from '#/components/dashboard-builder';
 import { DashboardSharing, type SharingState } from '#/components/dashboard-sharing';
-import { DashboardView, dashboardDateControlRange } from '#/components/dashboard-view';
+import {
+  DashboardView,
+  dashboardDateControlRange,
+  initialControlState,
+} from '#/components/dashboard-view';
 import { ErrorState, LoadingState } from '#/components/request-state';
 import { Badge } from '#/components/ui/badge';
 import { Label } from '#/components/ui/label';
@@ -25,12 +31,13 @@ import {
   initialAgentModeState,
   selectAgentMode,
 } from '#/domain/agent-mode';
-import type { DashboardDocument } from '#/domain/schema';
+import type { ControlState, DashboardDocument } from '#/domain/schema';
 import { pageTitle, usePageTitle } from '#/lib/page-title';
 import { useWebMcpTools } from '#/webmcp/use-webmcp-tools';
 
 export const Route = createFileRoute('/dashboards/$dashboardId')({
   validateSearch: z.object({
+    page: z.string().optional().catch(undefined),
     dateRange: z.string().optional().catch(undefined),
     // Editors can preview the dashboard the way a viewer sees it. It lives in the URL so a
     // reload keeps the preview and the state is shareable while checking a viewer report.
@@ -60,12 +67,19 @@ function DashboardContent() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [payload, setPayload] = useState<DashboardPayload>();
+  const [builderControlState, setBuilderControlState] = useState<ControlState>({});
+  const controlDashboardIdRef = useRef<string>(undefined);
   const [error, setError] = useState<string>();
   const [saveStatus, setSaveStatus] = useState<DashboardSaveStatus>('saved');
   const [agentMode, setAgentMode] = useState(initialAgentModeState);
   const refresh = useCallback(async () => {
     try {
-      setPayload(await callApi<DashboardPayload>({ action: 'getDashboard', dashboardId }));
+      const loaded = await callApi<DashboardPayload>({ action: 'getDashboard', dashboardId });
+      if (controlDashboardIdRef.current !== loaded.dashboard.id) {
+        controlDashboardIdRef.current = loaded.dashboard.id;
+        setBuilderControlState(initialControlState(loaded.dashboard));
+      }
+      setPayload(loaded);
       setError(undefined);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -88,6 +102,12 @@ function DashboardContent() {
     onToolUse: activateAgentMode,
     onMutation: refresh,
   });
+  const displayedDashboard =
+    payload &&
+    (previewingAsViewer
+      ? { ...payload.dashboard, pages: payload.dashboard.pages.filter((page) => !page.hidden) }
+      : payload.dashboard);
+  const activePage = displayedDashboard && activeDashboardPage(displayedDashboard, search.page);
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
       {error ? (
@@ -141,31 +161,46 @@ function DashboardContent() {
               </div>
             ) : null}
           </header>
-          {editing && !agentMode.enabled ? (
-            <DashboardBuilder
-              dashboard={payload.dashboard}
-              dataSources={payload.dataSources}
-              refresh={refresh}
-              onSaveStatusChange={setSaveStatus}
-            />
-          ) : (
-            <DashboardView
-              dashboard={payload.dashboard}
-              dateRange={parseDateRangeSearch(search.dateRange)}
-              onDateRangeChange={(range) => {
-                const defaultRange = dashboardDateControlRange(payload.dashboard);
-                void navigate({
-                  search: (current) => ({
-                    ...current,
-                    dateRange:
-                      defaultRange && sameDateRange(defaultRange, range)
-                        ? undefined
-                        : dateRangeSearchValue(range),
-                  }),
-                });
-              }}
-            />
-          )}
+          <DashboardPages
+            dashboard={displayedDashboard!}
+            pageId={activePage?.id}
+            canEdit={editing}
+            disabled={saveStatus === 'saving'}
+            refresh={refresh}
+            onPageChange={(page) => void navigate({ search: (current) => ({ ...current, page }) })}
+          />
+          {activePage ? (
+            editing && !agentMode.enabled ? (
+              <DashboardBuilder
+                key={activePage.id}
+                controlState={builderControlState}
+                setControlState={setBuilderControlState}
+                dashboard={payload.dashboard}
+                pageId={activePage.id}
+                dataSources={payload.dataSources}
+                refresh={refresh}
+                onSaveStatusChange={setSaveStatus}
+              />
+            ) : (
+              <DashboardView
+                dashboard={displayedDashboard!}
+                pageId={activePage.id}
+                dateRange={parseDateRangeSearch(search.dateRange)}
+                onDateRangeChange={(range) => {
+                  const defaultRange = dashboardDateControlRange(payload.dashboard);
+                  void navigate({
+                    search: (current) => ({
+                      ...current,
+                      dateRange:
+                        defaultRange && sameDateRange(defaultRange, range)
+                          ? undefined
+                          : dateRangeSearchValue(range),
+                    }),
+                  });
+                }}
+              />
+            )
+          ) : null}
         </div>
       )}
     </main>

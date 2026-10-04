@@ -275,42 +275,94 @@ export const dashboardWidgetSchema = z.object({
   definitionHash: z.string().min(1),
 });
 
-const dashboardDocumentFields = z.object({
+const dashboardFields = {
   id: z.string().min(1),
   workspaceId: z.string().min(1),
   name: z.string().trim().min(1),
-  schemaVersion: z.literal(2),
-  // Persisted documents predate strict timezone validation. Requests validate new values.
   timezone: z.string().min(1).default('Europe/Berlin'),
   defaultDateRange: dateRangeSchema,
   columns: z.number().int().positive().default(12),
-  canvasRows: z.number().int().min(10).optional(),
-  widgets: z.array(dashboardWidgetSchema),
   createdBy: z.string().min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-});
+};
 
-export const dashboardDocumentSchema = dashboardDocumentFields
-  .transform((document) => ({
-    ...document,
-    canvasRows:
-      document.canvasRows ??
-      Math.max(
-        10,
-        document.widgets.reduce(
-          (bottom, widget) => Math.max(bottom, widget.layout.y + widget.layout.height + 2),
-          0,
-        ),
-      ),
-  }))
+export const dashboardPageSchema = z
+  .object({
+    hidden: z.boolean().default(false),
+    id: z.string().min(1),
+    name: z.string().trim().min(1),
+    canvasRows: z.number().int().min(10),
+    widgets: z.array(dashboardWidgetSchema),
+  })
   .refine(
-    (document) =>
-      document.widgets.every(
-        (widget) => widget.layout.y + widget.layout.height <= document.canvasRows,
-      ),
-    { message: 'Canvas rows must contain every widget.', path: ['canvasRows'] },
+    (page) =>
+      page.widgets.every((widget) => widget.layout.y + widget.layout.height <= page.canvasRows),
+    {
+      message: 'Canvas rows must contain every widget.',
+      path: ['canvasRows'],
+    },
   );
+
+const currentDashboardSchema = z
+  .object({
+    ...dashboardFields,
+    schemaVersion: z.literal(3),
+    pages: z.array(dashboardPageSchema).min(1),
+  })
+  .refine(
+    (document) => new Set(document.pages.map((page) => page.id)).size === document.pages.length,
+    {
+      message: 'Page IDs must be unique.',
+      path: ['pages'],
+    },
+  )
+  .refine(
+    (document) => {
+      const ids = document.pages.flatMap((page) => page.widgets.map((widget) => widget.id));
+      return new Set(ids).size === ids.length;
+    },
+    { message: 'Widget IDs must be unique across the dashboard.', path: ['pages'] },
+  );
+
+const legacyDashboardSchema = z
+  .object({
+    ...dashboardFields,
+    schemaVersion: z.literal(2),
+    canvasRows: z.number().int().min(10).optional(),
+    widgets: z.array(dashboardWidgetSchema),
+  })
+  .transform(({ widgets, canvasRows, ...document }) => ({
+    ...document,
+    schemaVersion: 3 as const,
+    // A stable ID keeps old deep links usable before the migrated document is next saved.
+    pages: [
+      {
+        id: `${document.id}_page`,
+        name: 'Overview',
+        hidden: false,
+        widgets,
+        canvasRows:
+          canvasRows ??
+          Math.max(10, ...widgets.map((widget) => widget.layout.y + widget.layout.height + 2)),
+      },
+    ],
+  }));
+
+export const dashboardDocumentSchema = z.preprocess((input) => {
+  const legacy = legacyDashboardSchema.safeParse(input);
+  return legacy.success ? legacy.data : input;
+}, currentDashboardSchema);
+
+export function dashboardWidgets(document: DashboardDocument) {
+  return document.pages.flatMap((page) => page.widgets);
+}
+
+export function dashboardControlWidgets(document: DashboardDocument) {
+  return document.pages.filter((page) => !page.hidden).flatMap((page) => page.widgets);
+}
+
+export type DashboardPage = z.infer<typeof dashboardPageSchema>;
 
 export const controlStateSchema = z.object({
   dateRange: dateRangeSchema.optional(),

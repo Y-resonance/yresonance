@@ -74,7 +74,9 @@ test('finishing a widget drag keeps the widget selected', async ({ page }) => {
   await page.mouse.up();
 
   await expect
-    .poll(() => state.dashboard.widgets.find((widget) => widget.id === 'w_spend')?.layout.x)
+    .poll(
+      () => state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.layout.x,
+    )
     .toBeGreaterThan(0);
   await expect(settings.getByRole('heading', { name: 'Media spend' })).toBeVisible();
 });
@@ -99,14 +101,16 @@ test('a widget resizes from anywhere along its border', async ({ page }) => {
 
   await expect
     .poll(
-      () => state.dashboard.widgets.find((widget) => widget.id === 'w_campaigns')?.layout.height,
+      () =>
+        state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_campaigns')?.layout
+          .height,
     )
     .toBeGreaterThan(5);
 });
 
 test('a control widget can be resized to one row', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
-  const dateControl = state.dashboard.widgets.find((widget) => widget.id === 'w_date')!;
+  const dateControl = state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_date')!;
   dateControl.layout = { ...dateControl.layout, y: 7 };
 
   await page.goto('/dashboards/dash_demo');
@@ -124,7 +128,10 @@ test('a control widget can be resized to one row', async ({ page }) => {
   await page.mouse.up();
 
   await expect
-    .poll(() => state.dashboard.widgets.find((widget) => widget.id === 'w_date')?.layout.height)
+    .poll(
+      () =>
+        state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_date')?.layout.height,
+    )
     .toBe(1);
 });
 
@@ -141,7 +148,10 @@ test('the toolbar adds a widget while another one is being edited', async ({ pag
   await page.getByRole('button', { name: 'Add Scorecard' }).click();
 
   await expect
-    .poll(() => state.dashboard.widgets.filter((widget) => widget.id.startsWith('w_added')).length)
+    .poll(
+      () =>
+        state.dashboard.pages[0].widgets.filter((widget) => widget.id.startsWith('w_added')).length,
+    )
     .toBe(1);
   // Adding hands the inspector to the new widget instead of dropping back to the empty state.
   await expect(settings.getByRole('heading', { name: 'New scorecard' })).toBeVisible();
@@ -168,7 +178,7 @@ test('a widget dragged out of the toolbar popover lands on the grid', async ({ p
   await page.mouse.up();
 
   await expect
-    .poll(() => state.dashboard.widgets.map((widget) => widget.definition.type))
+    .poll(() => state.dashboard.pages[0].widgets.map((widget) => widget.definition.type))
     .toContain('gauge');
   await expect(page.getByRole('button', { name: 'Add Gauge' })).toHaveCount(0);
 });
@@ -177,7 +187,7 @@ test('a catalog widget dropped onto an empty canvas lands where it was dropped',
   page,
 }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
-  state.dashboard = { ...state.dashboard, widgets: [] };
+  state.dashboard.pages[0].widgets = [];
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -196,9 +206,9 @@ test('a catalog widget dropped onto an empty canvas lands where it was dropped',
   });
   await page.mouse.up();
 
-  await expect.poll(() => state.dashboard.widgets.length).toBe(1);
-  await expect.poll(() => state.dashboard.widgets[0]?.layout.x).toBeGreaterThan(5);
+  await expect.poll(() => state.dashboard.pages[0].widgets.length).toBe(1);
+  await expect.poll(() => state.dashboard.pages[0].widgets[0]?.layout.x).toBeGreaterThan(5);
   // The mock appends new widgets at row 20; the layout save moves it to the drop row.
-  await expect.poll(() => state.dashboard.widgets[0]?.layout.y).toBeGreaterThan(0);
-  await expect.poll(() => state.dashboard.widgets[0]?.layout.y).toBeLessThan(10);
+  await expect.poll(() => state.dashboard.pages[0].widgets[0]?.layout.y).toBeGreaterThan(0);
+  await expect.poll(() => state.dashboard.pages[0].widgets[0]?.layout.y).toBeLessThan(10);
 });

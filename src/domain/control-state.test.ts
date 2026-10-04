@@ -106,15 +106,20 @@ describe('dashboard control defaults', () => {
 
   it('detects multiple submitted values for a single-select control', () => {
     const dashboard = {
-      widgets: [
+      pages: [
         {
-          id: 'region',
-          definition: {
-            type: 'control' as const,
-            dataSourceId: 'source',
-            fieldId: 'region',
-            allowMultiple: false,
-          },
+          hidden: false,
+          widgets: [
+            {
+              id: 'region',
+              definition: {
+                type: 'control' as const,
+                dataSourceId: 'source',
+                fieldId: 'region',
+                allowMultiple: false,
+              },
+            },
+          ],
         },
       ],
     } as Parameters<typeof singleValueControlWithMultipleSelections>[0];

@@ -28,7 +28,7 @@ interface OpenedDashboard {
   role: string;
   sharing?: SharingState;
   dataSources: Array<{ id: string }>;
-  dashboard: { widgets: Array<{ definition: { title?: string } }> };
+  dashboard: { pages: Array<{ widgets: Array<{ definition: { title?: string } }> }> };
 }
 
 describe('dashboard grants', () => {
@@ -183,7 +183,7 @@ describe('dashboard grants', () => {
       action: 'getDashboard',
       dashboardId: dashboard.id,
     })) as OpenedDashboard;
-    expect(afterEdit.dashboard.widgets[0].definition.title).toBe('Revenue, revised');
+    expect(afterEdit.dashboard.pages[0].widgets[0].definition.title).toBe('Revenue, revised');
 
     signInAsOwner(workspace);
     await callService({
@@ -246,7 +246,7 @@ describe('widget updates', () => {
       action: 'getDashboard',
       dashboardId: dashboard.id,
     })) as OpenedDashboard;
-    expect(opened.dashboard.widgets[0].definition.title).toBe('Revenue');
+    expect(opened.dashboard.pages[0].widgets[0].definition.title).toBe('Revenue');
     expect(
       await database
         .select()
@@ -331,8 +331,10 @@ describe('date controls', () => {
     const opened = (await callService({
       action: 'getDashboard',
       dashboardId: dashboard.id,
-    })) as { dashboard: { widgets: Array<{ id: string; definition: unknown }> } };
-    expect(opened.dashboard.widgets.find((widget) => widget.id === dateControl.id)).toMatchObject({
+    })) as { dashboard: { pages: Array<{ widgets: Array<{ id: string; definition: unknown }> }> } };
+    expect(
+      opened.dashboard.pages[0].widgets.find((widget) => widget.id === dateControl.id),
+    ).toMatchObject({
       definition: { type: 'dateControl', defaultDateRange: yearToDateRange },
     });
 

@@ -1,3 +1,4 @@
+import { dashboardControlWidgets } from '#/domain/schema';
 import type { ControlState, DashboardDocument, DashboardWidget } from './schema';
 
 export function mergeControlState(defaults: ControlState, input?: ControlState): ControlState {
@@ -42,7 +43,7 @@ export function singleValueControlWithMultipleSelections(
   dashboard: DashboardDocument,
   state: ControlState,
 ) {
-  return dashboard.widgets.find(
+  return dashboardControlWidgets(dashboard).find(
     (widget) =>
       widget.definition.type === 'control' &&
       !widget.definition.allowMultiple &&
@@ -55,4 +56,24 @@ export function toggleControlValue(selected: string[], value: string, allowMulti
   return selected.includes(value)
     ? selected.filter((selectedValue) => selectedValue !== value)
     : [...selected, value];
+}
+
+export function reconcileDashboardControls(
+  dashboard: DashboardDocument,
+  state: ControlState,
+): ControlState {
+  const widgets = dashboardControlWidgets(dashboard);
+  const values = Object.fromEntries(
+    widgets.flatMap((widget) =>
+      widget.definition.type === 'control'
+        ? [[widget.id, state.values?.[widget.id] ?? controlDefaultValues(widget)]]
+        : [],
+    ),
+  );
+  return {
+    dateRange: widgets.some((widget) => widget.definition.type === 'dateControl')
+      ? state.dateRange
+      : undefined,
+    values: Object.keys(values).length ? values : undefined,
+  };
 }

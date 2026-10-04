@@ -53,7 +53,7 @@ test('a keyboard-only editor selects, edits, and removes a widget', async ({ pag
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect
-    .poll(() => state.dashboard.widgets.some((widget) => widget.id === 'w_spend'))
+    .poll(() => state.dashboard.pages[0].widgets.some((widget) => widget.id === 'w_spend'))
     .toBe(false);
   await expect(page.getByText('Spend to date')).toHaveCount(0);
 });
@@ -100,7 +100,10 @@ test('a keyboard-only editor adds a widget from the toolbar catalog', async ({ p
   await tabTo(page, page.getByRole('button', { name: 'Add Scorecard' }));
   await page.keyboard.press('Enter');
   await expect
-    .poll(() => state.dashboard.widgets.filter((widget) => widget.id.startsWith('w_added')).length)
+    .poll(
+      () =>
+        state.dashboard.pages[0].widgets.filter((widget) => widget.id.startsWith('w_added')).length,
+    )
     .toBe(1);
   await expect(page.getByRole('button', { name: 'Remove New scorecard' })).toBeVisible();
 });
@@ -114,24 +117,30 @@ test('row controls insert and remove an empty row with the keyboard', async ({ p
   await tabTo(page, insert);
   await page.keyboard.press('Enter');
   await expect
-    .poll(() => state.dashboard.widgets.find((widget) => widget.id === 'w_spend')?.layout.y)
+    .poll(
+      () => state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.layout.y,
+    )
     .toBe(3);
-  expect(state.dashboard.canvasRows).toBe(11);
+  expect(state.dashboard.pages[0].canvasRows).toBe(11);
 
   const remove = page.getByRole('button', { name: 'Remove empty row 3' });
   await tabTo(page, remove);
   await page.keyboard.press('Enter');
   await expect
-    .poll(() => state.dashboard.widgets.find((widget) => widget.id === 'w_spend')?.layout.y)
+    .poll(
+      () => state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.layout.y,
+    )
     .toBe(2);
-  expect(state.dashboard.canvasRows).toBe(10);
+  expect(state.dashboard.pages[0].canvasRows).toBe(10);
 
   const addBelow = page.getByRole('button', { name: 'Insert row after row 10' });
   await tabTo(page, addBelow);
   await page.keyboard.press('Enter');
-  await expect.poll(() => state.dashboard.canvasRows).toBe(11);
+  await expect.poll(() => state.dashboard.pages[0].canvasRows).toBe(11);
   await expect(page.getByRole('button', { name: 'Insert row after row 11' })).toBeVisible();
-  expect(state.dashboard.widgets.find((widget) => widget.id === 'w_spend')?.layout.y).toBe(2);
+  expect(state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.layout.y).toBe(
+    2,
+  );
 });
 
 // The drag handle doubles as the keyboard "Edit" button, so the pointer path is worth
@@ -152,7 +161,9 @@ test('the pointer drag handle still moves a widget', async ({ page }) => {
   await page.mouse.up();
 
   await expect
-    .poll(() => state.dashboard.widgets.find((widget) => widget.id === 'w_spend')?.layout.x)
+    .poll(
+      () => state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.layout.x,
+    )
     .toBeGreaterThan(0);
 
   // A plain click on the handle selects the widget instead of starting a drag.

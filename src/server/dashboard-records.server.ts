@@ -1,3 +1,4 @@
+import { dashboardWidgets } from '#/domain/schema';
 import type { newLibraryMetricValues } from './formulas.server';
 import { type DashboardDocument, dashboardDocumentSchema } from '#/domain/schema';
 import { dashboards, libraryMetrics } from '#/db/schema';
@@ -55,7 +56,7 @@ export async function persistDashboard(
 }
 
 export function widgetById(document: DashboardDocument, widgetId: string) {
-  const widget = document.widgets.find((item) => item.id === widgetId);
+  const widget = dashboardWidgets(document).find((item) => item.id === widgetId);
   if (!widget) throw new ApiError(404, 'widget_not_found', 'Widget not found.');
   return widget;
 }
