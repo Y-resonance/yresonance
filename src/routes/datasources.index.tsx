@@ -10,16 +10,8 @@ import {
   dataTableFeatures,
   type DataTableFeatures,
 } from '#/components/data-table';
-import { DatasourceRegisterForm } from '#/components/datasource-register-form';
 import { ErrorState, LoadingState } from '#/components/request-state';
-import { Button } from '#/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog';
+import { buttonVariants } from '#/components/ui/button';
 import {
   datasourceOverviewRows,
   formatRelativeTime,
@@ -74,7 +66,6 @@ function DatasourcesContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string>();
   const [search, setSearch] = useState('');
-  const [registering, setRegistering] = useState(false);
   const refresh = useCallback(async () => {
     try {
       const [sources, bootstrap] = await Promise.all([
@@ -113,10 +104,10 @@ function DatasourcesContent() {
                 Every dataset registered in this workspace. Open one to manage its fields.
               </p>
             </div>
-            <Button onClick={() => setRegistering(true)}>
+            <Link to="/datasources/new" className={buttonVariants()}>
               <PlusIcon />
               New datasource
-            </Button>
+            </Link>
           </div>
           <DataTableSearch
             value={search}
@@ -161,25 +152,6 @@ function DatasourcesContent() {
           />
         </div>
       )}
-      <Dialog open={registering} onOpenChange={setRegistering}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>New datasource</DialogTitle>
-            <DialogDescription>
-              Upload a CSV or Parquet file, or register data already in this workspace.
-            </DialogDescription>
-          </DialogHeader>
-          <DatasourceRegisterForm
-            onRegistered={(dataSource) => {
-              setRegistering(false);
-              void navigate({
-                to: '/datasources/$datasourceId',
-                params: { datasourceId: dataSource.id },
-              });
-            }}
-          />
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }
