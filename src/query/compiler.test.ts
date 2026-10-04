@@ -359,6 +359,61 @@ describe('query compiler', () => {
     });
   });
 
+  it('computes color scale bounds over every pivot cell of the whole result, without totals', async () => {
+    const instance = await DuckDBInstance.create(':memory:');
+    const connection = await instance.connect();
+    try {
+      const compiled = compileWidgetQuery({
+        dashboard: {
+          ...dashboard,
+          defaultDateRange: {
+            startDate: { fixed: '2026-08-01' },
+            endDate: { fixed: '2026-08-31' },
+          },
+        },
+        definition: {
+          type: 'table',
+          title: 'Cost',
+          dataSourceId: 'source',
+          dateRangeFieldId: 'date',
+          dimensions: [{ fieldId: 'platform' }, { fieldId: 'campaign' }],
+          pivotDimension: { fieldId: 'date' },
+          metrics: [
+            {
+              source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+              dataType: 'currency',
+              colorScale: { style: 'heatmap', color: 'positive' },
+            },
+          ],
+          resultLimit: { mode: 'pagination', amount: 1 },
+          showSubtotals: true,
+          showSummaryRow: true,
+        },
+        dataSource,
+        fields,
+        calculatedFields: [],
+        libraryMetrics: [],
+        controlState: {},
+        bucketName: 'bucket',
+        sourceSql: `(VALUES
+          ('Meta', 'Feed', DATE '2026-08-01', 10),
+          ('Meta', 'Feed', DATE '2026-08-02', 20),
+          ('Meta', 'Stories', DATE '2026-08-01', 30),
+          ('Search', 'Feed', DATE '2026-08-01', 40)
+        ) AS source("Platform", "Campaign", "DateStart", "MediaCost")`,
+        offset: 1,
+        scaleBounds: true,
+      });
+      const rows = (
+        await connection.runAndReadAll(compiled.sql, compiled.parameters.map(String))
+      ).getRowObjectsJson();
+      expect(rows.map((row) => [Number(row.min_1), Number(row.max_1)])).toEqual([[10, 40]]);
+    } finally {
+      connection.closeSync();
+      instance.closeSync();
+    }
+  });
+
   it('selects a library-driven gauge upper limit', () => {
     const result = compileWidgetQuery({
       dashboard,
