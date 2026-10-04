@@ -80,7 +80,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'queryWidget',
               description:
-                'Run a stored widget from the open dashboard with optional dashboard control state. Viewers cannot submit SQL or field names. Returns rows and applied control state.',
+                'Run a stored widget from the open dashboard with optional dashboard control state. For bar, pie, and line widgets with drillDimensions, drillPath lists one clicked value per level, starting at dimension, and the widget returns the next level filtered by those values. Viewers cannot submit SQL or field names. Returns rows and applied control state.',
               readOnly: true,
               fixed,
             },

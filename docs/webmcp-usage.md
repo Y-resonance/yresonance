@@ -30,6 +30,7 @@ delete data. Write tools return the stored result so the agent can verify what h
 page refreshes after each write.
 
 Security model: clients never send SQL or column names. The only query path is
-`queryWidget(widgetId, controlState)`, used by the GUI and the WebMCP tool alike. Viewers and agents
+`queryWidget(widgetId, controlState, drillPath)`, used by the GUI and the WebMCP tool alike. A
+drill path only carries values for levels the editor defined. Viewers and agents
 on a shared link can only run queries the dashboard already defines. Formulas are written in
 yresonance's own text syntax, parsed to an AST, validated, and compiled to SQL on the server.

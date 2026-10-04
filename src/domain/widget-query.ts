@@ -1,10 +1,11 @@
 import type { ApiRequest } from '#/api/contracts';
-import type { ControlState, DashboardWidget } from '#/domain/schema';
+import type { ControlState, DashboardWidget, DrillPath } from '#/domain/schema';
 
 export function widgetQueryRequest({
   dashboardId,
   widget,
   controlState,
+  drillPath,
   preview,
   shareToken,
   page,
@@ -12,6 +13,7 @@ export function widgetQueryRequest({
   dashboardId: string;
   widget: DashboardWidget;
   controlState: ControlState;
+  drillPath?: DrillPath;
   preview: boolean;
   shareToken?: string;
   page?: number;
@@ -23,6 +25,7 @@ export function widgetQueryRequest({
         definition: widget.definition,
         width: widget.layout.width,
         controlState,
+        drillPath,
       }
     : {
         action: 'queryWidget',
@@ -30,6 +33,7 @@ export function widgetQueryRequest({
         widgetId: widget.id,
         shareToken,
         controlState,
+        drillPath,
         page,
       };
 }

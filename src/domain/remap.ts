@@ -91,6 +91,7 @@ export function remapWidgetDefinition(
     return widgetDefinitionSchema.parse({
       ...common,
       dimension: dimension(definition.dimension),
+      drillDimensions: definition.drillDimensions?.map(dimension),
       metrics: definition.metrics.map(metric),
     });
   if (definition.type === 'bar' || definition.type === 'pie')
@@ -98,6 +99,7 @@ export function remapWidgetDefinition(
       ...common,
       metric: metric(definition.metric),
       dimension: dimension(definition.dimension),
+      drillDimensions: definition.drillDimensions?.map(dimension),
       breakdownDimension: definition.breakdownDimension
         ? dimension(definition.breakdownDimension)
         : undefined,

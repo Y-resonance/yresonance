@@ -21,7 +21,7 @@ explain. Update it when a decision changes, not when an implementation detail do
 ## Security model
 
 - Viewers can only trigger queries a dashboard already defines. Clients never send SQL or column
-  names. The one query path is `queryWidget(widgetId, controlState)`, shared by UI and tool.
+  names. The one query path is `queryWidget(widgetId, controlState, drillPath)`, shared by UI and tool.
 - Column secrecy is explicitly not a goal. A derived metric next to its denominator makes the
   numerator derivable anyway (CPM and impressions give spend).
 - Formulas use yresonance's own text syntax at two levels: row-level calculated fields and aggregate
@@ -68,6 +68,11 @@ explain. Update it when a decision changes, not when an implementation detail do
   `metrics` are ambiguous.
 - `addWidget` accepts only width and height and appends at the bottom. Agents do not compute
   coordinates. Widgets cannot overlap.
+- Bar, pie and line charts drill down through editor-defined levels (`drillDimensions`). The
+  viewer only supplies clicked values as `drillPath`, which `queryWidget` turns into equality
+  filters, so the security model holds. Drill state stays inside one widget; cross-filtering other
+  widgets is a separate topic. Clicked levels cannot be dates because a date bucket is not an
+  equality filter. Tables are excluded: they already show several dimensions with subtotals.
 - Comparison runs as a second query with a shifted date range.
 - Relative dates resolve in the dashboard's timezone, default `Europe/Berlin`.
 - Rich text is stored as versioned JSON, never as HTML. Styling is an open object owned by each

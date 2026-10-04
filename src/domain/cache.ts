@@ -92,6 +92,7 @@ export function queryCacheState(input: {
   requestedDateRange: unknown;
   resolvedDateRange: { start: string; end: string };
   resolvedControls: unknown;
+  drillPath: unknown[];
   dataSourceConnector: string;
   dataSourceVersion: string;
   timezone: string;
@@ -107,6 +108,7 @@ export function queryCacheState(input: {
       },
       values: input.resolvedControls,
     },
+    drillPath: input.drillPath,
     dataSource: {
       connector: input.dataSourceConnector,
       version: input.dataSourceVersion,
