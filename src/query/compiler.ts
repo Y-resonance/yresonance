@@ -34,6 +34,8 @@ export interface QueryContext {
   sourceSql?: string;
   resolvedControls?: Array<{ fieldId: string; values: unknown[] }>;
   offset?: number;
+  // Return one row with min_N and max_N per metric over every data row instead of a page.
+  scaleBounds?: boolean;
   dateBucketTarget?: number;
   dialect?: SqlDialect;
 }
@@ -140,6 +142,20 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
         .join(', ')
     : [explicitSort, stableDimensions].filter(Boolean).join(', ');
   const orderBy = order ? ` ORDER BY ${order}` : '';
+  if (context.scaleBounds) {
+    const bounds = metrics.flatMap((_, index) => {
+      const column = quoteIdentifier(`metric_${index + 1}`);
+      return [
+        `MIN(${column}) AS ${quoteIdentifier(`min_${index + 1}`)}`,
+        `MAX(${column}) AS ${quoteIdentifier(`max_${index + 1}`)}`,
+      ];
+    });
+    return {
+      sql: `SELECT ${bounds.join(', ')} FROM (SELECT ${select.join(', ')} FROM ${source} WHERE ${conditions.join(' AND ')}${groupBy}) AS scaled${groupedTable ? ' WHERE "__grouping" = 0' : ''}`,
+      parameters,
+      definitions,
+    };
+  }
   const limit = widgetLimit(definition);
   return {
     sql: `SELECT ${select.join(', ')} FROM ${source} WHERE ${conditions.join(' AND ')}${groupBy}${orderBy}${limit ? ` LIMIT ${context.offset === undefined ? limit : limit + 1}` : ''}${context.offset ? ` OFFSET ${context.offset}` : ''}`,

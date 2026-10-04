@@ -129,14 +129,14 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
+                'Validate and append a widget to the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
             {
               action: 'updateWidget',
               description:
-                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors, showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle.',
+                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors or a colorScale heatmap or in-cell bar (invert when lower is better), not both; showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Card titles take titleStyle and text widgets take textStyle.',
               readOnly: false,
               fixed,
             },

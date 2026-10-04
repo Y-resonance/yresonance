@@ -248,3 +248,42 @@ export function tableSummaryDefinition(definition: WidgetDefinition): WidgetDefi
     showSummaryRow: false,
   };
 }
+
+export interface ScaleBounds {
+  min: number;
+  max: number;
+}
+
+// Bounds per metric key over data rows. Subtotal and grand total rows carry __grouping > 0.
+export function colorScaleBounds(rows: Record<string, unknown>[], metricKeys: string[]) {
+  const bounds: Record<string, ScaleBounds> = {};
+  for (const row of rows) {
+    if (Number(row.__grouping ?? 0) > 0) continue;
+    for (const key of metricKeys) {
+      if (row[key] == null) continue;
+      const value = Number(row[key]);
+      if (!Number.isFinite(value)) continue;
+      const current = bounds[key];
+      bounds[key] = current
+        ? { min: Math.min(current.min, value), max: Math.max(current.max, value) }
+        : { min: value, max: value };
+    }
+  }
+  return bounds;
+}
+
+// Position of a value on its scale from 0 to 1, or undefined when it cannot be placed.
+export function colorScalePosition(
+  value: unknown,
+  bounds: ScaleBounds | undefined,
+  invert = false,
+) {
+  if (value == null || !bounds) return undefined;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return undefined;
+  const span = bounds.max - bounds.min;
+  // Equal values are all at the top of the scale, whichever direction it runs.
+  if (span <= 0) return 1;
+  const position = Math.min(1, Math.max(0, (number - bounds.min) / span));
+  return invert ? 1 - position : position;
+}

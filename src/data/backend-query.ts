@@ -46,6 +46,7 @@ export function compileDatasourceWidget(
     dialect,
     resolvedControls: query.resolvedControls,
     offset: query.offset,
+    scaleBounds: query.scaleBounds,
     dateBucketTarget: query.dateBucketTarget,
   });
 }
