@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { ANALYTICS_PROXY_PATH } from './config';
+import { ANALYTICS_PROXY_PATH, posthogHosts } from './config';
 
 export function proxyAnalyticsRequest(request: Request) {
   const url = new URL(request.url);
@@ -12,7 +12,7 @@ export function proxyAnalyticsRequest(request: Request) {
 async function forwardAnalyticsRequest(request: Request, url: URL) {
   const pathname = url.pathname.slice(ANALYTICS_PROXY_PATH.length) || '/';
   const isAsset = pathname.startsWith('/static/') || pathname.startsWith('/array/');
-  const upstream = new URL(isAsset ? 'https://eu-assets.i.posthog.com' : env.POSTHOG_HOST);
+  const upstream = new URL(isAsset ? posthogHosts(env.POSTHOG_HOST).assetsHost : env.POSTHOG_HOST);
   // Assign the path separately so a double slash cannot replace the upstream host.
   upstream.pathname = pathname;
   upstream.search = url.search;

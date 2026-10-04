@@ -9,37 +9,45 @@ vi.mock('cloudflare:workers', () => ({ env }));
 
 beforeEach(() => {
   env.POSTHOG_ENABLED = 'true';
+  env.POSTHOG_HOST = 'https://eu.i.posthog.com';
 });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('PostHog proxy', () => {
   it.each([
-    ['/static/exception-autocapture.js?v=1', 'eu-assets.i.posthog.com'],
-    ['/array/phc_test/config?ip=0', 'eu-assets.i.posthog.com'],
-    ['/e/?compression=gzip-js', 'eu.i.posthog.com'],
-    ['/flags/?v=2', 'eu.i.posthog.com'],
-    ['/i/v1/logs?token=phc_test', 'eu.i.posthog.com'],
-  ])('routes %s to the correct origin and preserves response headers', async (path, host) => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response('upstream body', {
-        status: 202,
-        headers: { 'Cache-Control': 'public, max-age=300', 'Content-Type': 'application/json' },
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+    ['/static/exception-autocapture.js?v=1', 'eu-assets.i.posthog.com', 'https://eu.i.posthog.com'],
+    ['/array/phc_test/config?ip=0', 'eu-assets.i.posthog.com', 'https://eu.i.posthog.com'],
+    ['/e/?compression=gzip-js', 'eu.i.posthog.com', 'https://eu.i.posthog.com'],
+    ['/flags/?v=2', 'eu.i.posthog.com', 'https://eu.i.posthog.com'],
+    ['/i/v1/logs?token=phc_test', 'eu.i.posthog.com', 'https://eu.i.posthog.com'],
+    ['/array/phc_test/config', 'us-assets.i.posthog.com', 'https://us.i.posthog.com'],
+    ['/static/exception-autocapture.js', 'us-assets.i.posthog.com', 'https://us.i.posthog.com'],
+    ['/array/phc_test/config', 'analytics.example.com', 'https://analytics.example.com'],
+  ])(
+    'routes %s to the correct origin and preserves response headers',
+    async (path, host, ingestionHost) => {
+      env.POSTHOG_HOST = ingestionHost;
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response('upstream body', {
+          status: 202,
+          headers: { 'Cache-Control': 'public, max-age=300', 'Content-Type': 'application/json' },
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
 
-    const response = await proxyAnalyticsRequest(
-      new Request(`https://yresonance.com/ingest${path}`),
-    );
-    const upstream = fetchMock.mock.calls[0][0];
-    expect(upstream).toBeInstanceOf(Request);
-    if (!(upstream instanceof Request)) throw new Error('Expected an upstream request.');
-    expect(upstream.url).toBe(`https://${host}${path}`);
-    expect(upstream.headers.get('host')).toBe(host);
-    expect(response?.status).toBe(202);
-    expect(response?.headers.get('cache-control')).toBe('public, max-age=300');
-    await expect(response?.text()).resolves.toBe('upstream body');
-  });
+      const response = await proxyAnalyticsRequest(
+        new Request(`https://yresonance.com/ingest${path}`),
+      );
+      const upstream = fetchMock.mock.calls[0][0];
+      expect(upstream).toBeInstanceOf(Request);
+      if (!(upstream instanceof Request)) throw new Error('Expected an upstream request.');
+      expect(upstream.url).toBe(`https://${host}${path}`);
+      expect(upstream.headers.get('host')).toBe(host);
+      expect(response?.status).toBe(202);
+      expect(response?.headers.get('cache-control')).toBe('public, max-age=300');
+      await expect(response?.text()).resolves.toBe('upstream body');
+    },
+  );
 
   it('preserves binary POST payloads and trusted client IP without leaking app credentials', async () => {
     const payload = new Uint8Array([31, 139, 8, 0, 255, 128, 1]);

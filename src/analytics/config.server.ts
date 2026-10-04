@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import type { AnalyticsConfig } from './config';
+import { posthogHosts, type AnalyticsConfig } from './config';
 
 export function analyticsConfig(): AnalyticsConfig | null {
   if (env.POSTHOG_ENABLED !== 'true') return null;
@@ -12,6 +12,7 @@ export function analyticsConfig(): AnalyticsConfig | null {
   return {
     token: env.POSTHOG_PROJECT_TOKEN,
     host: env.POSTHOG_HOST,
+    uiHost: posthogHosts(env.POSTHOG_HOST).uiHost,
     environment: env.APP_ENV,
   };
 }

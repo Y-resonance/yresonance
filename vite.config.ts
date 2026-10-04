@@ -7,6 +7,7 @@ import posthog from '@posthog/rollup-plugin';
 import { defineConfig } from 'vite';
 import { fileDataPlugin } from './dev/file-data-plugin.ts';
 import { queryEnginePlugin } from './dev/query-engine-plugin.ts';
+import { posthogHosts } from './src/analytics/config';
 
 // Browser tests run the dev server on their own port; the dev data service must follow it.
 const devPort = resolveDevPort(process.env.YRESONANCE_PORT);
@@ -67,6 +68,13 @@ export default defineConfig(({ command, mode }) => ({
         : {}),
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
+        vars: {
+          ...config.vars,
+          POSTHOG_ENABLED: process.env.POSTHOG_ENABLED ?? config.vars?.POSTHOG_ENABLED ?? 'false',
+          POSTHOG_PROJECT_TOKEN:
+            process.env.POSTHOG_PROJECT_TOKEN ?? config.vars?.POSTHOG_PROJECT_TOKEN ?? '',
+          POSTHOG_HOST: process.env.POSTHOG_HOST ?? config.vars?.POSTHOG_HOST,
+        },
         dev: {
           ...config.dev,
           // Cloudflare images are amd64. DuckDB's native binding crashes when Docker emulates
@@ -112,7 +120,7 @@ export default defineConfig(({ command, mode }) => ({
           posthog({
             personalApiKey: process.env.POSTHOG_API_KEY!,
             projectId: process.env.POSTHOG_PROJECT_ID!,
-            host: 'https://eu.posthog.com',
+            host: posthogHosts(process.env.POSTHOG_HOST ?? 'https://eu.i.posthog.com').uiHost,
             sourcemaps: {
               enabled: true,
               deleteAfterUpload: true,

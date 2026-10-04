@@ -48,6 +48,7 @@ test('browser telemetry keeps share credentials and report names private', async
     const client = initializeBrowserAnalytics({
       token: 'phc_test',
       host: '/ingest',
+      uiHost: 'https://eu.posthog.com',
       environment: 'test',
     });
     client.set_config({

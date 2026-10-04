@@ -3,7 +3,17 @@ export const ANALYTICS_PROXY_PATH = '/ingest';
 export interface AnalyticsConfig {
   token: string;
   host: string;
+  uiHost: string;
   environment: string;
+}
+
+export function posthogHosts(host: string) {
+  const origin = new URL(host).origin;
+  if (origin === 'https://eu.i.posthog.com')
+    return { assetsHost: 'https://eu-assets.i.posthog.com', uiHost: 'https://eu.posthog.com' };
+  if (origin === 'https://us.i.posthog.com')
+    return { assetsHost: 'https://us-assets.i.posthog.com', uiHost: 'https://us.posthog.com' };
+  return { assetsHost: origin, uiHost: origin };
 }
 
 // Shared links grant access. Never send their capability tokens to analytics.

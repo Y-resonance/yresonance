@@ -46,15 +46,31 @@ fresh environment.
 
 ## PostHog
 
-The public project token and EU ingestion host are Worker variables in `wrangler.jsonc`.
-Browser telemetry uses the same-origin `/ingest` proxy in the existing Worker. It routes `/static/*`
-and `/array/*` to EU PostHog assets, and events, feature flags, and browser logs to the configured
-ingestion host. The proxy strips app cookies, authorization headers, and referrers, forwards the
-Cloudflare client IP for geolocation, and preserves asset cache headers. Server telemetry goes
-directly to the ingestion host. See [PostHog's proxy reference](https://posthog.com/docs/advanced/proxy/proxy-reference).
-Production enables tracking. Development and previews disable it so test traffic stays out of
-product reports. To test locally, run `POSTHOG_ENABLED=true bun run dev`. The token is an ingestion
-key, not a personal API key.
+Tracking is disabled by default in every environment, and the checked-in project token is empty.
+Self-hosted deployments must opt in with their own PostHog project. Supply these environment
+variables to the local dev server or production build:
+
+```sh
+export POSTHOG_ENABLED=true
+export POSTHOG_PROJECT_TOKEN='<your_project_token>'
+export POSTHOG_HOST=https://eu.i.posthog.com
+bun run dev
+# Or build for your own deployment:
+bun run build
+```
+
+Use `https://us.i.posthog.com` for US Cloud or your ingestion URL for a self-hosted PostHog instance.
+Keep values in deployment settings or an ignored local file, not committed source. For the hosted
+service, these variables belong only in Cloudflare's production build settings. Leave them unset
+in preview builds to keep test traffic out of product reports. The project token is a public
+browser ingestion token, not a personal API key.
+
+The Vite build copies these settings into the generated Worker configuration. Browser telemetry
+uses the same-origin `/ingest` proxy in that Worker. It routes `/static/*` and `/array/*` to the
+matching EU or US assets origin, or the configured origin for self-hosted PostHog. Other requests
+and server telemetry use the configured ingestion host. The proxy strips app cookies,
+authorization headers, and referrers, forwards the Cloudflare client IP for geolocation, and
+preserves asset cache headers. See [PostHog's proxy reference](https://posthog.com/docs/advanced/proxy/proxy-reference).
 
 - Web analytics capture pageviews, page exits, campaign attribution, and Web Vitals.
 - `product_action` records API actions with `action`, `result`, `duration_ms`, `source` (`gui` or
@@ -78,7 +94,7 @@ and their underlying causes.
 Source map upload is wired into Vite but requires credentials beyond the public ingestion token.
 Set `POSTHOG_UPLOAD_SOURCEMAPS=true`, `POSTHOG_PROJECT_ID` for this project, and `POSTHOG_API_KEY`
 with the PostHog "Source map upload" permission preset in the production build environment.
-The build injects chunk IDs, uploads maps to EU PostHog, and deletes maps after upload. Until
+The build injects chunk IDs, uploads maps to the configured PostHog region, and deletes maps after upload. Until
 configured, minified errors have limited source context. Builds without upload credentials still work.
 
 After deployment, create a dashboard, add a widget through both GUI and WebMCP, and change workspace.

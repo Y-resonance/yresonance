@@ -19,7 +19,7 @@ export function initializeBrowserAnalytics(config: AnalyticsConfig) {
   if (client) return client;
   posthog.init(config.token, {
     api_host: config.host,
-    ui_host: 'https://eu.posthog.com',
+    ui_host: config.uiHost,
     defaults: '2026-05-30',
     capture_pageview: false,
     capture_pageleave: true,

@@ -8,8 +8,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "APP_ENV": "production",
-    "POSTHOG_ENABLED": "true",
-    "POSTHOG_PROJECT_TOKEN": "phc_uEj8pJK5tx6b62HrNy2isYCE9FruziBiAKxK6qg3MKXN",
+    "POSTHOG_ENABLED": "false",
+    "POSTHOG_PROJECT_TOKEN": "",
     "POSTHOG_HOST": "https://eu.i.posthog.com",
     "CLICKHOUSE_DATABASE": "yresonance_production",
     "QUERY_CACHE_NAME": "yresonance-query-cache",
@@ -104,7 +104,7 @@
       "vars": {
         "APP_ENV": "preview",
         "POSTHOG_ENABLED": "false",
-        "POSTHOG_PROJECT_TOKEN": "phc_uEj8pJK5tx6b62HrNy2isYCE9FruziBiAKxK6qg3MKXN",
+        "POSTHOG_PROJECT_TOKEN": "",
         "POSTHOG_HOST": "https://eu.i.posthog.com",
         "CLICKHOUSE_DATABASE": "yresonance_preview_shared",
         "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
@@ -170,7 +170,7 @@
     "vars": {
       "APP_ENV": "preview",
       "POSTHOG_ENABLED": "false",
-      "POSTHOG_PROJECT_TOKEN": "phc_uEj8pJK5tx6b62HrNy2isYCE9FruziBiAKxK6qg3MKXN",
+      "POSTHOG_PROJECT_TOKEN": "",
       "POSTHOG_HOST": "https://eu.i.posthog.com",
       "CLICKHOUSE_DATABASE": "yresonance_preview_shared",
       "QUERY_CACHE_NAME": "yresonance-query-cache-preview",
