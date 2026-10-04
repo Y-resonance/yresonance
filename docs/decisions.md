@@ -38,14 +38,23 @@ explain. Update it when a decision changes, not when an implementation detail do
 
 - One Cloudflare deploy: Worker (TanStack Start app and API) plus the query container. D1 with
   Drizzle for application data, R2 for data files, KV for query results, Clerk for auth.
-- Query engine is native DuckDB in a Bun container, one per workspace. DuckDB inside the Worker
-  (Ducklings) fit the bundle limit but hit the Worker memory limit on real datasources.
+- DuckDB remains the default analytics backend, running natively in a Bun container per workspace.
+  DuckDB inside the Worker (Ducklings) hit the Worker memory limit on real datasources. Datasources
+  can also use ClickHouse through its HTTPS endpoint, with credentials kept on the Worker.
+  Widget and formula definitions are shared; each backend compiles its SQL dialect.
 - R2 SQL was evaluated and not chosen: it needs Iceberg tables, not plain files.
 - The backend resolves prefixes to explicit object lists. DuckDB never lists or globs R2.
 - Caching is lazy and has no invalidation code. The key covers the widget definition, the fields
   and formulas it depends on, the resolved control state and the datasource version, so any change
-  makes old entries unreachable. They expire after 24 hours.
-- Managed CSV uploads are converted to Parquet before registration.
+  makes old entries unreachable. Managed uploads expire after 24 hours. External ClickHouse tables
+  have no reliable content revision and use a configurable TTL, default five minutes. Zero disables
+  caching. Workspace access mappings are checked before reading cached external results.
+- Managed CSV uploads are converted to Parquet before registration. ClickHouse imports stream
+  the inspected Parquet into one database per environment, with workspace-scoped tables. Production
+  and previews use separate SQL users. Preview databases follow branch lifecycles. External tables require
+  explicit server-side workspace mappings and SQL grants. Existing DuckDB sources are not migrated.
+  The optional backend `managedUploads` capability owns import and cleanup; the application
+  coordinates upload claims and commits registration without calling either engine directly.
 
 ## Behavior
 

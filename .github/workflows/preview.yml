@@ -29,6 +29,11 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 17c619232f5d84567cd69896e892f326
       CLOUDFLARE_WORKER_TAG: ${{ vars.CLOUDFLARE_WORKER_TAG }}
       PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+      CLICKHOUSE_PREVIEW_URL: ${{ secrets.CLICKHOUSE_PREVIEW_URL }}
+      CLICKHOUSE_PREVIEW_USER: ${{ secrets.CLICKHOUSE_PREVIEW_USER }}
+      CLICKHOUSE_PREVIEW_PASSWORD: ${{ secrets.CLICKHOUSE_PREVIEW_PASSWORD }}
+      CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID: ${{ secrets.CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID }}
+      CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET: ${{ secrets.CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET }}
     steps:
       # Cleanup uses trusted base-branch code even when the closed PR contained broken code.
       - uses: actions/checkout@v4

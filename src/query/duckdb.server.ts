@@ -29,6 +29,7 @@ export async function runPreparedQuery<T extends Record<string, unknown>>(
 ) {
   const queryId = crypto.randomUUID();
   const source = await resolveDataSource(dataSource, queryId);
+  const startedAt = Date.now();
   let result;
   let scannedBytes = 0;
   try {
@@ -38,11 +39,23 @@ export async function runPreparedQuery<T extends Record<string, unknown>>(
       sql: query.sql,
       parameters: query.parameters,
     });
+  } catch (error) {
+    console.warn('yresonance.query_execution', {
+      backend: 'duckdb',
+      workspaceId: dataSource.workspaceId,
+      queryId,
+      outcome: 'failure',
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
   } finally {
     scannedBytes = await finishSourceRead(source.queryBudgetId, queryId, dataSource.workspaceId);
   }
   console.info('yresonance.query_execution', {
     queryId,
+    backend: 'duckdb',
+    outcome: 'success',
+    durationMs: Date.now() - startedAt,
     workspaceId: dataSource.workspaceId,
     sourceBytes: source.sourceBytes,
     scannedBytes,

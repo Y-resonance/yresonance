@@ -20,9 +20,10 @@ export interface DatasourceOverviewRow {
 const sourceTypeLabels: Record<DataSourceLocation['kind'], string> = {
   object: 'Single object',
   prefix: 'Partition prefix',
+  clickhouse: 'ClickHouse',
 };
 
-const formatLabels: Record<DataSourceLocation['format'], string> = {
+const formatLabels: Record<'csv' | 'parquet', string> = {
   csv: 'CSV',
   parquet: 'Parquet',
 };
@@ -32,7 +33,12 @@ export function datasourceOverviewRows(entries: DatasourceListEntry[]): Datasour
     id: entry.id,
     name: entry.name,
     sourceType: sourceTypeLabels[entry.location.kind] ?? entry.location.kind,
-    format: formatLabels[entry.location.format] ?? entry.location.format,
+    format:
+      entry.location.kind === 'clickhouse'
+        ? entry.location.ownership === 'managed'
+          ? 'Managed table'
+          : 'External table'
+        : formatLabels[entry.location.format],
     fieldCount: entry.fieldCount,
     updatedAt: entry.updatedAt,
   }));

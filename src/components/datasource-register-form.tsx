@@ -1,3 +1,6 @@
+import { Toggle } from '@base-ui/react/toggle';
+import { ToggleGroup } from '@base-ui/react/toggle-group';
+import { CheckIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiClientError, callApi } from '#/api/client';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
@@ -20,11 +23,20 @@ interface RegisteredDatasource {
   name: string;
 }
 
+const analyticsBackends = [
+  { id: 'duckdb', name: 'DuckDB', description: 'CSV and Parquet files' },
+  { id: 'clickhouse', name: 'ClickHouse', description: 'Uploads and external tables' },
+] as const;
+
 export function DatasourceRegisterForm({
   onRegistered,
 }: {
   onRegistered: (dataSource: RegisteredDatasource) => void;
 }) {
+  const [backend, setBackend] = useState<'duckdb' | 'clickhouse'>('duckdb');
+  const [database, setDatabase] = useState('');
+  const [table, setTable] = useState('');
+  const [cacheTtlSeconds, setCacheTtlSeconds] = useState(300);
   const [useExistingData, setUseExistingData] = useState(false);
   const [objects, setObjects] = useState<Array<{ key: string }>>([]);
   const [objectsCursor, setObjectsCursor] = useState<string>();
@@ -51,7 +63,7 @@ export function DatasourceRegisterForm({
   }, [key, objects]);
 
   useEffect(() => {
-    if (!useExistingData || objects.length) return;
+    if (!useExistingData || backend === 'clickhouse' || objects.length) return;
     void callApi<{ objects: Array<{ key: string }>; cursor?: string }>({
       action: 'listR2Objects',
     })
@@ -62,7 +74,7 @@ export function DatasourceRegisterForm({
       .catch((caught: unknown) =>
         setFormError(caught instanceof Error ? caught.message : String(caught)),
       );
-  }, [objects.length, useExistingData]);
+  }, [backend, objects.length, useExistingData]);
 
   const inferredExistingFormat = kind === 'object' ? datasourceUploadFormat(key) : undefined;
 
@@ -91,7 +103,11 @@ export function DatasourceRegisterForm({
         const registered = await callApi<RegisteredDatasource>({
           action: 'registerDatasource',
           name,
-          location: { kind, key, format: inferredExistingFormat ?? format },
+          backend,
+          location:
+            backend === 'clickhouse'
+              ? { kind: 'clickhouse', database, table, ownership: 'external', cacheTtlSeconds }
+              : { kind, key, format: inferredExistingFormat ?? format },
         });
         onRegistered(registered);
       } catch (caught) {
@@ -157,6 +173,7 @@ export function DatasourceRegisterForm({
       const registered = await callApi<RegisteredDatasource>({
         action: 'registerDatasource',
         name,
+        backend,
         location: { kind: 'object', key: prepared.key, format: uploadFormat },
         cleanupToken: prepared.cleanupToken,
       });
@@ -234,6 +251,37 @@ export function DatasourceRegisterForm({
   return (
     <form className="max-w-xl" onSubmit={submit}>
       <FieldGroup>
+        <Field>
+          <FieldLabel id="source-backend-label">Analytics backend</FieldLabel>
+          <ToggleGroup
+            aria-labelledby="source-backend-label"
+            value={[backend]}
+            disabled={busy || Boolean(uploadedKey)}
+            onValueChange={([selected]) => {
+              if (selected) setBackend(selected);
+            }}
+            className="grid grid-cols-2 gap-3"
+          >
+            {analyticsBackends.map((option) => (
+              <Toggle
+                key={option.id}
+                value={option.id}
+                aria-label={option.name}
+                className="group relative flex min-h-40 flex-col items-start gap-3 rounded-lg border border-input bg-background p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-pressed:border-primary data-pressed:ring-1 data-pressed:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <img src={`/analytics-backends/${option.id}.svg`} alt="" className="size-10" />
+                <CheckIcon
+                  aria-hidden="true"
+                  className="absolute top-3 right-3 size-4 text-primary opacity-0 group-data-pressed:opacity-100"
+                />
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">{option.name}</span>
+                  <span className="text-sm text-muted-foreground">{option.description}</span>
+                </span>
+              </Toggle>
+            ))}
+          </ToggleGroup>
+        </Field>
         <Field orientation="horizontal">
           <FieldLabel htmlFor="use-existing-data">Use existing workspace data</FieldLabel>
           <Switch
@@ -269,7 +317,48 @@ export function DatasourceRegisterForm({
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        {useExistingData ? (
+        {useExistingData && backend === 'clickhouse' ? (
+          <>
+            <Field>
+              <FieldLabel htmlFor="source-database">Database</FieldLabel>
+              <Input
+                id="source-database"
+                value={database}
+                required
+                disabled={busy}
+                onChange={(event) => setDatabase(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="source-table">Table</FieldLabel>
+              <Input
+                id="source-table"
+                value={table}
+                required
+                disabled={busy}
+                onChange={(event) => setTable(event.target.value)}
+              />
+              <FieldDescription>
+                External tables must be authorized for this workspace.
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="source-cache-ttl">Cache TTL in seconds</FieldLabel>
+              <Input
+                id="source-cache-ttl"
+                type="number"
+                min={0}
+                max={86400}
+                step={1}
+                value={cacheTtlSeconds}
+                required
+                disabled={busy}
+                onChange={(event) => setCacheTtlSeconds(Number(event.target.value))}
+              />
+              <FieldDescription>0 disables caching.</FieldDescription>
+            </Field>
+          </>
+        ) : useExistingData ? (
           <>
             <Field>
               <FieldLabel htmlFor="source-key">R2 key or prefix</FieldLabel>
@@ -335,7 +424,11 @@ export function DatasourceRegisterForm({
           <p className="text-sm text-muted-foreground">Registering datasource...</p>
         ) : null}
         {phase === 'inspecting' ? (
-          <p className="text-sm text-muted-foreground">Inspecting file with DuckDB...</p>
+          <p className="text-sm text-muted-foreground">
+            {backend === 'clickhouse'
+              ? 'Importing into ClickHouse...'
+              : 'Inspecting file with DuckDB...'}
+          </p>
         ) : null}
         <div className="flex gap-2">
           <Button type="submit" disabled={busy || Boolean(uploadedKey)}>

@@ -1,35 +1,22 @@
+import type { ManagedUploadImport } from '#/data/analytics-data-backend';
 import { requireSession, type SessionContext } from './auth.server';
 import { eq, count, and, or, inArray, lt } from 'drizzle-orm';
-import {
-  dataSources,
-  fields,
-  calculatedFields,
-  datasourceUploads,
-  ingestionTokens,
-} from '#/db/schema';
+import { dataSources, fields, calculatedFields, datasourceUploads } from '#/db/schema';
 import { loadDataSource, loadQueryMetadata } from './records.server';
 import { ApiError } from './errors';
 import { scopedR2Prefix, isWorkspaceR2Key } from '#/domain/tenancy';
-import {
-  listSourceObjects,
-  prepareSourceUpload,
-  deleteSourceObject,
-  localSourceUrl,
-} from '#/data/source.server';
+import { listSourceObjects, prepareSourceUpload, deleteSourceObject } from '#/data/source.server';
 import { type ApiRequest } from '#/api/contracts';
 import {
   createDatasourceUploadCleanupToken,
   isManagedDatasourceUpload,
   verifyDatasourceUploadCleanupToken,
   datasourcePrefixOverlapsManagedUploads,
-  MAX_DATASOURCE_FILE_BYTES,
   dataSourceLocationReferencesKey,
 } from '#/domain/datasource-upload';
 import { DUCKDB_FILE_CONNECTOR } from '#/data/connectors/contract';
 import { type DataSourceRecord } from '#/query/types';
 import { env } from 'cloudflare:workers';
-import { createR2Capability, capabilityUrl } from '#/data/internal-r2';
-import { ingestCsv } from '#/query/duckdb.server';
 import { canUpdateFieldMetadata } from '#/domain/field-metadata';
 import { seedPreviewWorkspace } from './preview-seed.server';
 import { database, UPLOAD_CLAIM_LEASE_MS } from './database.server';
@@ -220,6 +207,40 @@ export async function registerDatasource(
   request: Extract<ApiRequest, { action: 'registerDatasource' }>,
 ) {
   const session = await requireSession();
+  if (request.location.kind === 'clickhouse') {
+    if (
+      request.location.ownership !== 'external' ||
+      request.cleanupToken ||
+      request.backend === 'duckdb'
+    )
+      throw new ApiError(
+        400,
+        'invalid_datasource_location',
+        'Register an external table or upload a file for managed ClickHouse data.',
+      );
+    const connector = connectorFor('clickhouse');
+    const pending = {
+      id: `ds_${crypto.randomUUID()}`,
+      workspaceId: session.workspace.id,
+      name: request.name,
+      connectorType: connector.type,
+      location: request.location,
+    };
+    const inspection = await datasourceOperation(() => connector.inspect(pending));
+    const source = { ...pending, version: inspection.version };
+    const discovered = inspection.description.map((column) =>
+      seedField(source.id, column, inspection.samples),
+    );
+    const now = new Date().toISOString();
+    const db = database();
+    await db.batch([
+      db.insert(dataSources).values({ ...source, createdAt: now, updatedAt: now }),
+      ...discovered.map((field) =>
+        db.insert(fields).values({ ...field, workspaceId: session.workspace.id }),
+      ),
+    ]);
+    return { ...source, fields: discovered };
+  }
   if (!isWorkspaceR2Key(session.workspace.r2Prefix, request.location.key))
     throw new ApiError(
       400,
@@ -249,33 +270,41 @@ export async function registerDatasource(
       'invalid_upload_format',
       `Managed ${request.location.format} uploads need a .${request.location.format} key.`,
     );
+  if (request.backend === 'clickhouse' && !managedUploadKey)
+    throw new ApiError(
+      400,
+      'managed_upload_required',
+      'Upload a file or register an authorized external table for ClickHouse.',
+    );
   const claimId = managedUploadKey
     ? await claimPendingUpload(session, managedUploadKey, request.cleanupToken)
     : undefined;
-  let convertedKey: string | undefined;
+  let imported: ManagedUploadImport | undefined;
   try {
-    const connector = connectorFor(DUCKDB_FILE_CONNECTOR);
-    const location =
-      managedUploadKey && request.location.format === 'csv'
-        ? await ingestManagedCsvUpload(session, managedUploadKey).then((converted) => {
-            convertedKey = converted.key;
-            return converted.location;
-          })
-        : request.location;
-    const pendingDataSource: Omit<DataSourceRecord, 'version'> = {
+    const connector = connectorFor(
+      request.backend === 'clickhouse' ? 'clickhouse' : DUCKDB_FILE_CONNECTOR,
+    );
+    const pending = {
       id: `ds_${crypto.randomUUID()}`,
       workspaceId: session.workspace.id,
       name: request.name,
       connectorType: connector.type,
-      location,
+      location: request.location,
     };
-    const inspection = await datasourceOperation(() =>
-      connector.inspect(pendingDataSource, {
-        ...(managedUploadKey ? { maximumObjectBytes: MAX_DATASOURCE_FILE_BYTES } : {}),
-      }),
-    );
-    const dataSource: DataSourceRecord = {
-      ...pendingDataSource,
+    if (managedUploadKey) {
+      const uploads = connector.managedUploads;
+      if (!uploads)
+        throw new ApiError(
+          400,
+          'managed_upload_not_supported',
+          'This backend does not support managed uploads.',
+        );
+      imported = await datasourceOperation(() => uploads.import(pending));
+    }
+    const inspection =
+      imported?.inspection ?? (await datasourceOperation(() => connector.inspect(pending)));
+    const dataSource: DataSourceRecord = imported?.dataSource ?? {
+      ...pending,
       version: inspection.version,
     };
     const discovered = inspection.description.map((column) =>
@@ -315,8 +344,8 @@ export async function registerDatasource(
       ),
       ...uploadCompletion,
     ]);
-    if (convertedKey && managedUploadKey)
-      await deleteSourceObject(managedUploadKey).catch((error: unknown) => {
+    if (imported)
+      await imported.cleanup('registered').catch((error: unknown) => {
         console.warn('yresonance.datasource_ingestion_cleanup_failed', {
           workspaceId: session.workspace.id,
           sourceKey: managedUploadKey,
@@ -325,52 +354,11 @@ export async function registerDatasource(
       });
     return { ...dataSource, fields: discovered };
   } catch (error) {
-    if (convertedKey) await deleteSourceObject(convertedKey).catch(() => undefined);
+    if (imported) await imported.cleanup('failed').catch(() => undefined);
     if (managedUploadKey && claimId)
       await restorePendingUpload(session, managedUploadKey, 'registering', claimId);
     throw error;
   }
-}
-
-async function ingestManagedCsvUpload(session: SessionContext, sourceKey: string) {
-  const destinationKey = sourceKey.replace(/\.csv$/iu, '.parquet');
-  const tokenId = `ingest_${crypto.randomUUID()}`;
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 5 * 60 * 1000);
-  await database().insert(ingestionTokens).values({
-    id: tokenId,
-    workspaceId: session.workspace.id,
-    sourceKey,
-    destinationKey,
-    expiresAt: expiresAt.toISOString(),
-    usedAt: null,
-    createdAt: now.toISOString(),
-  });
-  let sourceUrl: string;
-  let destinationUrl: string;
-  if (env.DATA_SOURCE_BASE_URL.startsWith('r2://')) {
-    const token = await createR2Capability(
-      {
-        kind: 'ingestion',
-        tokenId,
-        sourceKey,
-        destinationKey,
-        expiresAt: Math.floor(expiresAt.getTime() / 1000),
-      },
-      env.INTERNAL_R2_SIGNING_SECRET,
-    );
-    sourceUrl = capabilityUrl(token);
-    // The ingestion capability selects its read and write object from the HTTP method.
-    destinationUrl = sourceUrl;
-  } else {
-    sourceUrl = localSourceUrl(sourceKey);
-    destinationUrl = localSourceUrl(destinationKey);
-  }
-  await ingestCsv(session.workspace.id, tokenId, sourceUrl, destinationUrl);
-  return {
-    key: destinationKey,
-    location: { kind: 'object' as const, key: destinationKey, format: 'parquet' as const },
-  };
 }
 
 function uploadCleanupSecret() {

@@ -66,7 +66,16 @@ export async function queryWidget(
     widget.definition.type === 'table' && widget.definition.resultLimit.mode === 'pagination'
       ? widget.definition.resultLimit.amount
       : undefined;
+  const datasourceIdentity = await datasourceOperation(() => connector.cacheIdentity(dataSource));
+  const ttlSeconds =
+    dataSource.location.kind === 'clickhouse' && dataSource.location.ownership === 'external'
+      ? dataSource.location.cacheTtlSeconds
+      : 86_400;
   const cacheKey = await hashJson({
+    workspaceId: dataSource.workspaceId,
+    datasourceId: dataSource.id,
+    datasourceIdentity,
+    cacheTtlSeconds: ttlSeconds,
     ...queryCacheState({
       definitionHash: currentDefinitionHash,
       requestedDateRange: dateRange,
@@ -79,10 +88,16 @@ export async function queryWidget(
     }),
     page: pageSize === undefined ? 0 : page,
   });
-  const cached = await env.QUERY_CACHE.get(cacheKey, 'json');
-  if (cached) {
+  const cached =
+    ttlSeconds > 0
+      ? await env.QUERY_CACHE.get<{ cachedAt: number; result: Record<string, unknown> }>(
+          cacheKey,
+          'json',
+        )
+      : null;
+  if (cached && Date.now() - cached.cachedAt < ttlSeconds * 1000) {
     console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'hit' });
-    return { ...(cached as object), columns, cache: 'hit' };
+    return { ...cached.result, columns, cache: 'hit' };
   }
   console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'miss' });
   const pageOffset = pageSize === undefined ? undefined : page * pageSize;
@@ -107,7 +122,10 @@ export async function queryWidget(
     cache: 'miss',
     ...(pageSize === undefined ? {} : { page, hasMore }),
   };
-  await env.QUERY_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 86_400 });
+  if (ttlSeconds > 0)
+    await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
+      expirationTtl: Math.max(60, ttlSeconds),
+    });
   return result;
 }
 

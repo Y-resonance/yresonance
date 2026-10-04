@@ -66,7 +66,7 @@ export function isManagedDatasourceUpload(workspacePrefix: string, key: string) 
 
 export function dataSourceLocationReferencesKey(location: unknown, key: string) {
   const parsed = dataSourceLocationSchema.safeParse(location);
-  if (!parsed.success) return false;
+  if (!parsed.success || parsed.data.kind === 'clickhouse') return false;
   return parsed.data.kind === 'object' ? parsed.data.key === key : key.startsWith(parsed.data.key);
 }
 

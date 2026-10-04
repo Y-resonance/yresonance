@@ -261,7 +261,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
           {
             action: 'registerDatasource',
             description:
-              'Register an existing R2 CSV or parquet object or prefix. This runs DESCRIBE and seeds field metadata.',
+              'Register DuckDB files or an authorized external ClickHouse table. Choose backend for managed uploads. Inspects the source and returns datasource and field metadata.',
             readOnly: false,
           },
         ]

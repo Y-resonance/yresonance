@@ -18,6 +18,7 @@ import { Route as ApiYresonanceRouteImport } from './routes/api.yresonance'
 import { Route as DashboardsDashboardIdRouteImport } from './routes/dashboards.$dashboardId'
 import { Route as DatasourcesIndexRouteImport } from './routes/datasources.index'
 import { Route as DatasourcesDatasourceIdRouteImport } from './routes/datasources.$datasourceId'
+import { Route as DatasourcesNewRouteImport } from './routes/datasources.new'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
@@ -68,6 +69,11 @@ const DatasourcesDatasourceIdRoute = DatasourcesDatasourceIdRouteImport.update({
   path: '/datasources/$datasourceId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DatasourcesNewRoute = DatasourcesNewRouteImport.update({
+  id: '/datasources/new',
+  path: '/datasources/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
   path: '/share/$token',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
+  '/datasources/new': typeof DatasourcesNewRoute
   '/share/$token': typeof ShareTokenRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
+  '/datasources/new': typeof DatasourcesNewRoute
   '/share/$token': typeof ShareTokenRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
+  '/datasources/new': typeof DatasourcesNewRoute
   '/share/$token': typeof ShareTokenRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
+    | '/datasources/new'
     | '/share/$token'
     | '/sign-in/$'
     | '/sign-up/$'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
+    | '/datasources/new'
     | '/share/$token'
     | '/sign-in/$'
     | '/sign-up/$'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
+    | '/datasources/new'
     | '/share/$token'
     | '/sign-in/$'
     | '/sign-up/$'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   ApiYresonanceRoute: typeof ApiYresonanceRoute
   DashboardsDashboardIdRoute: typeof DashboardsDashboardIdRoute
   DatasourcesDatasourceIdRoute: typeof DatasourcesDatasourceIdRoute
+  DatasourcesNewRoute: typeof DatasourcesNewRoute
   ShareTokenRoute: typeof ShareTokenRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DatasourcesDatasourceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/datasources/new': {
+      id: '/datasources/new'
+      path: '/datasources/new'
+      fullPath: '/datasources/new'
+      preLoaderRoute: typeof DatasourcesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/$token': {
       id: '/share/$token'
       path: '/share/$token'
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiYresonanceRoute: ApiYresonanceRoute,
   DashboardsDashboardIdRoute: DashboardsDashboardIdRoute,
   DatasourcesDatasourceIdRoute: DatasourcesDatasourceIdRoute,
+  DatasourcesNewRoute: DatasourcesNewRoute,
   ShareTokenRoute: ShareTokenRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,

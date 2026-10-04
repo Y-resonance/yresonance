@@ -1,31 +1,33 @@
-import { env } from 'cloudflare:workers';
+import {
+  compileDatasourceQuery,
+  compileDatasourceWidget,
+  datasourceExpressionSql,
+} from '#/data/backend-query';
+import type { AnalyticsDataBackend } from '#/data/analytics-data-backend';
+import { importManagedFile } from '#/data/file-ingestion.server';
 import { collectObjectPages, matchingSourceObjects } from '#/data/listing';
 import { headSourceObject, listSourceObjects } from '#/data/source.server';
-import { controlOptionsQuery } from '#/domain/control-options';
 import { hashJson } from '#/domain/hash';
-import {
-  compileWidgetQuery,
-  validateAggregateFormula,
-  validateRowFormula,
-  type CompiledQuery,
-} from '#/query/compiler';
 import { describeDataSource, QueryEngineError, runPreparedQuery } from '#/query/duckdb.server';
 import type { DataSourceRecord } from '#/query/types';
-import {
-  DatasourceError,
-  DUCKDB_FILE_CONNECTOR,
-  type DatasourceConnector,
-  type DatasourceExpression,
-  type DatasourceQuery,
-  type WidgetDatasourceQuery,
-} from './contract';
+import { DatasourceError, DUCKDB_FILE_CONNECTOR, type DatasourceQuery } from './contract';
 
-export const duckdbFileConnector: DatasourceConnector = {
+export const duckdbFileConnector: AnalyticsDataBackend = {
   type: DUCKDB_FILE_CONNECTOR,
+  managedUploads: {
+    import(dataSource) {
+      return importManagedFile(dataSource, duckdbFileConnector.inspect);
+    },
+  },
+  cacheIdentity(dataSource) {
+    return { source: dataSource.location, revision: dataSource.version };
+  },
 
   async inspect(dataSource, options) {
     try {
       const { location } = dataSource;
+      if (location.kind === 'clickhouse')
+        throw new DatasourceError('invalid_query', 'DuckDB requires a file source.');
       const objects =
         location.kind === 'object'
           ? [await headSourceObject(location.key)].filter((object) => object !== null)
@@ -65,7 +67,7 @@ export const duckdbFileConnector: DatasourceConnector = {
   ) {
     try {
       return await runPreparedQuery<T>(dataSource, (sourceSql) =>
-        compileQuery(dataSource, query, sourceSql),
+        compileDatasourceQuery(dataSource, query, sourceSql),
       );
     } catch (error) {
       throw connectorError(error);
@@ -74,7 +76,7 @@ export const duckdbFileConnector: DatasourceConnector = {
 
   async validateQuery(dataSource, query) {
     try {
-      compileWidget(dataSource, query, quoteIdentifier('yresonance_source'));
+      compileDatasourceWidget(dataSource, query, quoteIdentifier('yresonance_source'));
     } catch (error) {
       throw connectorError(error, 'invalid_query');
     }
@@ -82,7 +84,11 @@ export const duckdbFileConnector: DatasourceConnector = {
 
   explainQuery(dataSource, query) {
     try {
-      const compiled = compileWidget(dataSource, query, quoteIdentifier('yresonance_source'));
+      const compiled = compileDatasourceWidget(
+        dataSource,
+        query,
+        quoteIdentifier('yresonance_source'),
+      );
       return { sql: compiled.sql, definitions: compiled.definitions };
     } catch (error) {
       throw connectorError(error, 'invalid_query');
@@ -91,67 +97,12 @@ export const duckdbFileConnector: DatasourceConnector = {
 
   async validateExpression(_dataSource, definition) {
     try {
-      expressionSql(definition);
+      datasourceExpressionSql(definition);
     } catch (error) {
       throw connectorError(error, 'invalid_query');
     }
   },
 };
-
-function compileQuery(dataSource: DataSourceRecord, query: DatasourceQuery, sourceSql: string) {
-  if (query.kind === 'widget') return compileWidget(dataSource, query, sourceSql);
-  const expression =
-    'columnName' in query.field
-      ? quoteIdentifier(query.field.columnName)
-      : `(${validateRowFormula(query.field.expression, query.metadata).sql})`;
-  return controlOptionsQuery(expression, query.search, query.direction, sourceSql);
-}
-
-function compileWidget(
-  dataSource: DataSourceRecord,
-  query: WidgetDatasourceQuery,
-  sourceSql: string,
-): CompiledQuery {
-  return compileWidgetQuery({
-    dashboard: query.dashboard,
-    definition: query.definition,
-    dataSource,
-    ...query.metadata,
-    controlState: query.controlState,
-    bucketName: env.R2_BUCKET_NAME,
-    sourceSql,
-    resolvedControls: query.resolvedControls,
-    offset: query.offset,
-    dateBucketTarget: query.dateBucketTarget,
-  });
-}
-
-function expressionSql(definition: DatasourceExpression) {
-  if (definition.kind === 'libraryMetric')
-    return validateAggregateFormula(
-      definition.expression,
-      definition.metadata,
-      definition.semanticType,
-    ).sql;
-  const calculatedFields = [
-    ...definition.metadata.calculatedFields.filter((field) => field.id !== definition.id),
-    {
-      id: definition.id ?? '__candidate__',
-      dataSourceId: '',
-      canonicalName: definition.canonicalName,
-      label: definition.canonicalName,
-      expression: definition.expression,
-      role: 'dimension' as const,
-      semanticType: definition.semanticType,
-      description: null,
-    },
-  ];
-  return validateRowFormula(
-    definition.expression,
-    { fields: definition.metadata.fields, calculatedFields },
-    definition.semanticType,
-  ).sql;
-}
 
 function connectorError(
   error: unknown,

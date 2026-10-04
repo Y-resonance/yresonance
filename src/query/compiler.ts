@@ -1,3 +1,4 @@
+import { quoteSqlIdentifier, type SqlDialect } from './dialect';
 import type {
   Aggregation,
   ControlState,
@@ -34,6 +35,7 @@ export interface QueryContext {
   resolvedControls?: Array<{ fieldId: string; values: unknown[] }>;
   offset?: number;
   dateBucketTarget?: number;
+  dialect?: SqlDialect;
 }
 
 export interface CompiledQuery {
@@ -56,7 +58,8 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
   const definitions: CompiledQuery['definitions'] = [];
   const select = [
     ...dimensionExpressions.map(
-      (expression, index) => `${expression} AS ${quoteIdentifier(`dimension_${index + 1}`)}`,
+      (expression, index) =>
+        `${expression} AS ${quoteSqlIdentifier(`dimension_${index + 1}`, context.dialect)}`,
     ),
     ...metrics.map((metric, index) => {
       const compiled = metricExpression(metric, context, definitions);
@@ -101,8 +104,10 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
       `GROUPING(${dimensionExpressions.slice(0, tableRowDimensions.length).join(', ')}) AS "__grouping"`,
     );
   }
-  const dimensionPositions = dimensions.map((_, index) => index + 1);
-  const pivotPositions = pivotPosition === undefined ? [] : [pivotPosition];
+  const dimensionPositions = dimensions.map((_, index) =>
+    context.dialect === 'clickhouse' ? dimensionExpressions[index] : index + 1,
+  );
+  const pivotPositions = pivotPosition === undefined ? [] : [dimensionPositions[pivotPosition - 1]];
   const groupingSets = groupedTable
     ? [
         `(${dimensionPositions.join(', ')})`,
@@ -193,6 +198,10 @@ function metricExpression(
   if (metric.source.kind === 'field') {
     assertAggregationType(metric.source.aggregation, metric.source.fieldId, context);
     const expression = fieldExpression(metric.source.fieldId, context);
+    if (metric.source.aggregation === 'median' && context.dialect === 'clickhouse') {
+      // Widen integer operands before addition. Keep decimal scale and empty-result nulls.
+      return `arrayReduce('sumOrNull', arrayMap(value -> CAST(value, replaceRegexpOne(toTypeName(value), 'U?Int[0-9]+', 'Float64')), [quantileExactLow(0.5)(${expression}), quantileExactHigh(0.5)(${expression})])) / 2`;
+    }
     const aggregation = {
       sum: 'SUM',
       average: 'AVG',
@@ -201,8 +210,8 @@ function metricExpression(
       min: 'MIN',
       max: 'MAX',
       median: 'MEDIAN',
-      standardDeviation: 'STDDEV_SAMP',
-      variance: 'VAR_SAMP',
+      standardDeviation: context.dialect === 'clickhouse' ? 'stddevSampStable' : 'STDDEV_SAMP',
+      variance: context.dialect === 'clickhouse' ? 'varSampStable' : 'VAR_SAMP',
     }[metric.source.aggregation];
     return metric.source.aggregation === 'countDistinct'
       ? `COUNT(DISTINCT ${expression})`
@@ -212,6 +221,7 @@ function metricExpression(
     const compiled = compileFormula(metric.source.expression, {
       mode: 'aggregate',
       fields: formulaFields(context),
+      dialect: context.dialect,
     });
     assertNumericMetric(compiled.type, 'Widget expression');
     definitions.push({
@@ -232,6 +242,7 @@ function metricExpression(
   const compiled = compileFormula(library.expression, {
     mode: 'aggregate',
     fields: formulaFields(context),
+    dialect: context.dialect,
   });
   assertNumericMetric(compiled.type, `Library metric ${library.name}`);
   return compiled.sql;
@@ -240,7 +251,7 @@ function metricExpression(
 function fieldExpression(fieldId: string, context: QueryContext) {
   const field = context.fields.find((item) => item.id === fieldId);
   if (field) {
-    const identifier = quoteIdentifier(field.columnName);
+    const identifier = quoteSqlIdentifier(field.columnName, context.dialect);
     return field.castTo ? `CAST(${identifier} AS ${safeCast(field.castTo)})` : identifier;
   }
   const calculated = context.calculatedFields.find((item) => item.id === fieldId);
@@ -256,19 +267,20 @@ function fieldExpression(fieldId: string, context: QueryContext) {
 
 export function compileLibraryExpression(
   expression: string,
-  context: Pick<QueryContext, 'fields' | 'calculatedFields'>,
+  context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
 ) {
   return validateAggregateFormula(expression, context).sql;
 }
 
 export function validateAggregateFormula(
   expression: string,
-  context: Pick<QueryContext, 'fields' | 'calculatedFields'>,
+  context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
   semanticType?: SemanticType,
 ) {
   const compiled = compileFormula(expression, {
     mode: 'aggregate',
     fields: formulaFields(context),
+    dialect: context.dialect,
   });
   const expected = semanticType ? formulaTypeForSemanticType(semanticType) : undefined;
   if (expected && compiled.type !== expected && compiled.type !== 'null')
@@ -280,12 +292,13 @@ export function validateAggregateFormula(
 
 export function validateRowFormula(
   expression: string,
-  context: Pick<QueryContext, 'fields' | 'calculatedFields'>,
+  context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
   semanticType?: SemanticType,
 ) {
   const compiled = compileFormula(expression, {
     mode: 'row',
     fields: formulaFields(context),
+    dialect: context.dialect,
   });
   const expected = semanticType ? formulaTypeForSemanticType(semanticType) : undefined;
   if (expected && compiled.type !== expected && compiled.type !== 'null')
@@ -302,8 +315,10 @@ function compileFilter(
 ) {
   const conditions = filter.conditions.map((condition) => {
     const field = fieldExpression(condition.fieldId, context);
-    if (condition.operator === 'isEmpty') return `(${field} IS NULL OR ${field} = '')`;
-    if (condition.operator === 'isNotEmpty') return `(${field} IS NOT NULL AND ${field} <> '')`;
+    if (condition.operator === 'isEmpty')
+      return `(${field} IS NULL OR ${context.dialect === 'clickhouse' ? `toString(${field})` : field} = '')`;
+    if (condition.operator === 'isNotEmpty')
+      return `(${field} IS NOT NULL AND ${context.dialect === 'clickhouse' ? `toString(${field})` : field} <> '')`;
     const operators = {
       equals: '=',
       notEquals: '<>',
@@ -359,6 +374,7 @@ export function compileSourceSqlFromBaseUrl(
   baseUrl: string,
   objectKeys?: string[],
 ) {
+  if (dataSource.location.kind === 'clickhouse') throw new Error('File source required.');
   const key =
     dataSource.location.kind === 'prefix'
       ? `${dataSource.location.key}*.${dataSource.location.format}`
@@ -371,6 +387,7 @@ export function compileSourceSqlFromBaseUrl(
 }
 
 export function compileSourceSqlFromUrls(dataSource: DataSourceRecord, urls: string[]) {
+  if (dataSource.location.kind === 'clickhouse') throw new Error('File source required.');
   const uris = urls.map((url) => sqlString(url));
   const source = uris.length === 1 ? uris[0] : `[${uris.join(', ')}]`;
   return dataSource.location.format === 'csv'
@@ -396,20 +413,20 @@ function safeCast(value: string) {
   return value;
 }
 
-function rawFormulaFields(fields: FieldRecord[]): FormulaField[] {
+function rawFormulaFields(fields: FieldRecord[], dialect?: SqlDialect): FormulaField[] {
   return fields.map((field) => ({
     canonicalName: field.canonicalName,
     sql: field.castTo
-      ? `CAST(${quoteIdentifier(field.columnName)} AS ${safeCast(field.castTo)})`
-      : quoteIdentifier(field.columnName),
+      ? `CAST(${quoteSqlIdentifier(field.columnName, dialect)} AS ${safeCast(field.castTo)})`
+      : quoteSqlIdentifier(field.columnName, dialect),
     type: formulaTypeForSemanticType(field.semanticType),
   }));
 }
 
 export function formulaFields(
-  context: Pick<QueryContext, 'fields' | 'calculatedFields'>,
+  context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
 ): FormulaField[] {
-  const raw = rawFormulaFields(context.fields);
+  const raw = rawFormulaFields(context.fields, context.dialect);
   const rawNames = new Set(raw.map((field) => field.canonicalName.toLocaleLowerCase('en-US')));
   const calculatedByName = new Map<string, CalculatedFieldRecord>();
   for (const field of context.calculatedFields) {
@@ -444,6 +461,7 @@ export function formulaFields(
       const compiled = compileFormula(field.expression, {
         mode: 'row',
         fields: [...raw, ...resolved.values()],
+        dialect: context.dialect,
       });
       const result: FormulaField = {
         canonicalName: field.canonicalName,
@@ -463,7 +481,7 @@ export function formulaFields(
 
 export function assertCalculatedFieldNameAvailable(
   canonicalName: string,
-  context: Pick<QueryContext, 'fields' | 'calculatedFields'>,
+  context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
   editingId?: string,
 ) {
   const key = canonicalName.toLocaleLowerCase('en-US');
@@ -481,7 +499,7 @@ export function assertCalculatedFieldNameAvailable(
 function assertAggregationType(
   aggregation: Aggregation,
   fieldId: string,
-  context: Pick<QueryContext, 'fields' | 'calculatedFields'>,
+  context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
 ) {
   if (aggregation === 'count' || aggregation === 'countDistinct') return;
   const field = context.fields.find((item) => item.id === fieldId);
