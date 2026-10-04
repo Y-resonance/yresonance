@@ -1,3 +1,6 @@
+import { Toggle } from '@base-ui/react/toggle';
+import { ToggleGroup } from '@base-ui/react/toggle-group';
+import { CheckIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiClientError, callApi } from '#/api/client';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
@@ -19,6 +22,11 @@ interface RegisteredDatasource {
   id: string;
   name: string;
 }
+
+const analyticsBackends = [
+  { id: 'duckdb', name: 'DuckDB', description: 'CSV and Parquet files' },
+  { id: 'clickhouse', name: 'ClickHouse', description: 'Uploads and external tables' },
+] as const;
 
 export function DatasourceRegisterForm({
   onRegistered,
@@ -244,16 +252,35 @@ export function DatasourceRegisterForm({
     <form className="max-w-xl" onSubmit={submit}>
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor="source-backend">Analytics backend</FieldLabel>
-          <NativeSelect
-            id="source-backend"
-            value={backend}
+          <FieldLabel id="source-backend-label">Analytics backend</FieldLabel>
+          <ToggleGroup
+            aria-labelledby="source-backend-label"
+            value={[backend]}
             disabled={busy || Boolean(uploadedKey)}
-            onChange={(event) => setBackend(event.target.value as typeof backend)}
+            onValueChange={([selected]) => {
+              if (selected) setBackend(selected);
+            }}
+            className="grid grid-cols-2 gap-3"
           >
-            <NativeSelectOption value="duckdb">DuckDB</NativeSelectOption>
-            <NativeSelectOption value="clickhouse">ClickHouse</NativeSelectOption>
-          </NativeSelect>
+            {analyticsBackends.map((option) => (
+              <Toggle
+                key={option.id}
+                value={option.id}
+                aria-label={option.name}
+                className="group relative flex min-h-40 flex-col items-start gap-3 rounded-lg border border-input bg-background p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-pressed:border-primary data-pressed:ring-1 data-pressed:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <img src={`/analytics-backends/${option.id}.svg`} alt="" className="size-10" />
+                <CheckIcon
+                  aria-hidden="true"
+                  className="absolute top-3 right-3 size-4 text-primary opacity-0 group-data-pressed:opacity-100"
+                />
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">{option.name}</span>
+                  <span className="text-sm text-muted-foreground">{option.description}</span>
+                </span>
+              </Toggle>
+            ))}
+          </ToggleGroup>
         </Field>
         <Field orientation="horizontal">
           <FieldLabel htmlFor="use-existing-data">Use existing workspace data</FieldLabel>

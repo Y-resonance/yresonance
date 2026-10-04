@@ -15,8 +15,24 @@ test('datasource registration chooses a backend and authorized external table wi
   await expect(page).toHaveURL(/\/datasources\/new$/);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'New datasource', exact: true })).toBeVisible();
-  await expect(page.getByLabel('Analytics backend')).toHaveValue('duckdb');
-  await page.getByLabel('Analytics backend').selectOption('clickhouse');
+  await expect(page.getByRole('button', { name: 'DuckDB', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('button', { name: 'DuckDB', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'DuckDB', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('button', { name: 'ClickHouse', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'ClickHouse', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('button', { name: 'DuckDB', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
   await expect(page.getByLabel('File', { exact: true })).toBeVisible();
   await page.getByRole('switch', { name: 'Use existing workspace data' }).click();
   await page.getByLabel('Name', { exact: true }).fill('External campaign data');
@@ -49,6 +65,14 @@ test('new datasource page links back to the datasource list', async ({ page }) =
   await mockYresonanceApi(page);
   await page.goto('/datasources/new');
   await expect(page.getByRole('heading', { name: 'New datasource', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'DuckDB', exact: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('button', { name: 'ClickHouse', exact: true })).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(page.getByRole('button', { name: 'ClickHouse', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await page.getByRole('main').getByRole('link', { name: 'Datasources', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Datasources', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'New datasource' })).toBeVisible();
