@@ -161,6 +161,9 @@ export function BuilderCanvas({
     [dashboard.widgets],
   );
   const gridRows = dashboard.canvasRows;
+  // Matches the height GridBackground draws for the canvas rows.
+  const canvasHeight =
+    gridRows * (DASHBOARD_GRID.rowHeight + DASHBOARD_GRID.margin[1]) + DASHBOARD_GRID.margin[1];
   const insertionCuts = rowInsertionCuts(dashboard.widgets, dashboard.canvasRows);
   return (
     <>
@@ -168,13 +171,7 @@ export function BuilderCanvas({
         <div
           ref={containerRef}
           className="relative"
-          // Matches the row height and margins drawn by GridBackground
-          // so the drop area covers the spare rows below the last widget.
-          style={{
-            minHeight:
-              gridRows * (DASHBOARD_GRID.rowHeight + DASHBOARD_GRID.margin[1]) +
-              DASHBOARD_GRID.margin[1],
-          }}
+          style={{ minHeight: canvasHeight }}
           onPointerDownCapture={() => {
             gridGestureRef.current = false;
           }}
@@ -220,6 +217,9 @@ export function BuilderCanvas({
                     ))
                 : null}
               <GridLayout
+                // The grid only accepts drops on its own element, which otherwise ends at the
+                // lowest widget, so it has to span the spare rows (all of an empty canvas).
+                style={{ minHeight: canvasHeight }}
                 width={width}
                 layout={layout}
                 compactor={noCompactor}
