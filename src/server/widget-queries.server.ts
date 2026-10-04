@@ -132,10 +132,31 @@ export async function queryWidget(
     cache: 'miss',
     ...(pageSize === undefined ? {} : { page, hasMore }),
   };
-  if (ttlSeconds > 0)
-    await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
-      expirationTtl: Math.max(60, ttlSeconds),
-    });
+  if (ttlSeconds > 0) {
+    // KV permits one write per key per second. Identical widgets can refresh together.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
+          expirationTtl: Math.max(60, ttlSeconds),
+        });
+        break;
+      } catch (error) {
+        if (attempt === 0 && error instanceof Error && error.message.includes('429')) {
+          console.info('yresonance.query_cache_write', { dashboardId, widgetId, outcome: 'retry' });
+          await new Promise((resolve) => setTimeout(resolve, 1100));
+          continue;
+        }
+        // A cache outage must not discard rows that the datasource already returned.
+        console.warn('yresonance.query_cache_write', {
+          dashboardId,
+          widgetId,
+          outcome: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        });
+        break;
+      }
+    }
+  }
   return result;
 }
 

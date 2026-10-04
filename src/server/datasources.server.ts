@@ -354,6 +354,7 @@ export async function registerDatasource(
         name: dataSource.name,
         connectorType: dataSource.connectorType,
         location: dataSource.location,
+        cachePolicy: dataSource.cachePolicy,
         version: dataSource.version,
         createdAt: now,
         updatedAt: now,

@@ -144,6 +144,30 @@ describe('widget queries', () => {
     expect((await env.QUERY_CACHE.list()).keys).toHaveLength(2);
   });
 
+  test('refresh retries a throttled cache write and still returns fresh rows if replacement fails', async () => {
+    const { dashboardId, widgetId } = await seedScorecardDashboard();
+    const query = { action: 'queryWidget', dashboardId, widgetId };
+    queryEngine.returnRows([{ revenue: 1 }]);
+    await callService(query);
+    queryEngine.returnRows([{ revenue: 2 }]);
+    const put = vi
+      .spyOn(env.QUERY_CACHE, 'put')
+      .mockRejectedValueOnce(new Error('KV PUT failed: 429 Too Many Requests'));
+    try {
+      expect(await callService({ ...query, refresh: true })).toMatchObject({
+        rows: [{ revenue: 2 }],
+      });
+      expect(await callService(query)).toMatchObject({ cache: 'hit', rows: [{ revenue: 2 }] });
+      put.mockRejectedValue(new Error('KV PUT failed: 429 Too Many Requests'));
+      queryEngine.returnRows([{ revenue: 3 }]);
+      expect(await callService({ ...query, refresh: true })).toMatchObject({
+        rows: [{ revenue: 3 }],
+      });
+    } finally {
+      put.mockRestore();
+    }
+  });
+
   test('file datasources honor custom expiry and disabling without changing the source version', async () => {
     const { source, dashboardId, widgetId } = await seedScorecardDashboard();
     const query = { action: 'queryWidget', dashboardId, widgetId };
