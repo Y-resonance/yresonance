@@ -17,8 +17,8 @@ export async function ingestClickhouseUpload(
   key: string,
   inspection: DatasourceInspection,
 ) {
-  const database = await managedClickhouseDatabase(workspaceId);
-  const table = managedTableName(id);
+  const database = managedClickhouseDatabase();
+  const table = await managedTableName(workspaceId, id);
   const source = clickhouseTableSql(database, table);
   const columns = inspection.description
     .map(

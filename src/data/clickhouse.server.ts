@@ -33,18 +33,30 @@ const resultSchema = z.object({
     .optional(),
 });
 
-export async function managedClickhouseDatabase(workspaceId: string) {
-  // Branch previews have distinct R2/KV names. Include them so their SQL data is isolated too.
-  return `yresonance_${await hashJson([env.R2_BUCKET_NAME, env.QUERY_CACHE_NAME, workspaceId])}`;
+export function managedClickhouseDatabase() {
+  const database = z
+    .string()
+    .regex(/^yresonance_[a-z0-9_]+$/)
+    .max(100)
+    .safeParse(env.CLICKHOUSE_DATABASE);
+  if (!database.success)
+    throw new DatasourceError(
+      'datasource_connector_failed',
+      'ClickHouse database is not configured.',
+    );
+  return database.data;
 }
 
 export async function authorizedClickhouseTable(dataSource: Omit<DataSourceRecord, 'version'>) {
   const location = dataSource.location;
   if (location.kind !== 'clickhouse')
     throw new DatasourceError('invalid_query', 'ClickHouse requires a table source.');
-  const managedDatabase = await managedClickhouseDatabase(dataSource.workspaceId);
+  const managedDatabase = managedClickhouseDatabase();
   if (location.ownership === 'managed') {
-    if (location.database !== managedDatabase || location.table !== managedTableName(dataSource.id))
+    if (
+      location.database !== managedDatabase ||
+      location.table !== (await managedTableName(dataSource.workspaceId, dataSource.id))
+    )
       throw new DatasourceError(
         'datasource_access_denied',
         'This ClickHouse table belongs to another workspace.',
@@ -76,8 +88,8 @@ export async function authorizedClickhouseTable(dataSource: Omit<DataSourceRecor
   return clickhouseTableSql(location.database, location.table);
 }
 
-export function managedTableName(id: string) {
-  return id.replaceAll('-', '_');
+export async function managedTableName(workspaceId: string, id: string) {
+  return `ws_${await hashJson(workspaceId)}_${id.replaceAll('-', '_')}`;
 }
 export function clickhouseTableSql(database: string, table: string) {
   return `${quoteSqlIdentifier(database, 'clickhouse')}.${quoteSqlIdentifier(table, 'clickhouse')}`;

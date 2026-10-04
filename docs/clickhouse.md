@@ -22,6 +22,7 @@ dates, and timestamps. Nested file types fail before a table is created.
 Configure these Worker secrets in each environment that should offer ClickHouse:
 
 - `CLICKHOUSE_URL`: the HTTPS HTTP endpoint.
+- `CLICKHOUSE_DATABASE`: the managed database name, configured as a Worker variable.
 - `CLICKHOUSE_USER` and `CLICKHOUSE_PASSWORD`: the restricted app account.
 - `CLICKHOUSE_ACCESS_CLIENT_ID` and `CLICKHOUSE_ACCESS_CLIENT_SECRET`: required when the endpoint
   is protected by Cloudflare Access. Use a Service Auth policy for the service token.
@@ -32,27 +33,44 @@ secrets separately from production. Cloudflare's Previews Base does not inherit 
 secrets. Do not make ClickHouse secrets required for starting the app: DuckDB-only environments
 continue to work without them. HTTP is accepted only for loopback conformance tests.
 
-The provisioned psimms instance is reached through `https://clickhouse-yresonance.psimms.de`.
-A dedicated `yresonance_analytics` user and an Access service token were created for this change.
-Local connection configuration is stored in `~/.config/yresonance/clickhouse-backend.json`;
-the Access token record is in `~/.config/yresonance/clickhouse-access.json`. Both files are
-private and outside the repository. No external workspace mappings have been provisioned;
+The provisioned psimms instance is reached through `https://clickhouse.yresonance.com` in the
+yresonance Cloudflare account, protected by an Access service token. The original personal-account
+tunnel remains available. Private runtime configurations live in
+`~/.config/yresonance/clickhouse-production.json` and `~/.config/yresonance/clickhouse-preview.json`.
+Production runtime secrets and Preview Base secrets are configured separately. No external
+workspace mappings have been provisioned;
 configure `CLICKHOUSE_EXTERNAL_TABLES` and the matching SQL grants before using external tables.
 The ClickHouse container has
 `CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1` so its administrator can manage SQL users. The app
 account has no user-management privileges.
 
-The restricted account's managed-data grants are:
+Separate SQL users restrict production and previews to their database namespaces:
 
 ```sql
 GRANT SELECT, INSERT, CREATE DATABASE, CREATE TABLE, DROP TABLE
-ON yresonance_*.* TO yresonance_analytics;
+ON yresonance_production.* TO yresonance_production;
+
+GRANT SELECT, INSERT, CREATE DATABASE, CREATE TABLE, DROP TABLE, DROP DATABASE
+ON yresonance_preview_*.* TO yresonance_preview;
 ```
 
-Managed database names contain a SHA-256 digest of the workspace id and the environment's
-R2/KV names. Every workspace gets its own database. Distinct branch-preview resource names
-also isolate their ClickHouse databases. Managed table names derive from server-generated
-datasource ids. Clients cannot register arbitrary managed table references.
+Production uses `yresonance_production`. Native previews use `yresonance_preview_<branch-hash>`,
+with the same hash of the exact branch name used for their Cloudflare resources. Preparation
+creates the database before deployment and reuses it across pushes. PR-close cleanup waits for
+running builds and removes only that branch database. The manual shared preview uses
+`yresonance_preview_shared`.
+
+Managed table names include a hash of the workspace id and a server-generated datasource id.
+Inspection and queries verify both the environment database and the workspace table name.
+Clients cannot register arbitrary managed table references. Earlier workspace databases are
+left untouched; this change does not migrate their tables.
+
+Preview provisioning uses `CLICKHOUSE_PREVIEW_URL`, `CLICKHOUSE_PREVIEW_USER`,
+`CLICKHOUSE_PREVIEW_PASSWORD`, `CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID`, and
+`CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET` in Cloudflare preview build settings and GitHub cleanup
+secrets. These are the preview user credentials, not administrator or production credentials.
+DuckDB-only deployments can omit all five; partial configuration fails the lifecycle operation.
+Use a separate local database and local user for development.
 
 External mappings use this shape:
 

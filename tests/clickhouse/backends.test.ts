@@ -17,12 +17,13 @@ vi.mock('cloudflare:workers', () => ({
     ...process.env,
     R2_BUCKET_NAME: 'backend-conformance',
     QUERY_CACHE_NAME: 'backend-conformance',
+    CLICKHOUSE_DATABASE: 'yresonance_development',
   },
 }));
 
 const workspaceId = `conformance_${crypto.randomUUID()}`;
 const id = `ds_${crypto.randomUUID()}`;
-const table = managedTableName(id);
+const table = await managedTableName(workspaceId, id);
 let source: DataSourceRecord;
 let sqlSource: string;
 let duckdb: DuckDBInstance;
@@ -81,7 +82,7 @@ beforeAll(async () => {
     return nativeFetch(input, streamingInit);
   };
   vi.stubGlobal('fetch', workerFetch);
-  const database = await managedClickhouseDatabase(workspaceId);
+  const database = managedClickhouseDatabase();
   sqlSource = clickhouseTableSql(database, table);
   source = {
     id,
@@ -281,6 +282,9 @@ test('managed Parquet imports are queryable and a failed import removes its tabl
   try {
     location = await ingestClickhouseUpload(workspaceId, importId, 'source.parquet', inspection);
     const imported = { ...source, id: importId, location };
+    await expect(
+      clickhouseBackend.inspect({ ...imported, workspaceId: 'another-workspace' }),
+    ).rejects.toThrow('This ClickHouse table belongs to another workspace.');
     const result = await clickhouseBackend.executeQuery(imported, {
       kind: 'widget',
       dashboard,
@@ -296,7 +300,7 @@ test('managed Parquet imports are queryable and a failed import removes its tabl
     ).rejects.toThrow('ClickHouse could not complete the request.');
     const exists = await clickhouseRequest(
       workspaceId,
-      `EXISTS TABLE ${clickhouseTableSql(location.database, managedTableName(failureId))} FORMAT JSON`,
+      `EXISTS TABLE ${clickhouseTableSql(location.database, await managedTableName(workspaceId, failureId))} FORMAT JSON`,
     );
     expect(exists?.data).toEqual([{ result: 0 }]);
   } finally {
@@ -304,6 +308,59 @@ test('managed Parquet imports are queryable and a failed import removes its tabl
     if (location) await removeClickhouseUpload(workspaceId, location.database, location.table);
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('preview databases retain data across builds and cleanup removes only the closed branch', async () => {
+  const { managePreviewClickhouse } = await import('../../scripts/clickhouse-preview');
+  const { previewClickhouseDatabase } = await import('../../scripts/preview-config');
+  for (const key of ['URL', 'USER', 'PASSWORD', 'ACCESS_CLIENT_ID', 'ACCESS_CLIENT_SECRET']) {
+    vi.stubEnv(
+      `CLICKHOUSE_PREVIEW_${key}`,
+      process.env[`CLICKHOUSE_${key}`] ?? 'unused-local-access-token',
+    );
+  }
+  const branch = `conformance/${crypto.randomUUID()}/report`;
+  const otherBranch = branch.replaceAll('/', '-');
+  const database = previewClickhouseDatabase(branch);
+  const otherDatabase = previewClickhouseDatabase(otherBranch);
+  try {
+    await managePreviewClickhouse('prepare', branch);
+    await managePreviewClickhouse('prepare', otherBranch);
+    await clickhouseRequest(
+      workspaceId,
+      `CREATE TABLE "${database}".retained (amount UInt8) ENGINE = Memory`,
+      [],
+      { readonly: false },
+    );
+    await clickhouseRequest(workspaceId, `INSERT INTO "${database}".retained VALUES (42)`, [], {
+      readonly: false,
+    });
+    await managePreviewClickhouse('prepare', branch);
+    expect(
+      (
+        await clickhouseRequest(
+          workspaceId,
+          `SELECT amount FROM "${database}".retained FORMAT JSON`,
+        )
+      )?.data,
+    ).toEqual([{ amount: 42 }]);
+    await managePreviewClickhouse('cleanup', branch);
+    await managePreviewClickhouse('cleanup', branch);
+    expect(
+      (await clickhouseRequest(workspaceId, `EXISTS DATABASE "${database}" FORMAT JSON`))?.data,
+    ).toEqual([{ result: 0 }]);
+    expect(
+      (await clickhouseRequest(workspaceId, `EXISTS DATABASE "${otherDatabase}" FORMAT JSON`))
+        ?.data,
+    ).toEqual([{ result: 1 }]);
+    await expect(managePreviewClickhouse('cleanup', 'main')).rejects.toThrow(
+      'non-production branch',
+    );
+  } finally {
+    await managePreviewClickhouse('cleanup', branch);
+    await managePreviewClickhouse('cleanup', otherBranch);
+    vi.unstubAllEnvs();
   }
 });
 
@@ -371,7 +428,7 @@ test('large integer medians and closely spaced large values retain precision', a
   const edgeSource = {
     ...source,
     id: edgeId,
-    location: { ...source.location, table: managedTableName(edgeId) },
+    location: { ...source.location, table: await managedTableName(workspaceId, edgeId) },
   };
   const edgeSql = clickhouseTableSql(edgeSource.location.database, edgeSource.location.table);
   const rows =

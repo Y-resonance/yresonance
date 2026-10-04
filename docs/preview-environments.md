@@ -11,7 +11,10 @@ The helper writes `.wrangler-branch.json` with branch bindings under `previews`,
 and `.wrangler-preview-migrations.json` pointing to that same D1 database. It
 applies migrations before building. Production bindings and routes stay at the
 top level. Branch resources request Western Europe; containers retain `WEUR`.
-Analytics use the non-production `yresonance_product_preview` dataset.
+Analytics use the non-production `yresonance_product_preview` dataset. ClickHouse uses one
+`yresonance_preview_<branch-hash>` database per branch, created during preparation and deleted
+with the branch resources on PR closure. Preview build settings and GitHub cleanup secrets
+use the restricted `CLICKHOUSE_PREVIEW_*` credentials documented in [ClickHouse setup](clickhouse.md).
 
 Cloudflare deploys the Preview, maintains its branch URL, and posts it to the PR.
 The separate `env.preview` remains available for deliberate shared deployments

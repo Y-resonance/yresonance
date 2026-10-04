@@ -8,6 +8,7 @@ vi.mock('cloudflare:workers', () => ({
     CLICKHOUSE_PASSWORD: 'private-password',
     CLICKHOUSE_ACCESS_CLIENT_ID: 'private-id',
     CLICKHOUSE_ACCESS_CLIENT_SECRET: 'private-access-secret',
+    CLICKHOUSE_DATABASE: 'yresonance_development',
   },
 }));
 afterEach(() => vi.unstubAllGlobals());
