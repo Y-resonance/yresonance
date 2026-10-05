@@ -513,13 +513,13 @@ function QueryCard({
   const definition = widget.definition;
   // Compare query inputs by content, since saves and refreshes replace their objects.
   const definitionKey = stableStringify(definition);
-  const queryControls = {
+  const queryControls = controlState;
+  const controlsKey = stableStringify({
     dateRange: controlState.dateRange,
     values: Object.fromEntries(
       Object.entries(controlState.values ?? {}).filter(([, values]) => values.length > 0),
     ),
-  };
-  const controlsKey = stableStringify(queryControls);
+  });
   const { revision, changePending } = useDashboardQueryRefresh();
   const refreshed = useRef(revision);
   const [rows, setRows] = useState<Record<string, unknown>[]>();

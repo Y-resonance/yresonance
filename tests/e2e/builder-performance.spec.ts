@@ -80,3 +80,31 @@ for (const outcome of ['saved', 'failed'] as const) {
     }
   });
 }
+
+test('clearing a default filter sends an explicit empty selection', async ({ page }) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  const control = state.dashboard.pages[0]!.widgets.find(
+    (widget) => widget.definition.type === 'control',
+  )!;
+  if (control.definition.type !== 'control') throw new Error('Expected a filter control.');
+  control.definition.defaultValues = ['Meta'];
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('button', { name: 'Clear', exact: true })).toBeVisible();
+  const clearedQuery = page.waitForRequest(
+    (request) => {
+      if (!request.url().endsWith('/api/yresonance') || request.method() !== 'POST') return false;
+      const body = apiRequestSchema.parse(request.postDataJSON());
+      return (
+        body.action === 'queryWidget' &&
+        body.widgetId === 'w_spend' &&
+        body.controlState?.values?.[control.id]?.length === 0
+      );
+    },
+    { timeout: 3000 },
+  );
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await clearedQuery;
+  await expect(page.getByRole('button', { name: 'Choose Platform values' })).toHaveText(
+    'All values',
+  );
+});
