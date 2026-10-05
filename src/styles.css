@@ -253,12 +253,6 @@ body {
     }
   }
 
-  @keyframes hero-tilt {
-    from {
-      transform: rotateX(16deg) scale(0.94);
-    }
-  }
-
   @keyframes aurora-drift {
     from {
       transform: translate3d(-6%, -4%, 0) scale(1);
@@ -301,16 +295,6 @@ body {
 
     .marquee:hover .marquee-track {
       animation-play-state: paused;
-    }
-
-    /* The hero stage starts tilted back and lies flat as the visitor starts scrolling. */
-    @supports (animation-timeline: scroll()) {
-      .hero-tilt {
-        transform-origin: 50% 0;
-        animation: hero-tilt linear both;
-        animation-timeline: scroll(root);
-        animation-range: 0 32rem;
-      }
     }
 
     @supports (animation-timeline: view()) {

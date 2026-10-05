@@ -274,12 +274,12 @@ export function LandingPage() {
         </div>
 
         <div
-          className="hero-rise mt-16 perspective-[2000px] sm:mt-20"
+          className="hero-rise mt-16 sm:mt-20"
           style={{ animationDelay: `${450 + wordCount * 70}ms` }}
         >
           <BrowserFrame
             url="yresonance.com/dashboards/q1-delivery"
-            className="hero-tilt shadow-2xl ring-1 shadow-primary/15 ring-primary/10"
+            className="shadow-2xl ring-1 shadow-primary/15 ring-primary/10"
           >
             <BuildDemo />
           </BrowserFrame>
