@@ -1,3 +1,7 @@
+import {
+  DashboardQueryRefresh,
+  DashboardRefreshButton,
+} from '#/components/dashboard-query-refresh';
 import { createFileRoute } from '@tanstack/react-router';
 import { CloudAlertIcon, CloudCheckIcon, LoaderCircleIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -96,95 +100,102 @@ function DashboardContent() {
       ) : !payload ? (
         <LoadingState />
       ) : (
-        <div className="flex flex-col gap-5">
-          <header className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-semibold tracking-tight">{payload.dashboard.name}</h1>
-                <Badge variant="secondary">{previewingAsViewer ? 'viewer' : payload.role}</Badge>
+        <DashboardQueryRefresh key={dashboardId}>
+          <div className="flex flex-col gap-5">
+            <header className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-semibold tracking-tight">
+                    {payload.dashboard.name}
+                  </h1>
+                  <Badge variant="secondary">{previewingAsViewer ? 'viewer' : payload.role}</Badge>
+                </div>
               </div>
-            </div>
-            {/* The editor controls stay put in both modes so the switch never moves under the
+              {/* The editor controls stay put in both modes so the switch never moves under the
                 cursor, even though a real viewer sees neither of them. */}
-            {canEdit ? (
               <div className="flex items-center gap-3">
-                {editing && webMcpAvailable ? (
-                  <Label className="text-muted-foreground" htmlFor="agent-mode">
-                    Agent mode
-                    <Switch
-                      id="agent-mode"
-                      checked={agentMode.enabled}
-                      onCheckedChange={(checked) => setAgentMode(selectAgentMode(checked))}
+                <DashboardRefreshButton />
+                {canEdit ? (
+                  <div className="flex items-center gap-3">
+                    {editing && webMcpAvailable ? (
+                      <Label className="text-muted-foreground" htmlFor="agent-mode">
+                        Agent mode
+                        <Switch
+                          id="agent-mode"
+                          checked={agentMode.enabled}
+                          onCheckedChange={(checked) => setAgentMode(selectAgentMode(checked))}
+                        />
+                      </Label>
+                    ) : null}
+                    <Label className="text-muted-foreground" htmlFor="viewer-mode">
+                      Viewer mode
+                      <Switch
+                        id="viewer-mode"
+                        checked={previewingAsViewer}
+                        onCheckedChange={(checked) =>
+                          void navigate({
+                            search: (current) => ({
+                              ...current,
+                              preview: checked ? ('viewer' as const) : undefined,
+                            }),
+                          })
+                        }
+                      />
+                    </Label>
+                    <SaveStatusIndicator status={saveStatus} />
+                    <DuplicateDashboard
+                      dashboard={{
+                        id: dashboardId,
+                        name: payload.dashboard.name,
+                        dataSourceIds: [
+                          ...new Set(
+                            payload.dashboard.widgets.flatMap((widget) =>
+                              'dataSourceId' in widget.definition
+                                ? [widget.definition.dataSourceId]
+                                : [],
+                            ),
+                          ),
+                        ],
+                      }}
+                      dataSources={payload.dataSources}
+                      disabled={saveStatus !== 'saved'}
                     />
-                  </Label>
+                    <DashboardSharing
+                      dashboardId={dashboardId}
+                      sharing={payload.sharing ?? { links: [], grants: [] }}
+                      refresh={refresh}
+                    />
+                  </div>
                 ) : null}
-                <Label className="text-muted-foreground" htmlFor="viewer-mode">
-                  Viewer mode
-                  <Switch
-                    id="viewer-mode"
-                    checked={previewingAsViewer}
-                    onCheckedChange={(checked) =>
-                      void navigate({
-                        search: (current) => ({
-                          ...current,
-                          preview: checked ? ('viewer' as const) : undefined,
-                        }),
-                      })
-                    }
-                  />
-                </Label>
-                <SaveStatusIndicator status={saveStatus} />
-                <DuplicateDashboard
-                  dashboard={{
-                    id: dashboardId,
-                    name: payload.dashboard.name,
-                    dataSourceIds: [
-                      ...new Set(
-                        payload.dashboard.widgets.flatMap((widget) =>
-                          'dataSourceId' in widget.definition
-                            ? [widget.definition.dataSourceId]
-                            : [],
-                        ),
-                      ),
-                    ],
-                  }}
-                  dataSources={payload.dataSources}
-                  disabled={saveStatus !== 'saved'}
-                />
-                <DashboardSharing
-                  dashboardId={dashboardId}
-                  sharing={payload.sharing ?? { links: [], grants: [] }}
-                  refresh={refresh}
-                />
               </div>
-            ) : null}
-          </header>
-          {editing && !agentMode.enabled ? (
-            <DashboardBuilder
-              dashboard={payload.dashboard}
-              dataSources={payload.dataSources}
-              refresh={refresh}
-              onSaveStatusChange={setSaveStatus}
-            />
-          ) : (
-            <DashboardView
-              dashboard={payload.dashboard}
-              dateRange={parseDateRangeSearch(search.dateRange)}
-              onDateRangeChange={(range) => {
-                const defaultRange = dashboardDateControlRange(payload.dashboard);
-                void navigate({
-                  search: (current) => ({
-                    ...current,
-                    dateRange:
-                      defaultRange && sameDateRange(defaultRange, range)
-                        ? undefined
-                        : dateRangeSearchValue(range),
-                  }),
-                });
-              }}
-            />
-          )}
-        </div>
+            </header>
+            {editing && !agentMode.enabled ? (
+              <DashboardBuilder
+                dashboard={payload.dashboard}
+                dataSources={payload.dataSources}
+                refresh={refresh}
+                onSaveStatusChange={setSaveStatus}
+              />
+            ) : (
+              <DashboardView
+                dashboard={payload.dashboard}
+                dateRange={parseDateRangeSearch(search.dateRange)}
+                onDateRangeChange={(range) => {
+                  const defaultRange = dashboardDateControlRange(payload.dashboard);
+                  void navigate({
+                    search: (current) => ({
+                      ...current,
+                      dateRange:
+                        defaultRange && sameDateRange(defaultRange, range)
+                          ? undefined
+                          : dateRangeSearchValue(range),
+                    }),
+                  });
+                }}
+              />
+            )}
+          </div>
+        </DashboardQueryRefresh>
       )}
     </main>
   );

@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { signOut } from './doubles/clerk';
 import { queryEngine } from './doubles/query-engine';
 import {
@@ -143,6 +143,58 @@ describe('widget queries', () => {
 
     // One cached entry per distinct control selection.
     expect((await env.QUERY_CACHE.list()).keys).toHaveLength(2);
+  });
+
+  test('refresh retries a throttled cache write and still returns fresh rows if replacement fails', async () => {
+    const { dashboardId, widgetId } = await seedScorecardDashboard();
+    const query = { action: 'queryWidget', dashboardId, widgetId };
+    queryEngine.returnRows([{ revenue: 1 }]);
+    await callService(query);
+    queryEngine.returnRows([{ revenue: 2 }]);
+    const put = vi
+      .spyOn(env.QUERY_CACHE, 'put')
+      .mockRejectedValueOnce(new Error('KV PUT failed: 429 Too Many Requests'));
+    try {
+      expect(await callService({ ...query, refresh: true })).toMatchObject({
+        rows: [{ revenue: 2 }],
+      });
+      expect(await callService(query)).toMatchObject({ cache: 'hit', rows: [{ revenue: 2 }] });
+      put.mockRejectedValue(new Error('KV PUT failed: 429 Too Many Requests'));
+      queryEngine.returnRows([{ revenue: 3 }]);
+      expect(await callService({ ...query, refresh: true })).toMatchObject({
+        rows: [{ revenue: 3 }],
+      });
+    } finally {
+      put.mockRestore();
+    }
+  });
+
+  test('file datasources honor custom expiry and disabling without changing the source version', async () => {
+    const { source, dashboardId, widgetId } = await seedScorecardDashboard();
+    const query = { action: 'queryWidget', dashboardId, widgetId };
+    queryEngine.returnRows([{ revenue: 1 }]);
+    await callService({
+      action: 'updateDatasource',
+      dataSourceId: source.id,
+      cachePolicy: { mode: 'duration', ttlSeconds: 1 },
+    });
+    expect(await callService(query)).toMatchObject({ cache: 'miss', rows: [{ revenue: 1 }] });
+    queryEngine.returnRows([{ revenue: 2 }]);
+    expect(await callService(query)).toMatchObject({ cache: 'hit', rows: [{ revenue: 1 }] });
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1001);
+    try {
+      expect(await callService(query)).toMatchObject({ cache: 'miss', rows: [{ revenue: 2 }] });
+    } finally {
+      clock.mockRestore();
+    }
+    await callService({
+      action: 'updateDatasource',
+      dataSourceId: source.id,
+      cachePolicy: { mode: 'disabled' },
+    });
+    await callService(query);
+    await callService(query);
+    expect(queryEngine.queryCalls).toHaveLength(4);
   });
 
   test('a datasource version change invalidates the cached result', async () => {

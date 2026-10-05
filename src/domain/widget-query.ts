@@ -9,6 +9,7 @@ export function widgetQueryRequest({
   preview,
   shareToken,
   page,
+  refresh,
 }: {
   dashboardId: string;
   widget: DashboardWidget;
@@ -17,6 +18,7 @@ export function widgetQueryRequest({
   preview: boolean;
   shareToken?: string;
   page?: number;
+  refresh?: boolean;
 }): Extract<ApiRequest, { action: 'previewWidget' | 'queryWidget' }> {
   return preview
     ? {
@@ -35,5 +37,6 @@ export function widgetQueryRequest({
         controlState,
         drillPath,
         page,
+        refresh,
       };
 }

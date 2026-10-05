@@ -80,6 +80,8 @@ test.each([
       action: 'registerDatasource',
       name: 'Managed data',
       backend,
+      cachePolicy:
+        backend === 'duckdb' ? { mode: 'disabled' } : { mode: 'duration', ttlSeconds: 15 },
       cleanupToken: upload.cleanupToken,
       location: { kind: 'object', key: upload.key, format },
     };
@@ -102,6 +104,9 @@ test.each([
     ).toEqual([]);
 
     const registered = (await callService(request)) as DataSourceRecord;
+    expect(
+      await callService({ action: 'describeDatasource', dataSourceId: registered.id }),
+    ).toMatchObject({ cachePolicy: request.cachePolicy });
     expect(registered.connectorType).toBe(backend === 'duckdb' ? 'duckdb-file' : 'clickhouse');
     expect(
       await db.query.datasourceUploads.findFirst({ where: eq(datasourceUploads.key, upload.key) }),

@@ -1,3 +1,5 @@
+import { DatasourceCacheFields } from './datasource-cache-fields';
+import type { DatasourceCachePolicy } from '#/domain/schema';
 import { Toggle } from '@base-ui/react/toggle';
 import { ToggleGroup } from '@base-ui/react/toggle-group';
 import { CheckIcon } from 'lucide-react';
@@ -36,7 +38,7 @@ export function DatasourceRegisterForm({
   const [backend, setBackend] = useState<'duckdb' | 'clickhouse'>('duckdb');
   const [database, setDatabase] = useState('');
   const [table, setTable] = useState('');
-  const [cacheTtlSeconds, setCacheTtlSeconds] = useState(300);
+  const [cachePolicy, setCachePolicy] = useState<DatasourceCachePolicy>({ mode: 'default' });
   const [useExistingData, setUseExistingData] = useState(false);
   const [objects, setObjects] = useState<Array<{ key: string }>>([]);
   const [objectsCursor, setObjectsCursor] = useState<string>();
@@ -102,11 +104,12 @@ export function DatasourceRegisterForm({
       try {
         const registered = await callApi<RegisteredDatasource>({
           action: 'registerDatasource',
+          cachePolicy,
           name,
           backend,
           location:
             backend === 'clickhouse'
-              ? { kind: 'clickhouse', database, table, ownership: 'external', cacheTtlSeconds }
+              ? { kind: 'clickhouse', database, table, ownership: 'external', cacheTtlSeconds: 300 }
               : { kind, key, format: inferredExistingFormat ?? format },
         });
         onRegistered(registered);
@@ -172,6 +175,7 @@ export function DatasourceRegisterForm({
     try {
       const registered = await callApi<RegisteredDatasource>({
         action: 'registerDatasource',
+        cachePolicy,
         name,
         backend,
         location: { kind: 'object', key: prepared.key, format: uploadFormat },
@@ -342,21 +346,6 @@ export function DatasourceRegisterForm({
                 External tables must be authorized for this workspace.
               </FieldDescription>
             </Field>
-            <Field>
-              <FieldLabel htmlFor="source-cache-ttl">Cache TTL in seconds</FieldLabel>
-              <Input
-                id="source-cache-ttl"
-                type="number"
-                min={0}
-                max={86400}
-                step={1}
-                value={cacheTtlSeconds}
-                required
-                disabled={busy}
-                onChange={(event) => setCacheTtlSeconds(Number(event.target.value))}
-              />
-              <FieldDescription>0 disables caching.</FieldDescription>
-            </Field>
           </>
         ) : useExistingData ? (
           <>
@@ -411,6 +400,12 @@ export function DatasourceRegisterForm({
             ) : null}
           </>
         ) : null}
+        <DatasourceCacheFields
+          policy={cachePolicy}
+          onChange={setCachePolicy}
+          disabled={busy}
+          defaultTtlSeconds={useExistingData && backend === 'clickhouse' ? 300 : 86_400}
+        />
         {phase === 'uploading' ? (
           <Progress value={progress} aria-label="Upload progress">
             <ProgressLabel>Uploading</ProgressLabel>

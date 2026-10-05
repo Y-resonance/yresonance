@@ -83,7 +83,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'queryWidget',
               description:
-                'Run a stored widget from the open dashboard with optional dashboard control state. For bar, pie, and line widgets with drillDimensions, drillPath lists one clicked value per level, starting at dimension, and the widget returns the next level filtered by those values. Viewers cannot submit SQL or field names. Returns rows and applied control state.',
+                'Run a stored widget with optional dashboard control state. For bar, pie, and line widgets with drillDimensions, drillPath lists one clicked value per level and returns the next level filtered by those values. Set refresh to bypass cached results and replace them. Viewers cannot submit SQL or field names. Returns rows and applied control state.',
               readOnly: true,
               fixed,
             },
@@ -271,6 +271,12 @@ export function useWebMcpTools(options: WebMcpOptions) {
             action: 'listR2Objects',
             description: 'List R2 objects only under the active workspace prefix.',
             readOnly: true,
+          },
+          {
+            action: 'updateDatasource',
+            description:
+              'Update a datasource caching policy for all dashboards using it. Choose default, disabled, or a duration in seconds. Returns the saved datasource.',
+            readOnly: false,
           },
           {
             action: 'registerDatasource',

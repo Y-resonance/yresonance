@@ -1,3 +1,4 @@
+import type { DatasourceCachePolicy } from '#/domain/schema';
 import {
   index,
   integer,
@@ -34,6 +35,7 @@ export const dataSources = sqliteTable(
     name: text().notNull(),
     connectorType: text('connector_type').notNull().default('duckdb-file'),
     location: text({ mode: 'json' }).notNull(),
+    cachePolicy: text('cache_policy', { mode: 'json' }).$type<DatasourceCachePolicy>(),
     version: text().notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

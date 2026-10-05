@@ -31,6 +31,7 @@ import {
   removeDatasourceUpload,
   trackDatasourceUpload,
   registerDatasource,
+  updateDatasource,
   updateFieldMetadata,
 } from './datasources.server';
 import {
@@ -107,6 +108,7 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
         request.controlState,
         request.shareToken,
         request.page,
+        request.refresh,
         request.drillPath,
       );
     case 'explainWidget':
@@ -132,6 +134,8 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
       return removeDatasourceUpload(request);
     case 'trackDatasourceUpload':
       return trackDatasourceUpload(request);
+    case 'updateDatasource':
+      return updateDatasource(request);
     case 'registerDatasource':
       return registerDatasource(request);
     case 'updateFieldMetadata':

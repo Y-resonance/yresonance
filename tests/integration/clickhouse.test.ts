@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, expect, test, vi } from 'vitest';
+import { signOut } from './doubles/clerk';
 import { eq } from 'drizzle-orm';
 import { createDatabase } from '#/db/client';
 import { dataSources } from '#/db/schema';
@@ -171,4 +172,71 @@ test('zero TTL bypasses KV and a datasource cannot claim another workspace manag
     })
     .where(eq(dataSources.id, source.id));
   await expectApiError(callService(query), { status: 403, code: 'datasource_access_denied' });
+});
+
+test('datasource policy persists, changes expiry, disables caching, and restores defaults', async () => {
+  const { setRevenue } = installClickhouse();
+  const workspace = await signInToNewWorkspace();
+  const source = await registerExternal(workspace.workspaceId);
+  const query = await dashboardFor(source);
+  await callService(query);
+  const policy = { mode: 'duration', ttlSeconds: 1 };
+  await callService({ action: 'updateDatasource', dataSourceId: source.id, cachePolicy: policy });
+  expect(
+    await callService({ action: 'describeDatasource', dataSourceId: source.id }),
+  ).toMatchObject({ cachePolicy: policy });
+  expect(await callService(query)).toMatchObject({ cache: 'miss' });
+  setRevenue(43);
+  expect(await callService(query)).toMatchObject({ cache: 'hit', rows: [{ metric_1: 42 }] });
+  const now = Date.now();
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 1001);
+  expect(await callService(query)).toMatchObject({ cache: 'miss', rows: [{ metric_1: 43 }] });
+  clock.mockRestore();
+  await callService({
+    action: 'updateDatasource',
+    dataSourceId: source.id,
+    cachePolicy: { mode: 'disabled' },
+  });
+  setRevenue(44);
+  expect(await callService(query)).toMatchObject({ cache: 'miss', rows: [{ metric_1: 44 }] });
+  setRevenue(45);
+  expect(await callService(query)).toMatchObject({ cache: 'miss', rows: [{ metric_1: 45 }] });
+  await callService({
+    action: 'updateDatasource',
+    dataSourceId: source.id,
+    cachePolicy: { mode: 'default' },
+  });
+  expect(await callService(query)).toMatchObject({ cache: 'hit' });
+  await signInToNewWorkspace();
+  await expectApiError(
+    callService({ action: 'updateDatasource', dataSourceId: source.id, cachePolicy: policy }),
+    { status: 404, code: 'datasource_not_found' },
+  );
+});
+
+test('shared viewers fetch fresh results, replace the cache, and still require source authorization', async () => {
+  const { setRevenue } = installClickhouse();
+  const workspace = await signInToNewWorkspace();
+  const source = await registerExternal(workspace.workspaceId);
+  const query = await dashboardFor(source);
+  const link = (await callService({
+    action: 'shareDashboard',
+    dashboardId: query.dashboardId,
+    operation: { kind: 'createLink' },
+  })) as { token: string };
+  await callService(query);
+  setRevenue(55);
+  signOut();
+  const sharedQuery = { ...query, shareToken: link.token };
+  expect(await callService(sharedQuery)).toMatchObject({ cache: 'hit', rows: [{ metric_1: 42 }] });
+  expect(await callService({ ...sharedQuery, refresh: true })).toMatchObject({
+    cache: 'miss',
+    rows: [{ metric_1: 55 }],
+  });
+  expect(await callService(sharedQuery)).toMatchObject({ cache: 'hit', rows: [{ metric_1: 55 }] });
+  env.CLICKHOUSE_EXTERNAL_TABLES = '[]';
+  await expectApiError(callService({ ...sharedQuery, refresh: true }), {
+    status: 403,
+    code: 'datasource_access_denied',
+  });
 });

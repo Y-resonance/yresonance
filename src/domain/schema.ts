@@ -372,6 +372,13 @@ export const controlStateSchema = z.object({
   values: z.record(z.string(), z.array(z.unknown())).optional(),
 });
 
+export const datasourceCachePolicySchema = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('default') }),
+  z.object({ mode: z.literal('disabled') }),
+  z.object({ mode: z.literal('duration'), ttlSeconds: z.number().int().min(1).max(86_400) }),
+]);
+export type DatasourceCachePolicy = z.infer<typeof datasourceCachePolicySchema>;
+
 export const fileDataSourceLocationSchema = z.object({
   kind: z.enum(['object', 'prefix']),
   key: z.string().trim().min(1),

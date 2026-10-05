@@ -21,7 +21,7 @@ Tools by page, read-only first, then writes:
   `upsertLibraryMetric`, `shareDashboard`, `createDashboard`.
 - Unlisted link: `getDashboard`, `queryWidget`, `explainWidget`, `getControlOptions`,
   `describeDatasource`. No writes.
-- Datasources: `listDataSources`, `listR2Objects`. Writes: `registerDatasource`.
+- Datasources: `listDataSources`, `listR2Objects`. Writes: `registerDatasource`, `updateDatasource`.
 - Admins additionally get `updateFieldMetadata` and `upsertLibraryMetric` on the datasource and
   metrics pages.
 
@@ -35,3 +35,8 @@ Security model: clients never send SQL or column names. The only query path is
 drill path only carries values for levels the editor defined. Viewers and agents
 on a shared link can only run queries the dashboard already defines. Formulas are written in
 yresonance's own text syntax, parsed to an AST, validated, and compiled to SQL on the server.
+
+`registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an
+existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from
+1 to 86400. `queryWidget` accepts `refresh: true` to bypass and replace a cached result, including
+on shared links. Expiry alone does not request data or refresh an open dashboard.

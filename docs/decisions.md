@@ -48,7 +48,10 @@ explain. Update it when a decision changes, not when an implementation detail do
   and formulas it depends on, the resolved control state and the datasource version, so any change
   makes old entries unreachable. Managed uploads expire after 24 hours. External ClickHouse tables
   have no reliable content revision and use a configurable TTL, default five minutes. Zero disables
-  caching. Workspace access mappings are checked before reading cached external results.
+  caching. Each datasource can keep its default, set a result lifetime, or disable caching.
+  Expiry runs a new query on the next request; open dashboards do not auto-refresh.
+  Editors and viewers can fetch fresh results for the displayed dashboard and replace matching
+  cached results. Workspace access mappings are checked before reading cached external results.
 - Managed CSV uploads are converted to Parquet before registration. ClickHouse imports stream
   the inspected Parquet into one database per environment, with workspace-scoped tables. Production
   and previews use separate SQL users. Preview databases follow branch lifecycles. External tables require
