@@ -9,6 +9,12 @@ Editors register uploaded or existing CSV and Parquet files from tenant-scoped R
 ClickHouse is also available for managed uploads and authorized external tables. See
 [ClickHouse setup and freshness](clickhouse.md) for server configuration. Auth is
 Clerk, with workspaces mapped to Clerk organizations. Application data lives in D1 with Drizzle.
+Signed dashboard requests batch the dashboard and workspace reads. Widget creation and updates
+load datasource metadata once, then reuse it for validation, hashing, and SQL compilation before
+the conditional dashboard save. Query execution batches datasource and metadata reads too.
+Builder refreshes request `getDashboard` with `includeSharing: false` to avoid Clerk directory
+lookups; initial loads and sharing changes retain the default sharing payload.
+
 Nothing domain-specific is hardcoded: metrics such as VTR or CPV are workspace data, not code.
 
 Preview workspaces automatically receive an "Example campaign data" datasource on their first

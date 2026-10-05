@@ -1,3 +1,4 @@
+import { loadQueryContext } from './records.server';
 import { requireSession } from './auth.server';
 import { dataSources, shareLinks, dashboards, dashboardGrants } from '#/db/schema';
 import { eq, inArray, and, isNull } from 'drizzle-orm';
@@ -68,7 +69,7 @@ export async function listDashboards() {
   return (await visibleDashboardRows(session)).map(summary);
 }
 
-export async function getDashboard(id: string, shareToken?: string) {
+export async function getDashboard(id: string, shareToken?: string, includeSharing = true) {
   const access = await authorizeDashboard(id, 'viewer', shareToken);
   const referencedSourceIds = [
     ...new Set(
@@ -94,7 +95,7 @@ export async function getDashboard(id: string, shareToken?: string) {
     role: access.role,
     dataSources: sources,
     controlState: defaultControlState(access.document),
-    ...(access.role === 'admin' || access.role === 'editor'
+    ...(includeSharing && (access.role === 'admin' || access.role === 'editor')
       ? { sharing: await sharingState(access.document.id) }
       : {}),
   };
@@ -427,13 +428,21 @@ export async function addWidget(request: Extract<ApiRequest, { action: 'addWidge
   const page = pageById(access.document, request.pageId);
   const definition = withDateControlDefault(request.definition);
   assertSingleDateControl(access.document, definition);
-  await validateDefinition(access.document, definition);
+  const context =
+    'dataSourceId' in definition
+      ? await loadQueryContext(definition.dataSourceId, access.document.workspaceId)
+      : undefined;
+  await validateDefinition(access.document, definition, context);
   const id = `widget_${crypto.randomUUID()}`;
   const widget: DashboardWidget = {
     id,
     layout: appendPlacement(page.widgets, request.width, request.height, access.document.columns),
     definition,
-    definitionHash: await definitionHash(definition, access.document.workspaceId),
+    definitionHash: await definitionHash(
+      definition,
+      access.document.workspaceId,
+      context?.metadata,
+    ),
   };
   const updated = {
     ...access.document,
@@ -448,8 +457,9 @@ export async function addWidget(request: Extract<ApiRequest, { action: 'addWidge
     ),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
+  const sql = await compiledSql(updated, widget, context);
   await persistDashboard(updated, access.row.updatedAt);
-  return { widget, compiledSql: await compiledSql(updated, widget) };
+  return { widget, compiledSql: sql };
 }
 
 export async function updateWidget(request: Extract<ApiRequest, { action: 'updateWidget' }>) {
@@ -457,11 +467,19 @@ export async function updateWidget(request: Extract<ApiRequest, { action: 'updat
   const existing = widgetById(access.document, request.widgetId);
   const definition = withDateControlDefault(request.definition);
   assertSingleDateControl(access.document, definition, existing.id);
-  await validateDefinition(access.document, definition);
+  const context =
+    'dataSourceId' in definition
+      ? await loadQueryContext(definition.dataSourceId, access.document.workspaceId)
+      : undefined;
+  await validateDefinition(access.document, definition, context);
   const widget = {
     ...existing,
     definition,
-    definitionHash: await definitionHash(definition, access.document.workspaceId),
+    definitionHash: await definitionHash(
+      definition,
+      access.document.workspaceId,
+      context?.metadata,
+    ),
   };
   const updated = {
     ...access.document,
@@ -471,7 +489,7 @@ export async function updateWidget(request: Extract<ApiRequest, { action: 'updat
     })),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
-  const sql = await compiledSql(updated, widget);
+  const sql = await compiledSql(updated, widget, context);
   if (!request.libraryMetric) {
     await persistDashboard(updated, access.row.updatedAt);
     return { widget, compiledSql: sql };
