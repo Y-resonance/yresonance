@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Field, FieldLabel, FieldGroup } from './ui/field';
 import { Switch } from './ui/switch';
-import { Ellipsis, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Ellipsis, Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -115,6 +115,7 @@ export function DashboardPages({
                             setOpen(true);
                           }}
                         >
+                          <Pencil aria-hidden="true" />
                           Rename page
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -129,6 +130,7 @@ export function DashboardPages({
                             )
                           }
                         >
+                          {item.hidden ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
                           {item.hidden ? 'Publish page' : 'Hide page'}
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -144,6 +146,7 @@ export function DashboardPages({
                             )
                           }
                         >
+                          <ArrowLeft aria-hidden="true" />
                           Move left
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -159,6 +162,7 @@ export function DashboardPages({
                             )
                           }
                         >
+                          <ArrowRight aria-hidden="true" />
                           Move right
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -170,6 +174,7 @@ export function DashboardPages({
                             setOpen(true);
                           }}
                         >
+                          <Trash2 aria-hidden="true" />
                           Remove page
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
