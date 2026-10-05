@@ -2,6 +2,10 @@ import { type ApiRequest } from '#/api/contracts';
 import { ApiError } from './errors';
 import { recordProductMetric } from '#/observability';
 import {
+  addPage,
+  updatePage,
+  removePage,
+  pageById,
   bootstrap,
   listDashboards,
   getDashboard,
@@ -42,6 +46,7 @@ import {
   validateMetricExpression,
   upsertLibraryMetric,
 } from './formulas.server';
+import { authorizeDashboard } from './dashboard-access.server';
 import { shareDashboard } from './sharing.server';
 
 export async function executeRequest(request: ApiRequest): Promise<unknown> {
@@ -71,6 +76,21 @@ export async function executeRequest(request: ApiRequest): Promise<unknown> {
 
 async function dispatchRequest(request: ApiRequest): Promise<unknown> {
   switch (request.action) {
+    case 'addPage':
+      return addPage(request);
+    case 'updatePage':
+      return updatePage(request);
+    case 'removePage':
+      return removePage(request);
+    case 'trackPageView': {
+      const access = await authorizeDashboard(request.dashboardId, 'viewer', request.shareToken);
+      const page = pageById(access.document, request.pageId);
+      recordProductMetric('dashboard_page_view', {
+        index: access.document.workspaceId,
+        labels: [access.document.id, page.id, access.role],
+      });
+      return { pageId: page.id };
+    }
     case 'bootstrap':
       return bootstrap();
     case 'listDashboards':
@@ -173,6 +193,9 @@ function recordLatency(
 }
 
 const dashboardSaveActions = new Set<ApiRequest['action']>([
+  'addPage',
+  'updatePage',
+  'removePage',
   'createDashboard',
   'updateDashboard',
   'duplicateDashboard',

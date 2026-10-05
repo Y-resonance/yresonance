@@ -49,6 +49,7 @@ test('overlapping add and move reject the stale write, then retry preserves both
   const requests = [
     {
       action: 'addWidget',
+      pageId: `${dashboard.id}_page`,
       dashboardId: dashboard.id,
       definition: { type: 'text', content: { schemaVersion: 'plain-text-v1', document: 'Added' } },
       width: 4,
@@ -75,8 +76,8 @@ test('overlapping add and move reject the stale write, then retry preserves both
     action: 'getDashboard',
     dashboardId: dashboard.id,
   })) as { dashboard: DashboardDocument };
-  expect(saved.widgets).toHaveLength(2);
-  expect(saved.widgets.find((item) => item.id === widget.id)?.layout.y).toBe(10);
+  expect(saved.pages[0].widgets).toHaveLength(2);
+  expect(saved.pages[0].widgets.find((item) => item.id === widget.id)?.layout.y).toBe(10);
   expect(saved.updatedAt).toBe('2030-01-01T00:00:00.001Z');
 });
 
@@ -109,7 +110,9 @@ test('a conflicting widget and library metric update creates neither half of the
     action: 'getDashboard',
     dashboardId: dashboard.id,
   })) as { dashboard: DashboardDocument };
-  expect(saved.widgets[0].definition).toMatchObject({ title: ['First', 'Second'][winner] });
+  expect(saved.pages[0].widgets[0].definition).toMatchObject({
+    title: ['First', 'Second'][winner],
+  });
   const metrics = await createDatabase(env.DB)
     .select()
     .from(libraryMetrics)

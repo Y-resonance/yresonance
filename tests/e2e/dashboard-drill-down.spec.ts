@@ -5,7 +5,7 @@ import { mockYresonanceApi } from './support/yresonance-api';
 test('a viewer drills from a campaign into its platforms and back', async ({ page }) => {
   test.slow();
   const state = await mockYresonanceApi(page, { role: 'viewer' });
-  state.dashboard.widgets.push({
+  state.dashboard.pages[0].widgets.push({
     id: 'w_drill',
     layout: { x: 0, y: 7, width: 8, height: 5 },
     definitionHash: 'hash_w_drill',

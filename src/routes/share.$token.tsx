@@ -2,6 +2,8 @@ import {
   DashboardQueryRefresh,
   DashboardRefreshButton,
 } from '#/components/dashboard-query-refresh';
+import { DashboardPages } from '#/components/dashboard-pages';
+import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
@@ -18,7 +20,10 @@ import { pageTitle, usePageTitle } from '#/lib/page-title';
 import { useWebMcpTools } from '#/webmcp/use-webmcp-tools';
 
 export const Route = createFileRoute('/share/$token')({
-  validateSearch: z.object({ dateRange: z.string().optional().catch(undefined) }),
+  validateSearch: z.object({
+    page: z.string().optional().catch(undefined),
+    dateRange: z.string().optional().catch(undefined),
+  }),
   component: SharedDashboard,
   head: () => ({ meta: [{ title: pageTitle('Shared dashboard') }] }),
 });
@@ -65,23 +70,34 @@ function SharedDashboard() {
         ) : !dashboard ? (
           <LoadingState />
         ) : (
-          <DashboardView
-            dashboard={dashboard}
-            shareToken={token}
-            dateRange={parseDateRangeSearch(search.dateRange)}
-            onDateRangeChange={(range) => {
-              const defaultRange = dashboardDateControlRange(dashboard);
-              void navigate({
-                search: (current) => ({
-                  ...current,
-                  dateRange:
-                    defaultRange && sameDateRange(defaultRange, range)
-                      ? undefined
-                      : dateRangeSearchValue(range),
-                }),
-              });
-            }}
-          />
+          <div className="flex flex-col gap-4">
+            <DashboardPages
+              dashboard={dashboard}
+              pageId={search.page}
+              shareToken={token}
+              onPageChange={(page) =>
+                void navigate({ search: (current) => ({ ...current, page }) })
+              }
+            />
+            <DashboardView
+              pageId={activeDashboardPage(dashboard, search.page)?.id}
+              dashboard={dashboard}
+              shareToken={token}
+              dateRange={parseDateRangeSearch(search.dateRange)}
+              onDateRangeChange={(range) => {
+                const defaultRange = dashboardDateControlRange(dashboard);
+                void navigate({
+                  search: (current) => ({
+                    ...current,
+                    dateRange:
+                      defaultRange && sameDateRange(defaultRange, range)
+                        ? undefined
+                        : dateRangeSearchValue(range),
+                  }),
+                });
+              }}
+            />
+          </div>
         )}
       </main>
     </DashboardQueryRefresh>

@@ -53,6 +53,7 @@ describe('POST /api/yresonance', () => {
 
     const response = await postApiRequest({
       action: 'addWidget',
+      pageId: `${dashboard.id}_page`,
       dashboardId: dashboard.id,
       definition: { ...scorecardDefinition(source), title: '' },
       width: 4,
@@ -106,6 +107,7 @@ describe('POST /api/yresonance', () => {
 
     const response = await postApiRequest({
       action: 'addWidget',
+      pageId: `${dashboard.id}_page`,
       dashboardId: dashboard.id,
       definition: regionControlDefinition(source),
       width: 4,

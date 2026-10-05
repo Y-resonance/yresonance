@@ -359,6 +359,7 @@ describe('drill-down', () => {
     await expectApiError(
       callService({
         action: 'addWidget',
+        pageId: `${dashboard.id}_page`,
         dashboardId: dashboard.id,
         definition: {
           type: 'line',
@@ -427,6 +428,7 @@ describe('control validation', () => {
     await expectApiError(
       callService({
         action: 'addWidget',
+        pageId: `${dashboardId}_page`,
         dashboardId,
         definition: regionControlDefinition(source, {
           allowMultiple: false,
@@ -509,6 +511,7 @@ describe('query engine failures', () => {
 
     await callService({
       action: 'addWidget',
+      pageId: `${dashboard.id}_page`,
       dashboardId: dashboard.id,
       definition: scorecardDefinition(source),
       width: 4,
@@ -518,9 +521,9 @@ describe('query engine failures', () => {
 
     queryEngine.reset();
     const opened = (await callService({ action: 'getDashboard', dashboardId: dashboard.id })) as {
-      dashboard: { widgets: unknown[] };
+      dashboard: { pages: Array<{ widgets: unknown[] }> };
     };
-    expect(opened.dashboard.widgets).toHaveLength(1);
+    expect(opened.dashboard.pages[0].widgets).toHaveLength(1);
   });
 
   test('saving rejects invalid formula syntax without calling the query engine', async () => {
@@ -531,6 +534,7 @@ describe('query engine failures', () => {
     await expectApiError(
       callService({
         action: 'addWidget',
+        pageId: `${dashboard.id}_page`,
         dashboardId: dashboard.id,
         definition: {
           ...scorecardDefinition(source),
@@ -560,6 +564,7 @@ describe('query engine failures', () => {
       await expectApiError(
         callService({
           action: 'addWidget',
+          pageId: `${dashboard.id}_page`,
           dashboardId: dashboard.id,
           definition: {
             ...scorecardDefinition(source),
@@ -585,6 +590,7 @@ describe('query engine failures', () => {
     await expectApiError(
       callService({
         action: 'addWidget',
+        pageId: `${dashboard.id}_page`,
         dashboardId: dashboard.id,
         definition: {
           ...scorecardDefinition(source),
@@ -622,6 +628,7 @@ describe('query engine failures', () => {
     await expectApiError(
       callService({
         action: 'addWidget',
+        pageId: `${dashboard.id}_page`,
         dashboardId: dashboard.id,
         definition: {
           ...scorecardDefinition(source),
@@ -679,6 +686,7 @@ describe('query engine failures', () => {
     await expectApiError(
       callService({
         action: 'addWidget',
+        pageId: `${dashboard.id}_page`,
         dashboardId: dashboard.id,
         definition: {
           ...scorecardDefinition(source),

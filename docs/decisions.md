@@ -61,6 +61,15 @@ explain. Update it when a decision changes, not when an implementation detail do
 
 ## Behavior
 
+- Dashboards have ordered pages. Shares and grants cover the dashboard. Hidden pages are drafts:
+  viewers cannot read their definitions or query their widgets, and their controls do not filter
+  published pages. A dashboard may have no published pages. It must keep at least one stored page.
+  Viewer navigation is omitted when only one page is available. Editors keep the page tab, its
+  action menu, and a trailing add button available even with one stored page.
+- Date and filter selections survive page navigation. Removing a populated page requires explicit
+  confirmation, and widget IDs stay unique across the dashboard so query and control references
+  remain stable when a widget moves.
+
 - Controls work across datasources like in Looker Studio: a control applies to every widget whose
   datasource has a field with the same canonical name. Where none matches, the control is ignored
   for that widget, not rejected.

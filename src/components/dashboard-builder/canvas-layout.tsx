@@ -1,3 +1,4 @@
+import type { DashboardCanvas } from '#/domain/dashboard-pages';
 import { DASHBOARD_GRID } from '#/domain/layout';
 import {
   useMemo,
@@ -10,7 +11,7 @@ import {
 import GridLayout, { noCompactor, useContainerWidth, type LayoutItem } from 'react-grid-layout';
 import { GridBackground } from 'react-grid-layout/extras';
 import { DashboardWidgetView } from '#/components/dashboard-view';
-import type { DashboardDocument, ControlState } from '#/domain/schema';
+import type { ControlState } from '#/domain/schema';
 import { isRowEmpty, rowInsertionCuts } from '#/domain/layout';
 import { widgetLabel } from '#/domain/widget-label';
 import { cn } from '#/lib/utils';
@@ -121,7 +122,7 @@ export function BuilderCanvas({
   saveRowInsertion,
   saveRowRemoval,
 }: {
-  dashboard: DashboardDocument;
+  dashboard: DashboardCanvas;
   desktop: boolean | undefined;
   saving: boolean;
   selectedId: string | undefined;

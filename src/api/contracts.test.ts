@@ -83,6 +83,7 @@ describe('dashboard layout API contracts', () => {
     expect(
       apiRequestSchema.safeParse({
         action: 'updateLayout',
+        pageId: 'page',
         dashboardId: 'dashboard-1',
         canvasRows: 12,
         placements: [],
@@ -91,6 +92,7 @@ describe('dashboard layout API contracts', () => {
     expect(
       apiRequestSchema.safeParse({
         action: 'updateLayout',
+        pageId: 'page',
         dashboardId: 'dashboard-1',
         canvasRows: 9,
         placements: [],

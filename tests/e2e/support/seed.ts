@@ -79,6 +79,7 @@ export async function seedDashboard(page: Page, name: string, source: SeededData
   });
   await callApi(page, {
     action: 'addWidget',
+    pageId: `${dashboard.id}_page`,
     dashboardId: dashboard.id,
     definition: {
       type: 'scorecard',
@@ -95,6 +96,7 @@ export async function seedDashboard(page: Page, name: string, source: SeededData
   });
   await callApi(page, {
     action: 'addWidget',
+    pageId: `${dashboard.id}_page`,
     dashboardId: dashboard.id,
     definition: {
       type: 'control',
@@ -128,6 +130,7 @@ export async function seedImpressionsDashboard(page: Page, name: string, source:
   };
   await callApi(page, {
     action: 'addWidget',
+    pageId: `${dashboard.id}_page`,
     dashboardId: dashboard.id,
     definition: {
       type: 'scorecard',
@@ -141,6 +144,7 @@ export async function seedImpressionsDashboard(page: Page, name: string, source:
   });
   await callApi(page, {
     action: 'addWidget',
+    pageId: `${dashboard.id}_page`,
     dashboardId: dashboard.id,
     definition: {
       type: 'line',
@@ -155,6 +159,7 @@ export async function seedImpressionsDashboard(page: Page, name: string, source:
   });
   await callApi(page, {
     action: 'addWidget',
+    pageId: `${dashboard.id}_page`,
     dashboardId: dashboard.id,
     definition: { type: 'dateControl' },
     width: 4,

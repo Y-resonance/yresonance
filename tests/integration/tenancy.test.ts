@@ -74,6 +74,7 @@ describe('workspace tenancy', () => {
     await expectApiError(
       callService({
         action: 'addWidget',
+        pageId: `${dashboard.id}_page`,
         dashboardId: dashboard.id,
         definition: scorecardDefinition(foreignSource),
         width: 4,

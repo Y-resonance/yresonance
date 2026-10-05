@@ -59,7 +59,7 @@ test('a custom metric is written and re-opened in the aggregate formula editor',
 
   await expect
     .poll(() => {
-      const widget = state.dashboard.widgets.find((item) => item.id === 'w_campaigns');
+      const widget = state.dashboard.pages[0].widgets.find((item) => item.id === 'w_campaigns');
       return widget?.definition.type === 'table' ? widget.definition.metrics.at(-1)?.source : null;
     })
     .toMatchObject({ kind: 'expression', expression: 'sum(media_cost) / sum(impressions)' });

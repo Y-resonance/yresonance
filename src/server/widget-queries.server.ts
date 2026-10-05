@@ -1,3 +1,4 @@
+import { dashboardControlWidgets, dashboardWidgets } from '#/domain/schema';
 import { type ApiRequest } from '#/api/contracts';
 import {
   type ControlState,
@@ -248,9 +249,11 @@ export async function getControlOptions(
 }
 
 export function defaultControlState(dashboard: DashboardDocument): ControlState {
-  const dateControl = dashboard.widgets.find((widget) => widget.definition.type === 'dateControl');
+  const dateControl = dashboardControlWidgets(dashboard).find(
+    (widget) => widget.definition.type === 'dateControl',
+  );
   const values = Object.fromEntries(
-    dashboard.widgets.flatMap((widget) =>
+    dashboardControlWidgets(dashboard).flatMap((widget) =>
       widget.definition.type === 'control' && controlDefaultValues(widget)?.length
         ? [[widget.id, controlDefaultValues(widget)]]
         : [],
@@ -534,12 +537,12 @@ export async function definitionHash(definition: WidgetDefinition, workspaceId: 
 export function validateControlState(dashboard: DashboardDocument, input: ControlState) {
   const state = controlStateSchema.parse(input);
   if (
-    dashboard.widgets.some((widget) => widget.definition.type === 'dateControl') &&
+    dashboardControlWidgets(dashboard).some((widget) => widget.definition.type === 'dateControl') &&
     !state.dateRange
   )
     throw new ApiError(400, 'date_range_required', 'This dashboard requires a date range.');
   const controlIds = new Set(
-    dashboard.widgets
+    dashboardWidgets(dashboard)
       .filter((widget) => widget.definition.type === 'control')
       .map((widget) => widget.id),
   );
@@ -548,7 +551,23 @@ export function validateControlState(dashboard: DashboardDocument, input: Contro
       throw new ApiError(400, 'unknown_control', `Unknown dashboard control ${key}.`);
   if (singleValueControlWithMultipleSelections(dashboard, state))
     throw new ApiError(400, 'multiple_values_not_allowed', 'This filter accepts only one value.');
-  return state;
+  const visibleControls = dashboardControlWidgets(dashboard);
+  const visibleIds = new Set(
+    visibleControls
+      .filter((widget) => widget.definition.type === 'control')
+      .map((widget) => widget.id),
+  );
+  const hasHiddenDateControl = dashboard.pages.some(
+    (page) =>
+      page.hidden && page.widgets.some((widget) => widget.definition.type === 'dateControl'),
+  );
+  return {
+    ...state,
+    ...(hasHiddenDateControl ? { dateRange: undefined } : {}),
+    values: Object.fromEntries(
+      Object.entries(state.values ?? {}).filter(([id]) => visibleIds.has(id)),
+    ),
+  };
 }
 
 function widgetComparison(definition: WidgetDefinition) {

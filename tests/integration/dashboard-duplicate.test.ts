@@ -47,6 +47,20 @@ describe('duplicating dashboards', () => {
     const workspace = await signInToNewWorkspace();
     const source = await seedDataSource(workspace);
     const { dashboard } = await reportFor(source);
+    const withDraft = (await callService({
+      action: 'addPage',
+      dashboardId: dashboard.id,
+      name: 'Draft',
+      hidden: true,
+    })) as DashboardDocument;
+    await callService({
+      action: 'addWidget',
+      dashboardId: dashboard.id,
+      pageId: withDraft.pages.at(-1)!.id,
+      definition: { type: 'text', content: { schemaVersion: 'plain', document: 'Draft notes' } },
+      width: 6,
+      height: 3,
+    });
     signInAsColleague(workspace);
     await expectApiError(duplicate(dashboard.id), {
       status: 403,
@@ -62,14 +76,48 @@ describe('duplicating dashboards', () => {
 
     expect(copy.id).not.toBe(original.id);
     expect(copy.name).toBe('Client B report');
+    expect(
+      copy.pages.map((page) => ({
+        name: page.name,
+        hidden: page.hidden,
+        canvasRows: page.canvasRows,
+        widgets: page.widgets.map((widget) => ({
+          definition: widget.definition,
+          layout: widget.layout,
+        })),
+      })),
+    ).toEqual(
+      original.pages.map((page) => ({
+        name: page.name,
+        hidden: page.hidden,
+        canvasRows: page.canvasRows,
+        widgets: page.widgets.map((widget) => ({
+          definition: widget.definition,
+          layout: widget.layout,
+        })),
+      })),
+    );
+    expect(
+      copy.pages.map((page) => page.id).some((id) => original.pages.some((page) => page.id === id)),
+    ).toBe(false);
+    expect(
+      copy.pages
+        .flatMap((page) => page.widgets)
+        .map((widget) => widget.id)
+        .some((id) =>
+          original.pages.flatMap((page) => page.widgets).some((widget) => widget.id === id),
+        ),
+    ).toBe(false);
     expect(copy.createdBy).toBe(workspace.userId);
-    expect(copy.widgets.map((widget) => widget.definition)).toEqual(
-      original.widgets.map((widget) => widget.definition),
+    expect(copy.pages[0].widgets.map((widget) => widget.definition)).toEqual(
+      original.pages[0].widgets.map((widget) => widget.definition),
     );
-    expect(copy.widgets.map((widget) => widget.layout)).toEqual(
-      original.widgets.map((widget) => widget.layout),
+    expect(copy.pages[0].widgets.map((widget) => widget.layout)).toEqual(
+      original.pages[0].widgets.map((widget) => widget.layout),
     );
-    expect(copy.widgets.map((widget) => widget.id)).not.toContain(original.widgets[0]!.id);
+    expect(copy.pages[0].widgets.map((widget) => widget.id)).not.toContain(
+      original.pages[0].widgets[0]!.id,
+    );
     const db = createDatabase(env.DB);
     expect(await db.select().from(shareLinks).where(eq(shareLinks.dashboardId, copy.id))).toEqual(
       [],
@@ -83,11 +131,24 @@ describe('duplicating dashboards', () => {
     const workspace = await signInToNewWorkspace();
     const source = await seedDataSource(workspace);
     const target = await seedDataSource(workspace);
-    const { dashboard } = await reportFor(source);
+    const { dashboard, scorecard: originalScorecard } = await reportFor(source);
+    const withPage = (await callService({
+      action: 'addPage',
+      dashboardId: dashboard.id,
+      name: 'Delivery',
+    })) as DashboardDocument;
+    await callService({
+      action: 'moveWidget',
+      dashboardId: dashboard.id,
+      widgetId: originalScorecard.id,
+      pageId: withPage.pages.at(-1)!.id,
+      placement: { x: 0, y: 0, width: 4, height: 3 },
+    });
 
     const copy = await duplicate(dashboard.id, { [source.id]: target.id });
 
-    const [scorecard, control] = copy.widgets.map((widget) => widget.definition);
+    const scorecard = copy.pages[1].widgets[0].definition;
+    const control = copy.pages[0].widgets[0].definition;
     expect(scorecard).toMatchObject({
       dataSourceId: target.id,
       dateRangeFieldId: target.fieldIds.day,

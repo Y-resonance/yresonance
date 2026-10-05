@@ -5,7 +5,7 @@ import { mockYresonanceApi } from './support/yresonance-api';
 test('charts show legends without widget configuration', async ({ page }) => {
   test.slow();
   const state = await mockYresonanceApi(page, { role: 'editor' });
-  state.dashboard.widgets.push(
+  state.dashboard.pages[0].widgets.push(
     {
       id: 'w_chart',
       layout: { x: 0, y: 7, width: 8, height: 5 },

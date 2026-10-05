@@ -4,7 +4,7 @@ import { apiRequestSchema } from '#/api/contracts';
 import { createDatabase } from '#/db/client';
 import { dataSources, fields } from '#/db/schema';
 import type { SourceListing } from '#/data/source.server';
-import type { WidgetDefinition } from '#/domain/schema';
+import type { DashboardDocument, WidgetDefinition } from '#/domain/schema';
 import { Route as apiRoute } from '#/routes/api.yresonance';
 import { ApiError } from '#/server/errors';
 import { executeRequest } from '#/server/service.server';
@@ -173,15 +173,13 @@ export function regionControlDefinition(
 
 /** Creates a dashboard owned by the signed-in user and returns its persisted document. */
 export async function createDashboard(name = uniqueId('Dashboard')) {
-  return (await callService({ action: 'createDashboard', name })) as {
-    id: string;
-    widgets: unknown[];
-  };
+  return (await callService({ action: 'createDashboard', name })) as DashboardDocument;
 }
 
 export async function addWidget(dashboardId: string, definition: WidgetDefinition) {
   const { widget } = (await callService({
     action: 'addWidget',
+    pageId: `${dashboardId}_page`,
     dashboardId,
     definition,
     width: 4,

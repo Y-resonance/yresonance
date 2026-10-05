@@ -1,3 +1,15 @@
+import { dashboardDateControlRange } from '#/components/dashboard-view';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from './ui/select';
+import { Field, FieldLabel } from './ui/field';
+import { dashboardCanvas, type DashboardCanvas } from '#/domain/dashboard-pages';
+import { dashboardControlWidgets, dashboardWidgets } from '#/domain/schema';
 import {
   type DashboardDocument,
   type ControlState,
@@ -5,16 +17,21 @@ import {
   type DateRange,
   type WidgetDefinition,
 } from '#/domain/schema';
-import { useState, useRef, useEffect } from 'react';
-import { initialControlState } from '#/components/dashboard-view';
+import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { createSerialQueue } from '#/domain/serial-queue';
 import { type Layout, type LayoutItem } from 'react-grid-layout';
 import { sameDateRange } from '#/domain/date-range-search';
 import { callApi } from '#/api/client';
-import { rollbackFailedLayoutState, insertRow, removeEmptyRow, isRowEmpty } from '#/domain/layout';
+import {
+  rollbackFailedLayoutState,
+  insertRow,
+  removeEmptyRow,
+  isRowEmpty,
+  appendPlacement,
+} from '#/domain/layout';
 import { type LibraryMetricDraft } from '#/components/metric-formula-dialog';
 import { clearControlValue } from '#/domain/widget-editing';
-import { withoutWidgetControlState } from '#/domain/control-state';
+import { withoutWidgetControlState, reconcileDashboardControls } from '#/domain/control-state';
 import {
   Sheet,
   SheetTrigger,
@@ -47,20 +64,23 @@ export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
 export function DashboardBuilder({
   dashboard: initialDashboard,
+  pageId,
+  controlState,
+  setControlState,
   dataSources,
   refresh,
   onSaveStatusChange,
 }: {
   dashboard: DashboardDocument;
+  pageId: string;
+  controlState: ControlState;
+  setControlState: Dispatch<SetStateAction<ControlState>>;
   dataSources: BuilderDataSource[];
   refresh: () => Promise<void>;
   onSaveStatusChange: (status: DashboardSaveStatus) => void;
 }) {
-  const [dashboard, setDashboard] = useState(initialDashboard);
+  const [dashboard, setDashboard] = useState(() => dashboardCanvas(initialDashboard, pageId));
   const [selectedId, setSelectedId] = useState<string>();
-  const [controlState, setControlState] = useState<ControlState>(() =>
-    initialControlState(initialDashboard),
-  );
   const [error, setError] = useState<string>();
   const [pendingOperations, setPendingOperations] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -72,14 +92,24 @@ export function DashboardBuilder({
   const dashboardRef = useRef(dashboard);
   const mutationQueueRef = useRef(createSerialQueue());
   const mutationRevisionRef = useRef(0);
-  const appliedDefaultDateRangeRef = useRef<DateRange | undefined>(undefined);
+  const appliedDefaultDateRangeRef = useRef<DateRange | undefined>(
+    dashboardDateControlRange(initialDashboard),
+  );
   const draggedType = useRef<BuilderType | undefined>(undefined);
   const saving = pendingOperations > 0;
+  useEffect(() => {
+    setControlState((current) => reconcileDashboardControls(dashboard, current));
+  }, [dashboard.pages]);
 
   useEffect(() => {
-    dashboardRef.current = initialDashboard;
-    setDashboard(initialDashboard);
-  }, [initialDashboard]);
+    const canvas = dashboardCanvas(initialDashboard, pageId);
+    dashboardRef.current = canvas;
+    setDashboard(canvas);
+  }, [initialDashboard, pageId]);
+  useEffect(() => {
+    setSelectedId(undefined);
+    setMobileOpen(false);
+  }, [pageId]);
   useEffect(() => {
     onSaveStatusChange(saving ? 'saving' : error ? 'error' : 'saved');
   }, [error, onSaveStatusChange, saving]);
@@ -100,7 +130,7 @@ export function DashboardBuilder({
     return () => window.removeEventListener('keydown', deselect);
   }, []);
   useEffect(() => {
-    const dateControl = dashboard.widgets.find(
+    const dateControl = dashboardControlWidgets(dashboard).find(
       (widget) => widget.definition.type === 'dateControl',
     );
     if (!dateControl || dateControl.definition.type !== 'dateControl') {
@@ -112,10 +142,18 @@ export function DashboardBuilder({
     if (previousDefault && sameDateRange(previousDefault, defaultDateRange)) return;
     appliedDefaultDateRangeRef.current = defaultDateRange;
     setControlState((current) => ({ ...current, dateRange: defaultDateRange }));
-  }, [dashboard.defaultDateRange, dashboard.widgets]);
+  }, [dashboard.defaultDateRange, dashboard.pages]);
 
-  function updateDashboard(updater: (current: DashboardDocument) => DashboardDocument) {
-    const next = updater(dashboardRef.current);
+  function updateDashboard(updater: (current: DashboardCanvas) => DashboardCanvas) {
+    const edited = updater(dashboardRef.current);
+    const next = {
+      ...edited,
+      pages: edited.pages.map((page) =>
+        page.id === pageId
+          ? { ...page, widgets: edited.widgets, canvasRows: edited.canvasRows }
+          : page,
+      ),
+    };
     dashboardRef.current = next;
     setDashboard(next);
     return next;
@@ -166,6 +204,7 @@ export function DashboardBuilder({
         const current = dashboardRef.current;
         return callApi({
           action: 'updateLayout',
+          pageId,
           dashboardId: current.id,
           canvasRows: current.canvasRows,
           placements: current.widgets.map((widget) => ({
@@ -205,6 +244,7 @@ export function DashboardBuilder({
       const result = await enqueueMutation(() =>
         callApi<{ widget: DashboardWidget }>({
           action: 'addWidget',
+          pageId,
           dashboardId: dashboardRef.current.id,
           definition,
           width: dropped?.w ?? entry.size.width,
@@ -359,7 +399,7 @@ export function DashboardBuilder({
           withoutWidgetControlState(
             controlState,
             widget,
-            next.widgets.some((item) => item.definition.type === 'dateControl'),
+            dashboardWidgets(next).some((item) => item.definition.type === 'dateControl'),
           ),
         );
         return next;
@@ -373,6 +413,35 @@ export function DashboardBuilder({
     } catch (caught) {
       if (revision === mutationRevisionRef.current) setError(message(caught));
       return false;
+    } finally {
+      finishSaving();
+    }
+  }
+
+  async function moveToPage(widget: DashboardWidget, targetPageId: string) {
+    const target = dashboardRef.current.pages.find((page) => page.id === targetPageId);
+    if (!target) return;
+    startSaving();
+    setError(undefined);
+    try {
+      await enqueueMutation(() =>
+        callApi({
+          action: 'moveWidget',
+          dashboardId: dashboardRef.current.id,
+          widgetId: widget.id,
+          pageId: target.id,
+          placement: appendPlacement(
+            target.widgets,
+            widget.layout.width,
+            widget.layout.height,
+            dashboardRef.current.columns,
+          ),
+        }),
+      );
+      setSelectedId(undefined);
+      await refresh();
+    } catch (caught) {
+      setError(message(caught));
     } finally {
       finishSaving();
     }
@@ -393,31 +462,59 @@ export function DashboardBuilder({
   const inspectorPanel = (
     <fieldset disabled={saving} className="min-w-0 border-0 p-0">
       {selected ? (
-        <WidgetSettings
-          dashboardId={dashboard.id}
-          dashboardDefaultDateRange={dashboard.defaultDateRange}
-          timezone={dashboard.timezone}
-          widget={selected}
-          dataSources={dataSources}
-          onClose={() => setSelectedId(undefined)}
-          onChange={(definition, libraryMetric) =>
-            updateWidget(selected, definition, libraryMetric)
-          }
-          onRemoveEmptyRowAbove={
-            dashboard.canvasRows > 10 &&
-            selected.layout.y > 0 &&
-            isRowEmpty(dashboard.widgets, selected.layout.y - 1)
-              ? () => saveRowRemoval(selected.layout.y - 1)
-              : undefined
-          }
-          onRemoveEmptyRowBelow={
-            dashboard.canvasRows > 10 &&
-            selected.layout.y + selected.layout.height < dashboard.canvasRows &&
-            isRowEmpty(dashboard.widgets, selected.layout.y + selected.layout.height)
-              ? () => saveRowRemoval(selected.layout.y + selected.layout.height)
-              : undefined
-          }
-        />
+        <>
+          <WidgetSettings
+            dashboardId={dashboard.id}
+            dashboardDefaultDateRange={dashboard.defaultDateRange}
+            timezone={dashboard.timezone}
+            widget={selected}
+            dataSources={dataSources}
+            onClose={() => setSelectedId(undefined)}
+            onChange={(definition, libraryMetric) =>
+              updateWidget(selected, definition, libraryMetric)
+            }
+            onRemoveEmptyRowAbove={
+              dashboard.canvasRows > 10 &&
+              selected.layout.y > 0 &&
+              isRowEmpty(dashboard.widgets, selected.layout.y - 1)
+                ? () => saveRowRemoval(selected.layout.y - 1)
+                : undefined
+            }
+            onRemoveEmptyRowBelow={
+              dashboard.canvasRows > 10 &&
+              selected.layout.y + selected.layout.height < dashboard.canvasRows &&
+              isRowEmpty(dashboard.widgets, selected.layout.y + selected.layout.height)
+                ? () => saveRowRemoval(selected.layout.y + selected.layout.height)
+                : undefined
+            }
+          />
+          {dashboard.pages.length > 1 ? (
+            <Field className="mt-4">
+              <FieldLabel htmlFor="move-widget-page">Move to page</FieldLabel>
+              <Select
+                value={null}
+                onValueChange={(value) => {
+                  if (value) void moveToPage(selected, value);
+                }}
+              >
+                <SelectTrigger id="move-widget-page">
+                  <SelectValue placeholder="Choose page" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {dashboard.pages
+                      .filter((page) => page.id !== pageId)
+                      .map((page) => (
+                        <SelectItem key={page.id} value={page.id}>
+                          {page.name}
+                        </SelectItem>
+                      ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
+        </>
       ) : (
         <p className="text-sm text-muted-foreground">Select a widget to edit it.</p>
       )}
@@ -426,7 +523,9 @@ export function DashboardBuilder({
   const catalogPanel = (
     <WidgetCatalog
       disabled={saving}
-      hasDateControl={dashboard.widgets.some((widget) => widget.definition.type === 'dateControl')}
+      hasDateControl={dashboardWidgets(dashboard).some(
+        (widget) => widget.definition.type === 'dateControl',
+      )}
       onAdd={async (type) => {
         setCatalogOpen(false);
         await addWidget(type);

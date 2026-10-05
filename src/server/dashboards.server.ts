@@ -4,6 +4,8 @@ import { eq, inArray, and, isNull } from 'drizzle-orm';
 import { ApiError } from './errors';
 import { type ApiRequest } from '#/api/contracts';
 import {
+  dashboardWidgets,
+  type DashboardPage,
   type DashboardDocument,
   defaultDateRange,
   type DashboardWidget,
@@ -23,7 +25,11 @@ import { remapWidgetDefinition, UnmatchedFieldsError } from '#/domain/remap';
 import { recordProductMetric } from '#/observability';
 import { yearToDateRange } from '#/domain/dates';
 import { seedPreviewWorkspace } from './preview-seed.server';
-import { visibleDashboardRows, authorizeDashboard } from './dashboard-access.server';
+import {
+  visibleDashboardRows,
+  authorizeDashboard,
+  viewerDocument,
+} from './dashboard-access.server';
 import { database } from './database.server';
 import {
   defaultControlState,
@@ -66,7 +72,7 @@ export async function getDashboard(id: string, shareToken?: string) {
   const access = await authorizeDashboard(id, 'viewer', shareToken);
   const referencedSourceIds = [
     ...new Set(
-      access.document.widgets.flatMap((widget) =>
+      dashboardWidgets(access.document).flatMap((widget) =>
         'dataSourceId' in widget.definition ? [widget.definition.dataSourceId] : [],
       ),
     ),
@@ -132,12 +138,11 @@ export async function createDashboard(request: Extract<ApiRequest, { action: 'cr
     id,
     workspaceId: session.workspace.id,
     name: request.name,
-    schemaVersion: 2,
+    schemaVersion: 3,
     timezone: request.timezone,
     defaultDateRange: request.defaultDateRange ?? defaultDateRange,
     columns: 12,
-    canvasRows: 10,
-    widgets: [],
+    pages: [{ id: `${id}_page`, name: 'Overview', hidden: false, canvasRows: 10, widgets: [] }],
     createdBy: session.userId,
     createdAt: now,
     updatedAt: now,
@@ -197,7 +202,7 @@ export async function duplicateDashboard(
       );
   }
   const usedIds = new Set(
-    original.document.widgets.flatMap((widget) =>
+    dashboardWidgets(original.document).flatMap((widget) =>
       'dataSourceId' in widget.definition ? [widget.definition.dataSourceId] : [],
     ),
   );
@@ -218,7 +223,7 @@ export async function duplicateDashboard(
 
   // Remap every widget before failing, so one response lists all gaps.
   const unmatched: Array<{ widgetId: string; widget: string; canonicalNames: string[] }> = [];
-  const remapped = original.document.widgets.map((widget) => {
+  const remapped = dashboardWidgets(original.document).map((widget) => {
     const from = 'dataSourceId' in widget.definition ? widget.definition.dataSourceId : undefined;
     const to = from && mapping.get(from);
     if (!from || !to) return { widget, remapped: false };
@@ -264,7 +269,7 @@ export async function duplicateDashboard(
     });
     recordProductMetric('dashboard_duplicate', {
       labels: ['mapped', 'unmatched_fields'],
-      numbers: [original.document.widgets.length, unmatched.length],
+      numbers: [dashboardWidgets(original.document).length, unmatched.length],
       index: workspaceId,
     });
     throw new ApiError(
@@ -295,13 +300,18 @@ export async function duplicateDashboard(
     }),
   );
   const remappedCount = remapped.filter((item) => item.remapped).length;
+  const copiedWidgets = new Map(remapped.map((item, index) => [item.widget.id, widgets[index]!]));
 
   const now = new Date().toISOString();
   const document: DashboardDocument = {
     ...original.document,
     id: `dash_${crypto.randomUUID()}`,
     name: request.name,
-    widgets,
+    pages: original.document.pages.map((page) => ({
+      ...page,
+      id: `page_${crypto.randomUUID()}`,
+      widgets: page.widgets.map((widget) => copiedWidgets.get(widget.id)!),
+    })),
     createdBy: session.userId,
     createdAt: now,
     updatedAt: now,
@@ -342,27 +352,100 @@ export async function deleteDashboard(dashboardId: string) {
   return { id: dashboardId, deleted: true };
 }
 
+export function pageById(document: DashboardDocument, pageId: string) {
+  const page = document.pages.find((page) => page.id === pageId);
+  if (!page) throw new ApiError(404, 'page_not_found', 'Page not found.');
+  return page;
+}
+
+export async function addPage(request: Extract<ApiRequest, { action: 'addPage' }>) {
+  const access = await authorizeDashboard(request.dashboardId, 'editor');
+  const page: DashboardPage = {
+    id: `page_${crypto.randomUUID()}`,
+    name: request.name,
+    hidden: request.hidden,
+    canvasRows: 10,
+    widgets: [],
+  };
+  const updated = {
+    ...access.document,
+    pages: [...access.document.pages, page],
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
+  };
+  await persistDashboard(updated, access.row.updatedAt);
+  return updated;
+}
+
+export async function updatePage(request: Extract<ApiRequest, { action: 'updatePage' }>) {
+  const access = await authorizeDashboard(request.dashboardId, 'editor');
+  const page = pageById(access.document, request.pageId);
+  if (request.position !== undefined && request.position >= access.document.pages.length)
+    throw new ApiError(400, 'invalid_page_position', 'Page position is outside the dashboard.');
+  const pages = access.document.pages.filter((item) => item.id !== page.id);
+  pages.splice(request.position ?? access.document.pages.indexOf(page), 0, {
+    ...page,
+    name: request.name ?? page.name,
+    hidden: request.hidden ?? page.hidden,
+  });
+  const updated = {
+    ...access.document,
+    pages,
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
+  };
+  assertRemainingPage(pages);
+  await persistDashboard(updated, access.row.updatedAt);
+  return updated;
+}
+
+export async function removePage(request: Extract<ApiRequest, { action: 'removePage' }>) {
+  const access = await authorizeDashboard(request.dashboardId, 'editor');
+  const page = pageById(access.document, request.pageId);
+  if (page.widgets.length && !request.confirm)
+    throw new ApiError(
+      400,
+      'page_confirmation_required',
+      'Removing a page with widgets requires confirm: true.',
+    );
+  const pages = access.document.pages.filter((item) => item.id !== page.id);
+  assertRemainingPage(pages);
+  const updated = {
+    ...access.document,
+    pages,
+    updatedAt: nextDashboardTimestamp(access.row.updatedAt),
+  };
+  await persistDashboard(updated, access.row.updatedAt);
+  return updated;
+}
+
+function assertRemainingPage(pages: DashboardPage[]) {
+  if (!pages.length)
+    throw new ApiError(400, 'page_required', 'A dashboard must have at least one page.');
+}
+
 export async function addWidget(request: Extract<ApiRequest, { action: 'addWidget' }>) {
   const access = await authorizeDashboard(request.dashboardId, 'editor');
+  const page = pageById(access.document, request.pageId);
   const definition = withDateControlDefault(request.definition);
   assertSingleDateControl(access.document, definition);
   await validateDefinition(access.document, definition);
   const id = `widget_${crypto.randomUUID()}`;
   const widget: DashboardWidget = {
     id,
-    layout: appendPlacement(
-      access.document.widgets,
-      request.width,
-      request.height,
-      access.document.columns,
-    ),
+    layout: appendPlacement(page.widgets, request.width, request.height, access.document.columns),
     definition,
     definitionHash: await definitionHash(definition, access.document.workspaceId),
   };
   const updated = {
     ...access.document,
-    widgets: [...access.document.widgets, widget],
-    canvasRows: Math.max(access.document.canvasRows, widget.layout.y + widget.layout.height + 2),
+    pages: access.document.pages.map((item) =>
+      item.id === page.id
+        ? {
+            ...item,
+            widgets: [...item.widgets, widget],
+            canvasRows: Math.max(item.canvasRows, widget.layout.y + widget.layout.height + 2),
+          }
+        : item,
+    ),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   await persistDashboard(updated, access.row.updatedAt);
@@ -382,7 +465,10 @@ export async function updateWidget(request: Extract<ApiRequest, { action: 'updat
   };
   const updated = {
     ...access.document,
-    widgets: access.document.widgets.map((item) => (item.id === widget.id ? widget : item)),
+    pages: access.document.pages.map((page) => ({
+      ...page,
+      widgets: page.widgets.map((item) => (item.id === widget.id ? widget : item)),
+    })),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   const sql = await compiledSql(updated, widget);
@@ -402,7 +488,10 @@ export async function removeWidget(request: Extract<ApiRequest, { action: 'remov
   widgetById(access.document, request.widgetId);
   const updated = {
     ...access.document,
-    widgets: access.document.widgets.filter((item) => item.id !== request.widgetId),
+    pages: access.document.pages.map((page) => ({
+      ...page,
+      widgets: page.widgets.filter((item) => item.id !== request.widgetId),
+    })),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   await persistDashboard(updated, access.row.updatedAt);
@@ -412,8 +501,12 @@ export async function removeWidget(request: Extract<ApiRequest, { action: 'remov
 export async function moveWidget(request: Extract<ApiRequest, { action: 'moveWidget' }>) {
   const access = await authorizeDashboard(request.dashboardId, 'editor');
   const existing = widgetById(access.document, request.widgetId);
+  const sourcePage = access.document.pages.find((page) =>
+    page.widgets.some((widget) => widget.id === existing.id),
+  )!;
+  const page = pageById(access.document, request.pageId ?? sourcePage.id);
   const check = checkPlacement(
-    access.document.widgets,
+    page.widgets,
     request.placement,
     access.document.columns,
     existing.id,
@@ -423,13 +516,16 @@ export async function moveWidget(request: Extract<ApiRequest, { action: 'moveWid
   const updatedWidget = { ...existing, layout: request.placement };
   const updated = {
     ...access.document,
-    widgets: access.document.widgets.map((widget) =>
-      widget.id === existing.id ? updatedWidget : widget,
-    ),
-    canvasRows: Math.max(
-      access.document.canvasRows,
-      request.placement.y + request.placement.height,
-    ),
+    pages: access.document.pages.map((item) => {
+      const widgets = item.widgets.filter((widget) => widget.id !== existing.id);
+      return item.id === page.id
+        ? {
+            ...item,
+            widgets: [...widgets, updatedWidget],
+            canvasRows: Math.max(item.canvasRows, request.placement.y + request.placement.height),
+          }
+        : { ...item, widgets };
+    }),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   await persistDashboard(updated, access.row.updatedAt);
@@ -438,17 +534,18 @@ export async function moveWidget(request: Extract<ApiRequest, { action: 'moveWid
 
 export async function updateLayout(request: Extract<ApiRequest, { action: 'updateLayout' }>) {
   const access = await authorizeDashboard(request.dashboardId, 'editor');
+  const page = pageById(access.document, request.pageId);
   const validation = validateLayoutUpdate(
-    access.document.widgets,
+    page.widgets,
     request.placements,
     access.document.columns,
   );
   if (!validation.ok)
-    throw new ApiError(400, 'invalid_layout', layoutMessage(validation, access.document.widgets));
+    throw new ApiError(400, 'invalid_layout', layoutMessage(validation, page.widgets));
   const placements = new Map(
     request.placements.map((update) => [update.widgetId, update.placement]),
   );
-  const widgets = access.document.widgets.map((widget) => ({
+  const widgets = page.widgets.map((widget) => ({
     ...widget,
     layout: placements.get(widget.id)!,
   }));
@@ -456,8 +553,9 @@ export async function updateLayout(request: Extract<ApiRequest, { action: 'updat
     throw new ApiError(400, 'invalid_layout', canvasRowsMessage(widgets, request.canvasRows));
   const updated = {
     ...access.document,
-    widgets,
-    canvasRows: request.canvasRows,
+    pages: access.document.pages.map((item) =>
+      item.id === page.id ? { ...item, widgets, canvasRows: request.canvasRows } : item,
+    ),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   await persistDashboard(updated, access.row.updatedAt);
@@ -502,21 +600,29 @@ export async function copyWidget(request: Extract<ApiRequest, { action: 'copyWid
   return addWidget({
     action: 'addWidget',
     dashboardId: target.document.id,
+    pageId: request.pageId,
     definition,
     width: original.layout.width,
     height: original.layout.height,
   });
 }
 
-function summary(row: { id: string; name: string; document: unknown; updatedAt: string }) {
-  const document = dashboardDocumentSchema.parse(row.document);
+function summary(row: {
+  id: string;
+  name: string;
+  document: unknown;
+  updatedAt: string;
+  role?: string;
+}) {
+  const stored = dashboardDocumentSchema.parse(row.document);
+  const document = row.role === 'viewer' ? viewerDocument(stored) : stored;
   return {
     id: row.id,
     name: row.name,
-    widgetCount: document.widgets.length,
+    widgetCount: dashboardWidgets(document).length,
     dataSourceIds: [
       ...new Set(
-        document.widgets.flatMap((widget) =>
+        dashboardWidgets(document).flatMap((widget) =>
           'dataSourceId' in widget.definition ? [widget.definition.dataSourceId] : [],
         ),
       ),
@@ -532,7 +638,7 @@ function assertSingleDateControl(
 ) {
   if (
     definition.type === 'dateControl' &&
-    document.widgets.some(
+    dashboardWidgets(document).some(
       (widget) => widget.id !== replacingWidgetId && widget.definition.type === 'dateControl',
     )
   )

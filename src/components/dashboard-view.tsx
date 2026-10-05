@@ -1,3 +1,6 @@
+import { activeDashboardPage } from '#/domain/dashboard-pages';
+import { dashboardControlWidgets } from '#/domain/schema';
+
 import { useDashboardQueryRefresh } from './dashboard-query-refresh';
 import { DASHBOARD_GRID } from '#/domain/layout';
 import {
@@ -52,7 +55,11 @@ import { widgetQueryRequest } from '#/domain/widget-query';
 import { cn } from '#/lib/utils';
 import { textBoxClasses, textStyleClasses } from '#/domain/text-style';
 import { colorsPerCategory, paletteColor } from '#/domain/chart-colors';
-import { controlDefaultValues, toggleControlValue } from '#/domain/control-state';
+import {
+  controlDefaultValues,
+  toggleControlValue,
+  reconcileDashboardControls,
+} from '#/domain/control-state';
 import {
   colorScaleBounds,
   colorScalePosition,
@@ -74,11 +81,13 @@ import {
 
 export function DashboardView({
   dashboard,
+  pageId,
   shareToken,
   dateRange,
   onDateRangeChange,
 }: {
   dashboard: DashboardDocument;
+  pageId?: string;
   shareToken?: string;
   dateRange?: DateRange;
   onDateRangeChange?: (range: DateRange) => void;
@@ -90,10 +99,13 @@ export function DashboardView({
   }));
   const [controlsOpen, setControlsOpen] = useState(true);
   useEffect(() => {
+    setControlState((current) => reconcileDashboardControls(dashboard, current));
+  }, [dashboard.pages]);
+  useEffect(() => {
     if (!defaultDateRange) return;
     setControlState((current) => ({ ...current, dateRange: dateRange ?? defaultDateRange }));
   }, [dateRange, defaultDateRange]);
-  const ordered = [...dashboard.widgets].sort(
+  const ordered = [...(activeDashboardPage(dashboard, pageId)?.widgets ?? [])].sort(
     (left, right) => left.layout.y - right.layout.y || left.layout.x - right.layout.x,
   );
   const controls = ordered.filter((widget) => isControlWidget(widget));
@@ -1393,9 +1405,11 @@ export function comboChartAxes(metrics: ComboMetric[], columns: QueryResultColum
 }
 
 export function initialControlState(dashboard: DashboardDocument): ControlState {
-  const dateControl = dashboard.widgets.find((widget) => widget.definition.type === 'dateControl');
+  const dateControl = dashboardControlWidgets(dashboard).find(
+    (widget) => widget.definition.type === 'dateControl',
+  );
   const values = Object.fromEntries(
-    dashboard.widgets.flatMap((widget) =>
+    dashboardControlWidgets(dashboard).flatMap((widget) =>
       widget.definition.type === 'control' && controlDefaultValues(widget)?.length
         ? [[widget.id, controlDefaultValues(widget)]]
         : [],
@@ -1410,7 +1424,9 @@ export function initialControlState(dashboard: DashboardDocument): ControlState 
 }
 
 export function dashboardDateControlRange(dashboard: DashboardDocument) {
-  const control = dashboard.widgets.find((widget) => widget.definition.type === 'dateControl');
+  const control = dashboardControlWidgets(dashboard).find(
+    (widget) => widget.definition.type === 'dateControl',
+  );
   return control?.definition.type === 'dateControl'
     ? (control.definition.defaultDateRange ?? dashboard.defaultDateRange)
     : undefined;
