@@ -236,6 +236,101 @@ describe('widget queries', () => {
   });
 });
 
+describe('drill-down', () => {
+  async function seedDrillableBar() {
+    const workspace = await signInToNewWorkspace();
+    const source = await seedDataSource(workspace);
+    const dashboard = await createDashboard();
+    const widget = await addWidget(dashboard.id, {
+      type: 'bar',
+      title: 'Revenue by region',
+      dataSourceId: source.id,
+      dateRangeFieldId: source.fieldIds.day,
+      metric: {
+        source: { kind: 'field', fieldId: source.fieldIds.revenue, aggregation: 'sum' },
+        dataType: 'currency',
+      },
+      dimension: { fieldId: source.fieldIds.region },
+      drillDimensions: [{ fieldId: source.fieldIds.day, dateGranularity: 'month' }],
+    });
+    return { source, dashboardId: dashboard.id, widgetId: widget.id };
+  }
+
+  test('a drill path groups by the next level and filters by the clicked value', async () => {
+    const { dashboardId, widgetId } = await seedDrillableBar();
+
+    const top = (await callService({
+      action: 'queryWidget',
+      dashboardId,
+      widgetId,
+    })) as QueryResult;
+    expect(queryEngine.queryCalls.at(-1)?.sql).toContain('"region" AS "dimension_1"');
+    expect(top.columns[0]).toMatchObject({ label: 'Region' });
+
+    const drilled = (await callService({
+      action: 'queryWidget',
+      dashboardId,
+      widgetId,
+      drillPath: ['north'],
+    })) as QueryResult;
+    const call = queryEngine.queryCalls.at(-1)!;
+    expect(call.sql).toContain(`DATE_TRUNC('month', "day") AS "dimension_1"`);
+    expect(call.sql).toContain('"region" IN (?)');
+    expect(call.parameters).toContain('north');
+    expect(drilled.columns[0]).toMatchObject({ label: 'Day' });
+    // Each level and clicked value is its own cache entry.
+    expect(drilled.cache).toBe('miss');
+    expect(
+      (
+        (await callService({
+          action: 'queryWidget',
+          dashboardId,
+          widgetId,
+          drillPath: ['south'],
+        })) as QueryResult
+      ).cache,
+    ).toBe('miss');
+  });
+
+  test('a drill path deeper than the defined levels is rejected', async () => {
+    const { dashboardId, widgetId } = await seedDrillableBar();
+    await expectApiError(
+      callService({ action: 'queryWidget', dashboardId, widgetId, drillPath: ['north', 'x'] }),
+      { status: 400, code: 'invalid_drill_path' },
+    );
+  });
+
+  test('only the last drill level can be a date', async () => {
+    const workspace = await signInToNewWorkspace();
+    const source = await seedDataSource(workspace);
+    const dashboard = await createDashboard();
+    await expectApiError(
+      callService({
+        action: 'addWidget',
+        pageId: `${dashboard.id}_page`,
+        dashboardId: dashboard.id,
+        definition: {
+          type: 'line',
+          title: 'Revenue over time',
+          dataSourceId: source.id,
+          dateRangeFieldId: source.fieldIds.day,
+          metrics: [
+            {
+              source: { kind: 'field', fieldId: source.fieldIds.revenue, aggregation: 'sum' },
+              dataType: 'currency',
+            },
+          ],
+          dimension: { fieldId: source.fieldIds.day },
+          drillDimensions: [{ fieldId: source.fieldIds.region }],
+        },
+        width: 6,
+        height: 4,
+      }),
+      { status: 400, code: 'invalid_drill_dimension' },
+    );
+  });
+});
+
 describe('control validation', () => {
   test('a control the dashboard does not have is rejected', async () => {
     const { dashboardId, widgetId } = await seedScorecardDashboard();

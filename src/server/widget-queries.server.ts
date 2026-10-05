@@ -5,8 +5,11 @@ import {
   type WidgetDefinition,
   type DashboardDocument,
   type DashboardWidget,
+  type DrillPath,
   controlStateSchema,
 } from '#/domain/schema';
+import { drilledQuery, drillLevels } from '#/domain/drill-down';
+import { recordProductMetric } from '#/observability';
 import {
   mergeControlState,
   controlDefaultValues,
@@ -33,6 +36,7 @@ export async function previewWidget(request: Extract<ApiRequest, { action: 'prev
     request.definition,
     request.controlState ?? {},
     request.width,
+    request.drillPath,
   );
 }
 
@@ -42,6 +46,7 @@ export async function queryWidget(
   state: ControlState | undefined,
   shareToken?: string,
   page = 0,
+  drillPath: DrillPath = [],
 ) {
   const access = await authorizeDashboard(dashboardId, 'viewer', shareToken);
   const widget = widgetById(access.document, widgetId);
@@ -50,7 +55,22 @@ export async function queryWidget(
     widget.definition,
     state,
     widget.layout.width,
+    drillPath,
   );
+  if (drillPath.length) {
+    // Counted per query, so a control change while drilled counts again. Good enough to see which
+    // widgets and levels viewers and agents actually use.
+    console.info('yresonance.widget_drill', {
+      dashboardId,
+      widgetId,
+      widgetType: widget.definition.type,
+      level: drillPath.length,
+    });
+    recordProductMetric('widget_drill', {
+      labels: [widget.definition.type, String(drillPath.length), widgetId],
+      index: dashboardId,
+    });
+  }
   if (!query) return { rows: [], controlState };
   const {
     dataSource,
@@ -82,6 +102,7 @@ export async function queryWidget(
       requestedDateRange: dateRange,
       resolvedDateRange,
       resolvedControls: normalize(resolvedControls),
+      drillPath,
       dataSourceConnector: connector.type,
       dataSourceVersion: dataSource.version,
       timezone: access.document.timezone,
@@ -256,6 +277,18 @@ export async function validateDefinition(
       'invalid_date_granularity',
       'Date granularity can only be set on date dimensions.',
     );
+  // Clicked values filter by equality, which a date bucket cannot express. Only the level nobody
+  // clicks, the last one, may be a date.
+  if (
+    drillLevels(definition)
+      .slice(0, -1)
+      .some((dimension) => metadataById.get(dimension.fieldId)?.semanticType === 'date')
+  )
+    throw new ApiError(
+      400,
+      'invalid_drill_dimension',
+      'Only the last drill-down level can be a date dimension.',
+    );
   if (!compilesToQuery(definition)) return;
   await datasourceOperation(() =>
     connectorFor(dataSource).validateQuery(dataSource, {
@@ -274,8 +307,15 @@ async function runDefinition(
   definition: WidgetDefinition,
   state: ControlState,
   width = 8,
+  drillPath: DrillPath = [],
 ) {
-  const { controlState, query } = await prepareWidgetQuery(dashboard, definition, state, width);
+  const { controlState, query } = await prepareWidgetQuery(
+    dashboard,
+    definition,
+    state,
+    width,
+    drillPath,
+  );
   if (!query) return { rows: [], controlState };
   const { rows, comparisonRows } = await executeWidgetQuery(query);
   return {
@@ -289,22 +329,34 @@ async function runDefinition(
 // Resolve once before either cache lookup or execution, including relative dates and controls.
 async function prepareWidgetQuery(
   dashboard: DashboardDocument,
-  definition: WidgetDefinition,
+  storedDefinition: WidgetDefinition,
   state: ControlState | undefined,
   width: number,
+  drillPath: DrillPath = [],
 ) {
   const defaults = defaultControlState(dashboard);
   const controlState = validateControlState(dashboard, mergeControlState(defaults, state));
+  const drilled = drilledQuery(storedDefinition, drillPath);
+  if (!drilled)
+    throw new ApiError(
+      400,
+      'invalid_drill_path',
+      'The drill path is deeper than the drill-down levels this widget defines.',
+    );
+  const definition = drilled.definition;
   if (!compilesToQuery(definition)) return { controlState, query: undefined };
   const dataSource = await loadDataSource(definition.dataSourceId, dashboard.workspaceId);
   const metadata = await loadQueryMetadata(dataSource.id, dashboard.workspaceId);
   const columns = queryResultColumns(definition, metadata);
-  const resolvedControls = await resolveControls(
-    dashboard,
-    definition,
-    [...metadata.fields, ...metadata.calculatedFields],
-    controlState,
-  );
+  const resolvedControls = [
+    ...(await resolveControls(
+      dashboard,
+      definition,
+      [...metadata.fields, ...metadata.calculatedFields],
+      controlState,
+    )),
+    ...drilled.filters,
+  ];
   const dateRange = controlState.dateRange ?? dashboard.defaultDateRange;
   const resolvedDateRange = resolveDateRange(dateRange, dashboard.timezone);
   const bucketTarget = dateBucketTarget(width);
@@ -576,6 +628,8 @@ function definitionFieldIds(definition: WidgetDefinition) {
   if ('filter' in definition)
     ids.push(...(definition.filter?.conditions.map((condition) => condition.fieldId) ?? []));
   if ('dimension' in definition) ids.push(definition.dimension.fieldId);
+  if ('drillDimensions' in definition)
+    ids.push(...(definition.drillDimensions?.map((dimension) => dimension.fieldId) ?? []));
   if ('dimensions' in definition)
     ids.push(...definition.dimensions.map((dimension) => dimension.fieldId));
   if ('pivotDimension' in definition && definition.pivotDimension)
@@ -595,11 +649,14 @@ function definitionFieldIds(definition: WidgetDefinition) {
 }
 
 function definitionDimensions(definition: WidgetDefinition) {
-  if (definition.type === 'line' || definition.type === 'combo') return [definition.dimension];
+  if (definition.type === 'line')
+    return [definition.dimension, ...(definition.drillDimensions ?? [])];
+  if (definition.type === 'combo') return [definition.dimension];
   if (definition.type === 'bar' || definition.type === 'pie')
     return [
       definition.dimension,
       ...(definition.breakdownDimension ? [definition.breakdownDimension] : []),
+      ...(definition.drillDimensions ?? []),
     ];
   return definition.type === 'table'
     ? [...definition.dimensions, ...(definition.pivotDimension ? [definition.pivotDimension] : [])]

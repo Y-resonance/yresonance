@@ -83,7 +83,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'queryWidget',
               description:
-                'Run a stored widget from the open dashboard with optional dashboard control state. Viewers cannot submit SQL or field names. Returns rows and applied control state.',
+                'Run a stored widget from the open dashboard with optional dashboard control state. For bar, pie, and line widgets with drillDimensions, drillPath lists one clicked value per level, starting at dimension, and the widget returns the next level filtered by those values. Viewers cannot submit SQL or field names. Returns rows and applied control state.',
               readOnly: true,
               fixed,
             },
@@ -396,6 +396,12 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
     // Tools describe what an agent may send, so defaulted fields stay optional and unknown keys
     // are not forbidden; zod strips them. This also keeps descriptors within browser size limits.
     io: 'input',
+    // Zod writes JavaScript's safe-integer range onto every `.int()`. It tells an agent nothing
+    // and costs descriptor budget, and the API still validates the input with the same schema.
+    override: ({ jsonSchema }) => {
+      if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER) delete jsonSchema.maximum;
+      if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;
+    },
   });
   const removed = new Set(['action', ...Object.keys(fixed ?? {})]);
   if (json.properties) for (const key of removed) delete json.properties[key];

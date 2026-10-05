@@ -31,7 +31,11 @@ describe('widget result shaping', () => {
   });
 
   it('defines pie breakdowns as labelled slices', () => {
-    expect(pieBreakdownRows(breakdown)[0]).toEqual({ label: 'Jan · Search', spend: 10 });
+    expect(pieBreakdownRows(breakdown)[0]).toEqual({
+      label: 'Jan · Search',
+      month: 'Jan',
+      spend: 10,
+    });
   });
 
   it('adds comparison values as visible chart series', () => {
