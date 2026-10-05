@@ -70,6 +70,7 @@ export function DatasourceCacheSettings({
           <PopoverTitle>Query caching</PopoverTitle>
           <form onSubmit={save} className="flex flex-col items-start gap-3">
             <DatasourceCacheFields
+              hideLabel
               key={String(open)}
               policy={policy}
               onChange={setPolicy}

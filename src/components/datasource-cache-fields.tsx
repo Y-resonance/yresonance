@@ -2,49 +2,80 @@ import { useId, useState } from 'react';
 import type { DatasourceCachePolicy } from '#/domain/schema';
 import { Field, FieldDescription, FieldLabel } from './ui/field';
 import { Input } from './ui/input';
-import { NativeSelect, NativeSelectOption } from './ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 
 export function DatasourceCacheFields({
   policy,
   onChange,
   disabled,
+  hideLabel = false,
   defaultTtlSeconds = 86_400,
 }: {
   policy: DatasourceCachePolicy;
   onChange: (policy: DatasourceCachePolicy) => void;
   disabled?: boolean;
+  hideLabel?: boolean;
   defaultTtlSeconds?: number;
 }) {
   const id = useId();
   const presets = [60, 300, 900, 3600, 86400];
   const duration = policy.mode === 'duration' ? policy.ttlSeconds : 300;
   const [custom, setCustom] = useState(!presets.includes(duration));
+  const modes = [
+    {
+      value: 'default',
+      label: `Default (${defaultTtlSeconds < 3600 ? `${defaultTtlSeconds / 60} minutes` : `${defaultTtlSeconds / 3600} hours`})`,
+    },
+    { value: 'duration', label: 'Cache for…' },
+    { value: 'disabled', label: 'Disabled' },
+  ];
+  const durations = [
+    { value: '60', label: '1 minute' },
+    { value: '300', label: '5 minutes' },
+    { value: '900', label: '15 minutes' },
+    { value: '3600', label: '1 hour' },
+    { value: '86400', label: '24 hours' },
+    { value: 'custom', label: 'Custom' },
+  ];
   return (
     <div className="flex flex-wrap items-start gap-4">
       <Field className="w-full sm:w-48">
-        <FieldLabel htmlFor={`${id}-mode`}>Query caching</FieldLabel>
-        <NativeSelect
-          id={`${id}-mode`}
+        <FieldLabel htmlFor={`${id}-mode`} className={hideLabel ? 'sr-only' : undefined}>
+          Query caching
+        </FieldLabel>
+        <Select
+          items={modes}
           value={policy.mode}
           disabled={disabled}
-          onChange={(event) =>
+          onValueChange={(value) => {
+            if (value === null) return;
             onChange(
-              event.target.value === 'duration'
+              value === 'duration'
                 ? { mode: 'duration', ttlSeconds: 300 }
-                : { mode: event.target.value === 'disabled' ? 'disabled' : 'default' },
-            )
-          }
+                : { mode: value === 'disabled' ? 'disabled' : 'default' },
+            );
+          }}
         >
-          <NativeSelectOption value="default">
-            Default (
-            {defaultTtlSeconds < 3600
-              ? `${defaultTtlSeconds / 60} minutes`
-              : `${defaultTtlSeconds / 3600} hours`}
-            )
-          </NativeSelectOption>
-          <NativeSelectOption value="duration">Cache for…</NativeSelectOption>
-          <NativeSelectOption value="disabled">Disabled</NativeSelectOption>
-        </NativeSelect>
+          <SelectTrigger id={`${id}-mode`} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {modes.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <FieldDescription>
           {policy.mode === 'disabled'
             ? 'Run every requested query.'
@@ -55,26 +86,32 @@ export function DatasourceCacheFields({
         <>
           <Field className="w-full sm:w-48">
             <FieldLabel htmlFor={`${id}-duration`}>Reuse query results for</FieldLabel>
-            <NativeSelect
-              id={`${id}-duration`}
+            <Select
+              items={durations}
               disabled={disabled}
               value={custom ? 'custom' : String(duration)}
-              onChange={(event) => {
-                setCustom(event.target.value === 'custom');
+              onValueChange={(value) => {
+                if (value === null) return;
+                setCustom(value === 'custom');
                 onChange({
                   mode: 'duration',
-                  ttlSeconds:
-                    event.target.value === 'custom' ? duration : Number(event.target.value),
+                  ttlSeconds: value === 'custom' ? duration : Number(value),
                 });
               }}
             >
-              <NativeSelectOption value="60">1 minute</NativeSelectOption>
-              <NativeSelectOption value="300">5 minutes</NativeSelectOption>
-              <NativeSelectOption value="900">15 minutes</NativeSelectOption>
-              <NativeSelectOption value="3600">1 hour</NativeSelectOption>
-              <NativeSelectOption value="86400">24 hours</NativeSelectOption>
-              <NativeSelectOption value="custom">Custom</NativeSelectOption>
-            </NativeSelect>
+              <SelectTrigger id={`${id}-duration`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {durations.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </Field>
           {custom ? (
             <Field className="w-full sm:w-40">
