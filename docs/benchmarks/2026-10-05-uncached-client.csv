@@ -1,0 +1,221 @@
+dataset_rows,phase,backend,workload,iteration,timestamp,duration_ms,cache,result_rows,widget_id
+100000,serial,duckdb,Total,0,2026-10-05T08:08:41.147Z,1235.200,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Total,0,2026-10-05T08:08:41.403Z,256.200,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Daily trend,0,2026-10-05T08:08:42.652Z,1249.300,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Daily trend,0,2026-10-05T08:08:42.902Z,248.900,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Campaign breakdown,0,2026-10-05T08:08:44.148Z,1242.600,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Campaign breakdown,0,2026-10-05T08:08:44.488Z,337.600,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Comparison,0,2026-10-05T08:08:46.405Z,1917.100,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,clickhouse,Comparison,0,2026-10-05T08:08:46.673Z,268.300,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,clickhouse,Total,1,2026-10-05T08:08:46.922Z,248.800,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Total,1,2026-10-05T08:08:48.169Z,1246.800,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Daily trend,1,2026-10-05T08:08:48.436Z,266.500,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Daily trend,1,2026-10-05T08:08:49.602Z,1166.400,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Campaign breakdown,1,2026-10-05T08:08:49.869Z,265.000,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Campaign breakdown,1,2026-10-05T08:08:50.960Z,1077.700,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Comparison,1,2026-10-05T08:08:51.222Z,262.500,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,duckdb,Comparison,1,2026-10-05T08:08:53.081Z,1858.000,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,duckdb,Total,2,2026-10-05T08:08:54.210Z,1129.200,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Total,2,2026-10-05T08:08:54.459Z,249.000,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Daily trend,2,2026-10-05T08:08:55.512Z,1053.000,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Daily trend,2,2026-10-05T08:08:55.763Z,250.700,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Campaign breakdown,2,2026-10-05T08:08:56.904Z,1139.700,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Campaign breakdown,2,2026-10-05T08:08:57.171Z,266.300,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Comparison,2,2026-10-05T08:08:58.922Z,1750.600,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,clickhouse,Comparison,2,2026-10-05T08:08:59.195Z,273.700,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,clickhouse,Total,3,2026-10-05T08:08:59.443Z,247.900,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Total,3,2026-10-05T08:09:00.585Z,1141.700,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Daily trend,3,2026-10-05T08:09:00.840Z,255.000,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Daily trend,3,2026-10-05T08:09:02.273Z,1433.100,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Campaign breakdown,3,2026-10-05T08:09:02.581Z,306.500,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Campaign breakdown,3,2026-10-05T08:09:03.586Z,1004.000,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Comparison,3,2026-10-05T08:09:03.835Z,248.700,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,duckdb,Comparison,3,2026-10-05T08:09:05.542Z,1707.500,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,duckdb,Total,4,2026-10-05T08:09:06.746Z,1202.300,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Total,4,2026-10-05T08:09:06.998Z,251.700,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Daily trend,4,2026-10-05T08:09:08.379Z,1380.800,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Daily trend,4,2026-10-05T08:09:08.637Z,257.600,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Campaign breakdown,4,2026-10-05T08:09:09.786Z,1148.400,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Campaign breakdown,4,2026-10-05T08:09:10.072Z,285.200,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Comparison,4,2026-10-05T08:09:11.691Z,1618.500,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,clickhouse,Comparison,4,2026-10-05T08:09:11.974Z,282.900,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,clickhouse,Total,5,2026-10-05T08:09:12.239Z,265.600,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Total,5,2026-10-05T08:09:13.345Z,1105.500,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Daily trend,5,2026-10-05T08:09:13.605Z,260.300,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Daily trend,5,2026-10-05T08:09:14.694Z,1088.600,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Campaign breakdown,5,2026-10-05T08:09:14.962Z,266.700,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Campaign breakdown,5,2026-10-05T08:09:16.183Z,1220.200,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Comparison,5,2026-10-05T08:09:16.433Z,250.500,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,duckdb,Comparison,5,2026-10-05T08:09:18.140Z,1706.100,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,duckdb,Total,6,2026-10-05T08:09:19.349Z,1209.400,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Total,6,2026-10-05T08:09:19.599Z,249.600,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Daily trend,6,2026-10-05T08:09:20.749Z,1150.600,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Daily trend,6,2026-10-05T08:09:20.997Z,247.600,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Campaign breakdown,6,2026-10-05T08:09:22.086Z,1088.400,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Campaign breakdown,6,2026-10-05T08:09:22.385Z,297.600,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Comparison,6,2026-10-05T08:09:24.106Z,1721.000,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,clickhouse,Comparison,6,2026-10-05T08:09:24.350Z,243.700,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,clickhouse,Total,7,2026-10-05T08:09:24.595Z,244.700,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Total,7,2026-10-05T08:09:25.567Z,972.100,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Daily trend,7,2026-10-05T08:09:25.828Z,260.500,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Daily trend,7,2026-10-05T08:09:26.993Z,1165.000,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Campaign breakdown,7,2026-10-05T08:09:27.297Z,303.000,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Campaign breakdown,7,2026-10-05T08:09:28.978Z,1679.300,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Comparison,7,2026-10-05T08:09:29.215Z,237.700,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,duckdb,Comparison,7,2026-10-05T08:09:30.986Z,1770.800,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,duckdb,Total,8,2026-10-05T08:09:32.183Z,1197.100,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Total,8,2026-10-05T08:09:32.448Z,264.400,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Daily trend,8,2026-10-05T08:09:33.618Z,1169.600,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Daily trend,8,2026-10-05T08:09:33.869Z,251.100,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Campaign breakdown,8,2026-10-05T08:09:35.096Z,1226.400,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Campaign breakdown,8,2026-10-05T08:09:35.377Z,280.200,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Comparison,8,2026-10-05T08:09:36.889Z,1510.900,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,serial,clickhouse,Comparison,8,2026-10-05T08:09:37.126Z,236.900,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,clickhouse,Total,9,2026-10-05T08:09:37.372Z,246.600,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,serial,duckdb,Total,9,2026-10-05T08:09:38.444Z,1072.000,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,serial,clickhouse,Daily trend,9,2026-10-05T08:09:38.706Z,260.800,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,serial,duckdb,Daily trend,9,2026-10-05T08:09:39.885Z,1178.600,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,serial,clickhouse,Campaign breakdown,9,2026-10-05T08:09:40.185Z,298.300,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,serial,duckdb,Campaign breakdown,9,2026-10-05T08:09:41.249Z,1062.600,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,serial,clickhouse,Comparison,9,2026-10-05T08:09:41.497Z,247.600,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,serial,duckdb,Comparison,9,2026-10-05T08:09:43.320Z,1822.800,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,concurrent,duckdb,Total,0,2026-10-05T08:09:45.373Z,2052.700,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,concurrent,duckdb,Daily trend,0,2026-10-05T08:09:44.516Z,1195.000,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,concurrent,duckdb,Campaign breakdown,0,2026-10-05T08:09:46.076Z,2753.300,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,concurrent,duckdb,Comparison,0,2026-10-05T08:09:47.168Z,3846.500,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,dashboard,duckdb,All four widgets,0,2026-10-05T08:09:47.168Z,3847.800,,,
+100000,concurrent,clickhouse,Total,0,2026-10-05T08:09:47.499Z,331.300,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,concurrent,clickhouse,Daily trend,0,2026-10-05T08:09:47.458Z,289.900,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,concurrent,clickhouse,Campaign breakdown,0,2026-10-05T08:09:47.504Z,334.300,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,concurrent,clickhouse,Comparison,0,2026-10-05T08:09:47.506Z,337.900,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,dashboard,clickhouse,All four widgets,0,2026-10-05T08:09:47.506Z,338.500,,,
+100000,concurrent,clickhouse,Total,1,2026-10-05T08:09:47.760Z,253.800,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,concurrent,clickhouse,Daily trend,1,2026-10-05T08:09:47.806Z,297.800,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,concurrent,clickhouse,Campaign breakdown,1,2026-10-05T08:09:47.829Z,319.800,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,concurrent,clickhouse,Comparison,1,2026-10-05T08:09:47.804Z,295.400,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,dashboard,clickhouse,All four widgets,1,2026-10-05T08:09:47.829Z,322.200,,,
+100000,concurrent,duckdb,Total,1,2026-10-05T08:09:49.686Z,1857.300,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,concurrent,duckdb,Daily trend,1,2026-10-05T08:09:49.007Z,1177.900,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,concurrent,duckdb,Campaign breakdown,1,2026-10-05T08:09:51.490Z,3659.400,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,concurrent,duckdb,Comparison,1,2026-10-05T08:09:50.806Z,2975.900,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,dashboard,duckdb,All four widgets,1,2026-10-05T08:09:51.490Z,3661.200,,,
+100000,concurrent,duckdb,Total,2,2026-10-05T08:09:54.285Z,2794.700,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,concurrent,duckdb,Daily trend,2,2026-10-05T08:09:52.671Z,1180.600,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,concurrent,duckdb,Campaign breakdown,2,2026-10-05T08:09:55.847Z,4355.000,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,concurrent,duckdb,Comparison,2,2026-10-05T08:09:54.889Z,3398.300,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,dashboard,duckdb,All four widgets,2,2026-10-05T08:09:55.847Z,4356.600,,,
+100000,concurrent,clickhouse,Total,2,2026-10-05T08:09:56.154Z,307.200,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,concurrent,clickhouse,Daily trend,2,2026-10-05T08:09:56.152Z,305.100,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,concurrent,clickhouse,Campaign breakdown,2,2026-10-05T08:09:56.139Z,289.800,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,concurrent,clickhouse,Comparison,2,2026-10-05T08:09:56.107Z,259.800,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,dashboard,clickhouse,All four widgets,2,2026-10-05T08:09:56.154Z,307.300,,,
+100000,concurrent,clickhouse,Total,3,2026-10-05T08:09:56.456Z,301.700,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,concurrent,clickhouse,Daily trend,3,2026-10-05T08:09:56.456Z,301.600,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,concurrent,clickhouse,Campaign breakdown,3,2026-10-05T08:09:56.497Z,341.700,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,concurrent,clickhouse,Comparison,3,2026-10-05T08:09:56.440Z,284.900,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,dashboard,clickhouse,All four widgets,3,2026-10-05T08:09:56.497Z,343.500,,,
+100000,concurrent,duckdb,Total,3,2026-10-05T08:09:58.352Z,1854.200,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,concurrent,duckdb,Daily trend,3,2026-10-05T08:10:00.337Z,3838.700,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,concurrent,duckdb,Campaign breakdown,3,2026-10-05T08:09:57.616Z,1117.700,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,concurrent,duckdb,Comparison,3,2026-10-05T08:09:59.631Z,3133.100,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,dashboard,duckdb,All four widgets,3,2026-10-05T08:10:00.337Z,3839.300,,,
+100000,concurrent,duckdb,Total,4,2026-10-05T08:10:04.079Z,3742.100,miss,1,widget_ef0b8965-aa6f-4b38-9b77-e188824f7eda
+100000,concurrent,duckdb,Daily trend,4,2026-10-05T08:10:01.547Z,1210.000,miss,28,widget_2fede9f9-f8e4-4fe7-9a22-f2fa7c89481c
+100000,concurrent,duckdb,Campaign breakdown,4,2026-10-05T08:10:02.266Z,1928.900,miss,400,widget_da7061ce-33ec-4e39-8bad-18e9ad86ad17
+100000,concurrent,duckdb,Comparison,4,2026-10-05T08:10:03.468Z,3131.100,miss,1,widget_827987ed-11f9-480c-9f1a-f2d150c15190
+100000,dashboard,duckdb,All four widgets,4,2026-10-05T08:10:04.079Z,3742.100,,,
+100000,concurrent,clickhouse,Total,4,2026-10-05T08:10:04.330Z,251.400,miss,1,widget_55d9c049-7404-4ca6-962a-0dc7997dbd3c
+100000,concurrent,clickhouse,Daily trend,4,2026-10-05T08:10:04.309Z,229.700,miss,28,widget_b7a66fc0-bfd2-4217-9fa1-87c69abb05d3
+100000,concurrent,clickhouse,Campaign breakdown,4,2026-10-05T08:10:04.390Z,310.500,miss,400,widget_9b842647-70ad-42f4-b355-238c5fcbe4b8
+100000,concurrent,clickhouse,Comparison,4,2026-10-05T08:10:04.355Z,275.300,miss,1,widget_880c9ba6-8e0c-4fcb-a0c7-b96f874f0384
+100000,dashboard,clickhouse,All four widgets,4,2026-10-05T08:10:04.390Z,311.200,,,
+1000000,serial,duckdb,Total,0,2026-10-05T08:11:40.769Z,1706.600,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,serial,clickhouse,Total,0,2026-10-05T08:11:41.068Z,298.400,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,serial,duckdb,Daily trend,0,2026-10-05T08:11:42.701Z,1632.600,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,serial,clickhouse,Daily trend,0,2026-10-05T08:11:43.050Z,349.600,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,serial,duckdb,Campaign breakdown,0,2026-10-05T08:11:44.800Z,1747.700,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,serial,clickhouse,Campaign breakdown,0,2026-10-05T08:11:45.245Z,443.200,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,serial,duckdb,Comparison,0,2026-10-05T08:11:47.470Z,2224.900,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,serial,clickhouse,Comparison,0,2026-10-05T08:11:47.767Z,297.400,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,serial,clickhouse,Total,1,2026-10-05T08:11:48.062Z,294.600,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,serial,duckdb,Total,1,2026-10-05T08:11:49.579Z,1517.400,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,serial,clickhouse,Daily trend,1,2026-10-05T08:11:49.950Z,370.300,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,serial,duckdb,Daily trend,1,2026-10-05T08:11:51.497Z,1546.900,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,serial,clickhouse,Campaign breakdown,1,2026-10-05T08:11:51.939Z,440.700,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,serial,duckdb,Campaign breakdown,1,2026-10-05T08:11:53.563Z,1623.200,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,serial,clickhouse,Comparison,1,2026-10-05T08:11:53.858Z,294.300,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,serial,duckdb,Comparison,1,2026-10-05T08:11:56.199Z,2341.100,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,serial,duckdb,Total,2,2026-10-05T08:11:57.827Z,1627.500,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,serial,clickhouse,Total,2,2026-10-05T08:11:58.103Z,276.100,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,serial,duckdb,Daily trend,2,2026-10-05T08:11:59.725Z,1622.600,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,serial,clickhouse,Daily trend,2,2026-10-05T08:12:00.032Z,306.500,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,serial,duckdb,Campaign breakdown,2,2026-10-05T08:12:01.627Z,1594.100,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,serial,clickhouse,Campaign breakdown,2,2026-10-05T08:12:02.094Z,465.700,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,serial,duckdb,Comparison,2,2026-10-05T08:12:04.391Z,2297.000,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,serial,clickhouse,Comparison,2,2026-10-05T08:12:04.680Z,288.400,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,serial,clickhouse,Total,3,2026-10-05T08:12:04.953Z,273.100,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,serial,duckdb,Total,3,2026-10-05T08:12:06.447Z,1493.800,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,serial,clickhouse,Daily trend,3,2026-10-05T08:12:06.758Z,311.000,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,serial,duckdb,Daily trend,3,2026-10-05T08:12:08.342Z,1584.200,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,serial,clickhouse,Campaign breakdown,3,2026-10-05T08:12:08.783Z,439.900,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,serial,duckdb,Campaign breakdown,3,2026-10-05T08:12:10.574Z,1790.200,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,serial,clickhouse,Comparison,3,2026-10-05T08:12:10.841Z,266.400,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,serial,duckdb,Comparison,3,2026-10-05T08:12:13.277Z,2436.500,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,serial,duckdb,Total,4,2026-10-05T08:12:14.691Z,1413.400,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,serial,clickhouse,Total,4,2026-10-05T08:12:14.972Z,281.500,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,serial,duckdb,Daily trend,4,2026-10-05T08:12:16.403Z,1430.200,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,serial,clickhouse,Daily trend,4,2026-10-05T08:12:16.716Z,313.200,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,serial,duckdb,Campaign breakdown,4,2026-10-05T08:12:18.330Z,1612.700,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,serial,clickhouse,Campaign breakdown,4,2026-10-05T08:12:18.763Z,431.600,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,serial,duckdb,Comparison,4,2026-10-05T08:12:21.046Z,2283.000,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,serial,clickhouse,Comparison,4,2026-10-05T08:12:21.320Z,273.700,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,concurrent,duckdb,Total,0,2026-10-05T08:12:23.045Z,1724.800,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,concurrent,duckdb,Daily trend,0,2026-10-05T08:12:25.667Z,4346.400,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,concurrent,duckdb,Campaign breakdown,0,2026-10-05T08:12:27.673Z,6349.700,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,concurrent,duckdb,Comparison,0,2026-10-05T08:12:26.359Z,5037.500,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,dashboard,duckdb,All four widgets,0,2026-10-05T08:12:27.673Z,6352.500,,,
+1000000,concurrent,clickhouse,Total,0,2026-10-05T08:12:27.976Z,302.900,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,concurrent,clickhouse,Daily trend,0,2026-10-05T08:12:28.127Z,453.100,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,concurrent,clickhouse,Campaign breakdown,0,2026-10-05T08:12:28.248Z,573.400,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,concurrent,clickhouse,Comparison,0,2026-10-05T08:12:28.036Z,362.000,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,dashboard,clickhouse,All four widgets,0,2026-10-05T08:12:28.248Z,575.600,,,
+1000000,concurrent,clickhouse,Total,1,2026-10-05T08:12:28.725Z,476.400,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,concurrent,clickhouse,Daily trend,1,2026-10-05T08:12:28.792Z,542.800,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,concurrent,clickhouse,Campaign breakdown,1,2026-10-05T08:12:28.927Z,675.100,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,concurrent,clickhouse,Comparison,1,2026-10-05T08:12:28.725Z,475.600,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,dashboard,clickhouse,All four widgets,1,2026-10-05T08:12:28.927Z,678.200,,,
+1000000,concurrent,duckdb,Total,1,2026-10-05T08:12:30.587Z,1660.000,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,concurrent,duckdb,Daily trend,1,2026-10-05T08:12:33.082Z,4154.300,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,concurrent,duckdb,Campaign breakdown,1,2026-10-05T08:12:31.883Z,2954.100,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,concurrent,duckdb,Comparison,1,2026-10-05T08:12:34.881Z,5953.600,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,dashboard,duckdb,All four widgets,1,2026-10-05T08:12:34.882Z,5954.800,,,
+1000000,concurrent,duckdb,Total,2,2026-10-05T08:12:38.659Z,3777.900,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,concurrent,duckdb,Daily trend,2,2026-10-05T08:12:41.422Z,6539.800,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,concurrent,duckdb,Campaign breakdown,2,2026-10-05T08:12:37.271Z,2387.200,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,concurrent,duckdb,Comparison,2,2026-10-05T08:12:40.067Z,5184.600,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,dashboard,duckdb,All four widgets,2,2026-10-05T08:12:41.422Z,6540.500,,,
+1000000,concurrent,clickhouse,Total,2,2026-10-05T08:12:41.708Z,286.400,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,concurrent,clickhouse,Daily trend,2,2026-10-05T08:12:41.832Z,409.300,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,concurrent,clickhouse,Campaign breakdown,2,2026-10-05T08:12:41.944Z,519.300,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,concurrent,clickhouse,Comparison,2,2026-10-05T08:12:41.795Z,371.700,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,dashboard,clickhouse,All four widgets,2,2026-10-05T08:12:41.944Z,521.700,,,
+1000000,concurrent,clickhouse,Total,3,2026-10-05T08:12:42.327Z,382.800,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,concurrent,clickhouse,Daily trend,3,2026-10-05T08:12:42.521Z,576.000,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,concurrent,clickhouse,Campaign breakdown,3,2026-10-05T08:12:42.689Z,743.200,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,concurrent,clickhouse,Comparison,3,2026-10-05T08:12:42.422Z,477.200,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,dashboard,clickhouse,All four widgets,3,2026-10-05T08:12:42.689Z,745.700,,,
+1000000,concurrent,duckdb,Total,3,2026-10-05T08:12:46.181Z,3491.500,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,concurrent,duckdb,Daily trend,3,2026-10-05T08:12:44.397Z,1705.100,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,concurrent,duckdb,Campaign breakdown,3,2026-10-05T08:12:48.525Z,5831.000,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,concurrent,duckdb,Comparison,3,2026-10-05T08:12:47.367Z,4674.900,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,dashboard,duckdb,All four widgets,3,2026-10-05T08:12:48.525Z,5835.100,,,
+1000000,concurrent,duckdb,Total,4,2026-10-05T08:12:51.745Z,3220.700,miss,1,widget_0833911b-8b17-41ea-b13b-6f33dce3d5d4
+1000000,concurrent,duckdb,Daily trend,4,2026-10-05T08:12:53.003Z,4477.100,miss,28,widget_fe233ba6-ba76-4fea-8712-29251d76e250
+1000000,concurrent,duckdb,Campaign breakdown,4,2026-10-05T08:12:50.177Z,1650.600,miss,400,widget_a4c1566b-fbd8-410f-920f-d37a58c932ef
+1000000,concurrent,duckdb,Comparison,4,2026-10-05T08:12:54.190Z,5664.100,miss,1,widget_05e6d002-8616-42b4-bf1e-31559dc12553
+1000000,dashboard,duckdb,All four widgets,4,2026-10-05T08:12:54.190Z,5664.900,,,
+1000000,concurrent,clickhouse,Total,4,2026-10-05T08:12:54.586Z,396.700,miss,1,widget_1846420a-5267-4588-8d61-4100247c759e
+1000000,concurrent,clickhouse,Daily trend,4,2026-10-05T08:12:54.583Z,392.600,miss,28,widget_dd75e484-8b3e-4918-9405-3a5fe6ef24b9
+1000000,concurrent,clickhouse,Campaign breakdown,4,2026-10-05T08:12:54.746Z,553.800,miss,400,widget_f21d3d56-07dc-41b7-9c30-53af7b3e0c18
+1000000,concurrent,clickhouse,Comparison,4,2026-10-05T08:12:54.503Z,311.800,miss,1,widget_009f3963-b9bf-42b8-9483-b29dce198fd5
+1000000,dashboard,clickhouse,All four widgets,4,2026-10-05T08:12:54.746Z,556.700,,,

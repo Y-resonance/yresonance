@@ -30,8 +30,8 @@ export async function benchmarkUncachedQueries({
   uploadHeaders?: Record<string, string>;
 }) {
   const url = new URL(baseUrl);
-  if (!url.hostname.endsWith('.workers.dev') || url.protocol !== 'https:')
-    throw new Error('Use a Cloudflare preview URL.');
+  if (!url.hostname.endsWith('-yresonance.rundown.workers.dev') || url.protocol !== 'https:')
+    throw new Error('Use a yresonance native branch-preview URL.');
   z.number().int().min(1).max(1_000_000).parse(rowCount);
   z.number().int().min(1).max(100).parse(iterations);
   const startedAt = new Date().toISOString();
@@ -39,7 +39,7 @@ export async function benchmarkUncachedQueries({
   const csv = ['Date,Campaign,Platform,Impressions,Clicks'];
   for (let index = 0; index < rowCount; index++)
     csv.push(
-      `2026-01-${String((index % 28) + 1).padStart(2, '0')},Campaign ${index % 100},Platform ${index % 4},${1000 + (index % 1000)},${index % 100}`,
+      `2026-01-${String((index % 28) + 1).padStart(2, '0')},Campaign ${index % 100},Platform ${Math.floor(index / 100) % 4},${1000 + ((Math.imul(index + 1, 2654435761) >>> 0) % 1_000_000)},${(Math.imul(index + 1, 1597334677) >>> 0) % 1000}`,
     );
   const contents = csv.join('\n');
   const uploadBytes = new TextEncoder().encode(contents).byteLength;
@@ -76,19 +76,22 @@ export async function benchmarkUncachedQueries({
     );
     sources.push({ backend, source });
   }
-  const dashboard = z.object({ id: z.string() }).parse(
-    await api({
-      action: 'createDashboard',
-      name,
-      dataSourceIds: sources.map(({ source }) => source.id),
-      timezone: 'Europe/Berlin',
-      defaultDateRange: {
-        startDate: { fixed: '2026-01-01' },
-        endDate: { fixed: '2026-01-28' },
-      },
-    }),
-  );
-  const widgets = [];
+  const dashboard = z
+    .object({ id: z.string(), pages: z.array(z.object({ id: z.string() })).min(1) })
+    .parse(
+      await api({
+        action: 'createDashboard',
+        name,
+        dataSourceIds: sources.map(({ source }) => source.id),
+        timezone: 'Europe/Berlin',
+        defaultDateRange: {
+          startDate: { fixed: '2026-01-01' },
+          endDate: { fixed: '2026-01-28' },
+        },
+      }),
+    );
+  const widgets: Array<{ backend: 'duckdb' | 'clickhouse'; workload: string; widgetId: string }> =
+    [];
   for (const { backend, source } of sources) {
     const field = (column: string) => {
       const found = source.fields.find((entry) => entry.columnName === column);
@@ -119,7 +122,7 @@ export async function benchmarkUncachedQueries({
         title: 'Campaign breakdown',
         dimensions: [{ fieldId: field('Campaign') }, { fieldId: field('Platform') }],
         metrics: [metric],
-        resultLimit: { mode: 'top', amount: 100 },
+        resultLimit: { mode: 'top', amount: 500 },
         sort: [{ target: { kind: 'metric', index: 0 }, direction: 'desc' }],
       },
       {
@@ -134,6 +137,7 @@ export async function benchmarkUncachedQueries({
       const added = z.object({ widget: z.object({ id: z.string() }) }).parse(
         await api({
           action: 'addWidget',
+          pageId: dashboard.pages[0]!.id,
           dashboardId: dashboard.id,
           definition,
           width: 6,
@@ -188,9 +192,10 @@ export async function benchmarkUncachedQueries({
       for (const widget of pair) samples.push(await measure(widget, 'serial', iteration));
     }
   }
-  for (const backend of ['duckdb', 'clickhouse'] as const) {
-    const backendWidgets = widgets.filter((widget) => widget.backend === backend);
-    for (let iteration = 0; iteration < Math.min(iterations, 5); iteration++) {
+  for (let iteration = 0; iteration < Math.min(iterations, 5); iteration++) {
+    const backends = ['duckdb', 'clickhouse'] as const;
+    for (const backend of iteration % 2 ? [...backends].reverse() : backends) {
+      const backendWidgets = widgets.filter((widget) => widget.backend === backend);
       const start = performance.now();
       samples.push(
         ...(await Promise.all(
@@ -243,6 +248,12 @@ if (import.meta.main) {
     if (!body.ok) throw new Error(`${input.action}: ${body.error.message}`);
     return body.data;
   };
-  const result = await benchmarkUncachedQueries({ api, baseUrl, uploadHeaders: headers });
+  const result = await benchmarkUncachedQueries({
+    api,
+    baseUrl,
+    uploadHeaders: headers,
+    rowCount: Number(process.env.QUERY_BENCHMARK_ROWS ?? '100000'),
+    iterations: Number(process.env.QUERY_BENCHMARK_ITERATIONS ?? '10'),
+  });
   console.log(JSON.stringify(result, null, 2));
 }

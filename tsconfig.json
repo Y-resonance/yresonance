@@ -11,6 +11,7 @@
     "scripts/preview-config.test.ts",
     "scripts/prepare-preview-example.ts",
     "scripts/benchmark-query-startup.ts",
+    "scripts/benchmark-uncached-queries.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
