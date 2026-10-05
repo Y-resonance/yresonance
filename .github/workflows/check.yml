@@ -12,9 +12,9 @@ permissions:
 jobs:
   check:
     name: Lint, types, and unit tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v4
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
@@ -29,7 +29,8 @@ jobs:
             exit 1
           fi
       - run: bun run check
-      - uses: docker/setup-buildx-action@v3
+      - name: Setup Blacksmith Builder
+        uses: useblacksmith/setup-docker-builder@v1
       # The only Vite production build in this pipeline; the dry run reads its output.
       - run: bun run build
       - name: Validate the deployment package
@@ -37,9 +38,9 @@ jobs:
 
   integration:
     name: Worker integration tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v4
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
@@ -50,13 +51,13 @@ jobs:
 
   browser-ui:
     name: UI tests (${{ matrix.shard }}/2)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
@@ -75,12 +76,12 @@ jobs:
 
   browser:
     name: Browser tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     # Forks never receive the Clerk secrets, so the job would fail for reasons a contributor
     # cannot act on.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - uses: actions/checkout@v4
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
@@ -129,7 +130,7 @@ jobs:
 
   analytics-backends:
     name: DuckDB and ClickHouse parity
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     services:
       clickhouse:
         image: clickhouse/clickhouse-server:26.8.16.41
@@ -147,7 +148,7 @@ jobs:
       CLICKHOUSE_USER: yresonance_test
       CLICKHOUSE_PASSWORD: conformance_test_only
     steps:
-      - uses: actions/checkout@v4
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
