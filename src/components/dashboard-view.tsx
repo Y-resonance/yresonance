@@ -14,15 +14,25 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { ChevronsUpDown, X } from 'lucide-react';
-import type {
-  ComboMetric,
-  ControlState,
-  DashboardDocument,
-  DashboardWidget,
-  DateRange,
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from 'react';
+import { ChevronRight, ChevronsUpDown, X } from 'lucide-react';
+import {
+  drillPathSchema,
+  type ComboMetric,
+  type ControlState,
+  type DashboardDocument,
+  type DashboardWidget,
+  type DateRange,
+  type DrillPath,
 } from '#/domain/schema';
+import { drillLevels } from '#/domain/drill-down';
 import type { QueryResultColumn } from '#/domain/query-result';
 import { callApi } from '#/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card';
@@ -498,7 +508,14 @@ function QueryCard({
   const [retry, setRetry] = useState(0);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  // Clicked values per drilled level. Kept across control changes, dropped when the widget changes.
+  const [drillPath, setDrillPath] = useState<DrillStep[]>([]);
   useEffect(() => setPage(0), [controlState, dashboardId, widget.definition, widget.id]);
+  // Keeps the same array when nothing is drilled, so mounting does not trigger a second query.
+  useEffect(
+    () => setDrillPath((path) => (path.length ? [] : path)),
+    [dashboardId, widget.definition, widget.id],
+  );
   useEffect(() => {
     let current = true;
     changePending(1);
@@ -529,6 +546,7 @@ function QueryCard({
         dashboardId,
         widget,
         controlState,
+        drillPath: drillPath.length ? drillPath.map((step) => step.value) : undefined,
         preview: preview ?? false,
         shareToken,
         page,
@@ -565,6 +583,7 @@ function QueryCard({
     changePending,
     controlState,
     dashboardId,
+    drillPath,
     page,
     preview,
     retry,
@@ -575,12 +594,20 @@ function QueryCard({
   ]);
   const definition = widget.definition;
   if (!('title' in definition)) return null;
+  const canDrill = drillPath.length < drillLevels(definition).length - 1;
+  // Dropping the old level's rows shows a skeleton and keeps a second click from drilling into a
+  // value of the level that is being left.
+  const changeDrillPath = (next: DrillStep[]) => {
+    setRows(undefined);
+    setDrillPath(next);
+  };
   return (
     <Card className="h-full min-h-0">
       <CardHeader className="shrink-0">
         <CardTitle className={textStyleClasses(definition.titleStyle)}>
           {definition.title}
         </CardTitle>
+        {drillPath.length ? <DrillBreadcrumb path={drillPath} onChange={changeDrillPath} /> : null}
         {error ? <CardDescription>{error}</CardDescription> : null}
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto">
@@ -607,6 +634,7 @@ function QueryCard({
               page={page}
               hasMore={hasMore}
               setPage={setPage}
+              onDrill={canDrill ? (step) => changeDrillPath([...drillPath, step]) : undefined}
             />
             {error ? (
               <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>
@@ -620,6 +648,41 @@ function QueryCard({
   );
 }
 
+interface DrillStep {
+  value: DrillPath[number];
+  label: string;
+}
+
+function DrillBreadcrumb({
+  path,
+  onChange,
+}: {
+  path: DrillStep[];
+  onChange: (path: DrillStep[]) => void;
+}) {
+  return (
+    <nav aria-label="Drill-down" className="-ml-2 flex flex-wrap items-center text-xs">
+      <Button variant="ghost" size="xs" onClick={() => onChange([])}>
+        All
+      </Button>
+      {path.map((step, index) => (
+        <Fragment key={index}>
+          <ChevronRight className="size-3 text-muted-foreground" aria-hidden />
+          {index === path.length - 1 ? (
+            <span aria-current="location" className="px-2 font-medium">
+              {step.label}
+            </span>
+          ) : (
+            <Button variant="ghost" size="xs" onClick={() => onChange(path.slice(0, index + 1))}>
+              {step.label}
+            </Button>
+          )}
+        </Fragment>
+      ))}
+    </nav>
+  );
+}
+
 export function Result({
   definition,
   rows,
@@ -630,6 +693,7 @@ export function Result({
   page,
   hasMore,
   setPage,
+  onDrill,
 }: {
   definition: Extract<DashboardWidget['definition'], { title: string }>;
   rows: Record<string, unknown>[];
@@ -641,6 +705,8 @@ export function Result({
   page: number;
   hasMore: boolean;
   setPage: (page: number) => void;
+  /** Set while the chart has a deeper drill level; called with the clicked dimension value. */
+  onDrill?: (step: DrillStep) => void;
 }) {
   const dimensionColumns = columns.filter((column) => column.kind === 'dimension');
   const metricColumns = columns.filter((column) => column.kind === 'metric');
@@ -926,6 +992,7 @@ export function Result({
   )
     return <p className="text-sm text-muted-foreground">No rows for this date range.</p>;
   let dimension = dimensionColumns[0]!;
+  const drillColumn = dimension;
   let currentRows = normalizeMetricValues(rows, metricColumns);
   let previousRows = normalizeMetricValues(comparisonRows ?? [], metricColumns);
   let chartMetrics = metricColumns;
@@ -1043,6 +1110,17 @@ export function Result({
     ...pieConfig,
     ...barConfig,
   };
+  // Takes the clicked row itself: Recharts indexes bars and slices after dropping empty ones, so
+  // their click index does not point into chartRows. Empty (null) dimension values cannot be
+  // drilled into, because an equality filter never matches them.
+  const drill = onDrill
+    ? (row: Record<string, unknown> | undefined) => {
+        const value = drillPathSchema.element.safeParse(row?.[drillColumn.key]);
+        if (value.success)
+          onDrill({ value: value.data, label: formatDimensionLabel(value.data, drillColumn) });
+      }
+    : undefined;
+  const drillClass = drill ? 'cursor-pointer' : undefined;
   const tooltip = (
     <ChartTooltip
       content={
@@ -1068,12 +1146,16 @@ export function Result({
       <ChartContainer
         role="img"
         aria-label={`${definition.title} chart`}
-        className="mx-auto aspect-square max-h-72 md:h-full md:max-h-full md:min-h-0"
+        className={cn(
+          'mx-auto aspect-square max-h-72 md:h-full md:max-h-full md:min-h-0',
+          drillClass,
+        )}
         config={config}
       >
         <PieChart>
           {tooltip}
           <Pie
+            onClick={drill ? (item) => drill(item.payload) : undefined}
             data={chartRows}
             dataKey={series[0]?.key ?? ''}
             nameKey={pieLegendKey}
@@ -1089,7 +1171,7 @@ export function Result({
       <ChartContainer
         role="img"
         aria-label={`${definition.title} chart`}
-        className="h-72 w-full md:h-full md:min-h-0"
+        className={cn('h-72 w-full md:h-full md:min-h-0', drillClass)}
         config={config}
       >
         <BarChart data={chartRows}>
@@ -1103,6 +1185,7 @@ export function Result({
           {series.map((item) => (
             <Bar
               key={item.key}
+              onClick={drill ? (item) => drill(item.payload) : undefined}
               dataKey={item.key}
               fill={`var(--color-${item.key})`}
               fillOpacity={item.isComparison ? 0.5 : 1}
@@ -1194,10 +1277,19 @@ export function Result({
     <ChartContainer
       role="img"
       aria-label={`${definition.title} chart`}
-      className="h-72 w-full md:h-full md:min-h-0"
+      className={cn('h-72 w-full md:h-full md:min-h-0', drillClass)}
       config={config}
     >
-      <LineChart data={chartRows}>
+      <LineChart
+        data={chartRows}
+        // No active index means the click was outside the plot, for example on the legend.
+        onClick={
+          drill
+            ? (state) =>
+                state.activeIndex == null ? undefined : drill(chartRows[Number(state.activeIndex)])
+            : undefined
+        }
+      >
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={dimension.key}

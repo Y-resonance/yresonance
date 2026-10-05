@@ -109,6 +109,7 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
         request.shareToken,
         request.page,
         request.refresh,
+        request.drillPath,
       );
     case 'explainWidget':
       return explainWidget(request.dashboardId, request.widgetId, request.shareToken);

@@ -42,8 +42,10 @@ export function pivotBreakdownRows(
 export function pieBreakdownRows(rows: Record<string, unknown>[]) {
   const [dimension, breakdown, metric] = Object.keys(rows[0] ?? {});
   if (!dimension || !breakdown || !metric) return rows;
+  // The raw dimension value stays on the row so a slice can still be drilled into.
   return rows.map((row) => ({
     label: `${String(row[dimension])} · ${String(row[breakdown])}`,
+    [dimension]: row[dimension],
     [metric]: row[metric],
   }));
 }
