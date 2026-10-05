@@ -3,8 +3,8 @@
 DuckDB is noticeably slower on this preview. Four widgets loading together take a median
 3.84 seconds on 100,000 rows and 5.96 seconds on one million rows. ClickHouse takes
 0.32 and 0.58 seconds respectively. The DuckDB container's serialized query queue amplifies
-its remote Parquet read costs. These measurements establish a baseline; this PR changes
-benchmark tooling, not query execution.
+its remote Parquet read costs. These measurements establish the baseline before the
+[canvas and request optimizations](2026-10-05-canvas-performance.md).
 
 ## Measurements
 
@@ -108,8 +108,8 @@ the query queue would risk the memory limit without addressing the per-query rea
 
 For both engines, time dashboard authorization, datasource/metadata loading, and source
 resolution separately. ClickHouse already spends much more time in API preparation than in
-its small aggregate queries. Metadata reads are already parallel within `loadQueryMetadata`;
-a useful experiment would share preparation across a dashboard's widgets while preserving
+its small aggregate queries. At this baseline, metadata reads ran in parallel within `loadQueryMetadata`. The follow-up
+batches those reads and reuses metadata within creation and update requests. A further experiment would share preparation across a dashboard's widgets while preserving
 per-request authorization and freshness.
 
 ## Reproduce and inspect
