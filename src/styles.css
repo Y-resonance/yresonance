@@ -236,6 +236,92 @@ body {
     }
   }
 
+  /* Landing page motion. Everything is declared under no-preference with a `both` fill, so
+     reduced-motion visitors and older browsers render the finished state. */
+  @keyframes hero-word {
+    from {
+      opacity: 0;
+      transform: translateY(0.35em);
+      filter: blur(10px);
+    }
+  }
+
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(2rem);
+    }
+  }
+
+  @keyframes hero-tilt {
+    from {
+      transform: rotateX(5deg) scale(0.97);
+    }
+  }
+
+  @keyframes aurora-drift {
+    from {
+      transform: translate3d(-6%, -4%, 0) scale(1);
+    }
+    to {
+      transform: translate3d(6%, 5%, 0) scale(1.15);
+    }
+  }
+
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes zoom-on-scroll {
+    from {
+      opacity: 0.3;
+      transform: scale(0.9);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-word {
+      display: inline-block;
+      animation: hero-word 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .hero-rise {
+      animation: hero-rise 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .aurora {
+      animation: aurora-drift 14s ease-in-out infinite alternate;
+    }
+
+    .marquee-track {
+      animation: marquee 60s linear infinite;
+    }
+
+    .marquee:hover .marquee-track {
+      animation-play-state: paused;
+    }
+
+    /* The hero stage starts slightly tilted back and lies flat as the visitor starts scrolling. */
+    @supports (animation-timeline: scroll()) {
+      .hero-tilt {
+        transform-origin: 50% 0;
+        animation: hero-tilt linear both;
+        animation-timeline: scroll(root);
+        animation-range: 0 32rem;
+      }
+    }
+
+    @supports (animation-timeline: view()) {
+      .zoom-on-scroll {
+        animation: zoom-on-scroll linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 40%;
+      }
+    }
+  }
+
   /* Scroll-driven reveal, no JavaScript and no observer. The animation is only declared where the
      browser supports view timelines and the visitor has not asked for reduced motion, so everyone
      else renders the finished state instead of an element stuck at opacity 0. */

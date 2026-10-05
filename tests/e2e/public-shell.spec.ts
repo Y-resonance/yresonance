@@ -60,7 +60,8 @@ test('the landing page serves both product screenshots', async ({ page }) => {
 
   for (const name of [/yresonance dashboard/, /yresonance datasource screen/]) {
     const screenshot = page.getByRole('img', { name });
-    await expect(screenshot).toBeAttached();
+    // Both load lazily, so each has to come near the viewport before it is fetched.
+    await screenshot.scrollIntoViewIfNeeded();
     await expect
       .poll(() => screenshot.evaluate((image: HTMLImageElement) => image.naturalWidth))
       .toBeGreaterThan(0);
