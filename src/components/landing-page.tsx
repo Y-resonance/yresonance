@@ -131,12 +131,18 @@ function Screenshot({
   );
 }
 
-/** A soft brand-colored light that drifts slowly behind hero and closing sections. */
+/**
+ * A soft brand-colored light that drifts slowly behind hero and closing sections. The radial mask
+ * fades it out before the box edge, so the blur never ends in a visible cutoff.
+ */
 function Aurora({ className }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className={cn('pointer-events-none absolute -z-10 overflow-hidden', className)}
+      className={cn(
+        'pointer-events-none absolute -z-10 overflow-hidden mask-radial-from-20% mask-radial-to-70%',
+        className,
+      )}
     >
       <div className="aurora absolute top-1/4 left-1/4 size-1/2 rounded-full bg-primary/25 blur-[100px] dark:bg-primary/20" />
       <div className="aurora absolute top-1/3 right-1/5 size-2/5 rounded-full bg-chart-7/20 blur-[110px] [animation-delay:-7s] [animation-duration:19s]" />
