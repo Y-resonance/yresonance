@@ -186,7 +186,13 @@ function DatasourceContent() {
       ) : (
         <div className="flex flex-col gap-6">
           <div>
-            <Button variant="ghost" size="sm" className="-ml-2" render={<Link to="/datasources" />}>
+            <Button
+              nativeButton={false}
+              variant="ghost"
+              size="sm"
+              className="-ml-2"
+              render={<Link to="/datasources" />}
+            >
               <ArrowLeftIcon />
               Datasources
             </Button>
@@ -207,24 +213,30 @@ function DatasourceContent() {
               ) : null}
             </div>
           </div>
-          <DatasourceCacheSettings
-            key={`${datasourceId}:${JSON.stringify(description.cachePolicy)}`}
-            dataSourceId={datasourceId}
-            defaultTtlSeconds={
-              description.location.kind === 'clickhouse' &&
-              description.location.ownership === 'external'
-                ? description.location.cacheTtlSeconds
-                : 86_400
-            }
-            initialPolicy={description.cachePolicy ?? { mode: 'default' }}
-            onSaved={refresh}
-          />
-          <DataTableSearch
-            value={search}
-            onChange={setSearch}
-            label="Search fields"
-            placeholder="Search fields"
-          />
+          <div
+            role="toolbar"
+            aria-label="Datasource settings"
+            className="flex flex-wrap items-center justify-between gap-4"
+          >
+            <DatasourceCacheSettings
+              key={`${datasourceId}:${JSON.stringify(description.cachePolicy)}`}
+              dataSourceId={datasourceId}
+              defaultTtlSeconds={
+                description.location.kind === 'clickhouse' &&
+                description.location.ownership === 'external'
+                  ? description.location.cacheTtlSeconds
+                  : 86_400
+              }
+              initialPolicy={description.cachePolicy ?? { mode: 'default' }}
+              onSaved={refresh}
+            />
+            <DataTableSearch
+              value={search}
+              onChange={setSearch}
+              label="Search fields"
+              placeholder="Search fields"
+            />
+          </div>
           <DataTable
             table={table}
             sortLabel="Sort fields by"

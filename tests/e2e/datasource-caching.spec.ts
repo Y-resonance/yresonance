@@ -5,19 +5,29 @@ import { mockYresonanceApi } from './support/yresonance-api';
 test('datasource caching can be saved, reloaded, customized, and disabled', async ({ page }) => {
   await mockYresonanceApi(page, { isAdmin: false });
   await page.goto('/datasources/src_reporting');
-  await expect(page.getByLabel('Query caching')).toHaveValue('default');
-  await page.getByLabel('Query caching').selectOption('duration');
+  const settings = page.getByRole('dialog', { name: 'Query caching', exact: true });
+  const mode = settings.getByLabel('Query caching', { exact: true });
+  await page.getByRole('button', { name: 'Query caching: Default (24 hours)' }).click();
+  await expect(mode).toHaveValue('default');
+  await mode.selectOption('duration');
   await page.getByLabel('Reuse query results for').selectOption('custom');
   await page.getByLabel('Minutes', { exact: true }).fill('7');
   await page.getByRole('button', { name: 'Save caching' }).click();
   await expect(page.getByRole('button', { name: 'Save caching' })).toBeHidden();
   await page.reload();
+  await page.getByRole('button', { name: 'Query caching: 7 minutes' }).click();
   await expect(page.getByLabel('Minutes', { exact: true })).toHaveValue('7');
-  await page.getByLabel('Query caching').selectOption('disabled');
+  await mode.selectOption('disabled');
   await page.getByRole('button', { name: 'Save caching' }).click();
   await expect(page.getByRole('button', { name: 'Save caching' })).toBeHidden();
   await page.reload();
-  await expect(page.getByLabel('Query caching')).toHaveValue('disabled');
+  await page.getByRole('button', { name: 'Query caching: Disabled' }).click();
+  await expect(mode).toHaveValue('disabled');
+  await mode.selectOption('duration');
+  await page.keyboard.press('Escape');
+  await expect(settings).toBeHidden();
+  await page.getByRole('button', { name: 'Query caching: Disabled' }).click();
+  await expect(mode).toHaveValue('disabled');
 });
 
 for (const role of ['editor', 'viewer', 'shared'] as const) {
