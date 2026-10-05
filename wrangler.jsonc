@@ -167,6 +167,9 @@
     },
   },
   "previews": {
+    "placement": {
+      "mode": "smart",
+    },
     "vars": {
       "APP_ENV": "preview",
       "POSTHOG_ENABLED": "false",
