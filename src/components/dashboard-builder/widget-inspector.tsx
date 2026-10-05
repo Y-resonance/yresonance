@@ -410,12 +410,23 @@ function DimensionSettings({
                 tone="dimension"
                 value={definition.dimension.fieldId}
                 fields={choices}
-                onChange={(fieldId) =>
-                  void commit({
-                    ...definition,
-                    dimension: dimensionForField(definition.dimension, fieldId, fields, 'auto'),
-                  })
-                }
+                onChange={(fieldId) => {
+                  const dimension = dimensionForField(
+                    definition.dimension,
+                    fieldId,
+                    fields,
+                    'auto',
+                  );
+                  // A date top level cannot be drilled from, so its drill levels go with it.
+                  const date = fields.some(
+                    (field) => field.id === fieldId && field.semanticType === 'date',
+                  );
+                  void commit(
+                    definition.type === 'combo' || !date
+                      ? { ...definition, dimension }
+                      : { ...definition, dimension, drillDimensions: undefined },
+                  );
+                }}
               />
             </div>
             {formulaFieldId(fields, definition.dimension.fieldId) ? (
@@ -433,7 +444,9 @@ function DimensionSettings({
               commit({ ...definition, dimension: { ...definition.dimension, dateGranularity } })
             }
           />
-        ) : null}
+        ) : definition.type === 'combo' ? null : (
+          <DrillDownSettings definition={definition} fields={fields} commit={commit} />
+        )}
       </>
     );
   }
@@ -526,6 +539,76 @@ function DimensionSettings({
 }
 
 type DimensionDefinition = Extract<WidgetDefinition, { type: 'line' }>['dimension'];
+
+/**
+ * The levels a viewer can click through below the chart's dimension. Hidden for date dimensions,
+ * because a clicked date bucket cannot be filtered by equality; the server enforces the same rule.
+ */
+function DrillDownSettings({
+  definition,
+  fields,
+  commit,
+}: QuerySettingsProps & {
+  definition: Extract<WidgetDefinition, { type: 'bar' | 'pie' | 'line' }>;
+}) {
+  const levels = definition.drillDimensions ?? [];
+  const choices = fieldChoices(
+    fields.filter((field) => field.role === 'dimension'),
+    'Fields',
+  );
+  const setLevels = (drillDimensions: DimensionDefinition[]) =>
+    void commit({
+      ...definition,
+      drillDimensions: drillDimensions.length ? drillDimensions : undefined,
+    });
+  return (
+    <Field>
+      <FieldLabel>Drill-down</FieldLabel>
+      <div className="flex flex-col gap-1.5">
+        {levels.map((level, index) => (
+          <div key={`${level.fieldId}-${index}`} className="flex items-center gap-1">
+            <FieldPicker
+              appearance="assignment"
+              label={`Drill level ${index + 1}`}
+              prefix={choices.find((field) => field.id === level.fieldId)?.prefix ?? 'ABC'}
+              tone="dimension"
+              value={level.fieldId}
+              fields={choices}
+              onChange={(fieldId) =>
+                setLevels(
+                  levels.map((item, itemIndex) =>
+                    itemIndex === index ? dimensionForField(item, fieldId, fields, 'auto') : item,
+                  ),
+                )
+              }
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Remove drill level ${index + 1}`}
+              onClick={() => setLevels(levels.filter((_, itemIndex) => itemIndex !== index))}
+            >
+              <Trash2Icon />
+            </Button>
+          </div>
+        ))}
+        <FieldPicker
+          appearance="add"
+          label="Add drill level"
+          tone="dimension"
+          value=""
+          fields={choices}
+          onChange={(fieldId) =>
+            setLevels([...levels, dimensionForField({ fieldId }, fieldId, fields, 'auto')])
+          }
+        />
+      </div>
+      {levels.length ? (
+        <FieldDescription>Viewers click a value to open the next level.</FieldDescription>
+      ) : null}
+    </Field>
+  );
+}
 
 function dimensionForField(
   dimension: DimensionDefinition,

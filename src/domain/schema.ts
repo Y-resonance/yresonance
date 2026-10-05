@@ -182,6 +182,11 @@ const dimensionSchema = z.object({
 // same colour. 'category' hands each bar its own palette slot instead.
 export const barColorBySchema = z.enum(['series', 'category']);
 
+// Further levels a viewer can drill into from the chart's `dimension`, in order. The editor defines
+// the levels; viewers only pick values. Every level they click is filtered by equality, so date
+// fields are only allowed as the last level.
+const drillDimensionsSchema = z.array(dimensionSchema).optional();
+
 const comparisonSchema = z.object({ mode: z.enum(['none', 'previousPeriod', 'previousYear']) });
 const sortSchema = z.object({
   target: z.discriminatedUnion('kind', [
@@ -244,6 +249,7 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     ...cardBase,
     type: z.literal('line'),
     dimension: dimensionSchema,
+    drillDimensions: drillDimensionsSchema,
     metrics: z.array(metricSchema).min(1),
     comparison: comparisonSchema.optional(),
   }),
@@ -273,6 +279,7 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     type: z.literal('bar'),
     metric: metricSchema,
     dimension: dimensionSchema,
+    drillDimensions: drillDimensionsSchema,
     breakdownDimension: dimensionSchema.optional(),
     comparison: comparisonSchema.optional(),
     colorBy: barColorBySchema.optional(),
@@ -284,6 +291,7 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     type: z.literal('pie'),
     metric: metricSchema,
     dimension: dimensionSchema,
+    drillDimensions: drillDimensionsSchema,
     breakdownDimension: dimensionSchema.optional(),
     sort: z.array(sortSchema).optional(),
     limit: z.number().int().positive().max(500).optional(),
@@ -356,6 +364,9 @@ export const dashboardDocumentSchema = dashboardDocumentFields
     { message: 'Canvas rows must contain every widget.', path: ['canvasRows'] },
   );
 
+// One clicked value per drilled level, starting at the chart's top-level `dimension`.
+export const drillPathSchema = z.array(z.union([z.string(), z.number(), z.boolean()]));
+
 export const controlStateSchema = z.object({
   dateRange: dateRangeSchema.optional(),
   values: z.record(z.string(), z.array(z.unknown())).optional(),
@@ -387,6 +398,7 @@ export type WidgetMetric = z.infer<typeof metricSchema>;
 export type ComboMetric = z.infer<typeof comboMetricSchema>;
 export type DateGranularity = z.infer<typeof dateGranularitySchema>;
 export type ControlState = z.infer<typeof controlStateSchema>;
+export type DrillPath = z.infer<typeof drillPathSchema>;
 export type DateRange = z.infer<typeof dateRangeSchema>;
 export type FieldRole = z.infer<typeof fieldRoleSchema>;
 export type SemanticType = z.infer<typeof semanticTypeSchema>;
