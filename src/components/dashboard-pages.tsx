@@ -7,6 +7,14 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Field, FieldLabel, FieldGroup } from './ui/field';
 import { Switch } from './ui/switch';
+import { Ellipsis, Plus } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+} from './ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -73,60 +81,129 @@ export function DashboardPages({
 
   return (
     <>
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
-        {dashboard.pages.length > 1 ? (
-          <Tabs
-            value={page?.id}
-            onValueChange={(value) => onPageChange(String(value))}
-            className="min-w-0 max-w-full overflow-x-auto"
-          >
-            <TabsList variant="line" aria-label="Dashboard pages">
-              {dashboard.pages.map((item) => (
-                <TabsTrigger key={item.id} value={item.id} disabled={disabled || saving}>
+      {dashboard.pages.length > 1 || canEdit ? (
+        <Tabs
+          value={page?.id}
+          onValueChange={(value) => onPageChange(String(value))}
+          className="min-w-0 max-w-full overflow-x-auto"
+        >
+          <TabsList variant="line" aria-label="Dashboard pages">
+            {dashboard.pages.map((item) => (
+              <div key={item.id} className="flex h-full items-center">
+                <TabsTrigger value={item.id} disabled={disabled || saving}>
                   {item.name}
                   {item.hidden ? ' (draft)' : ''}
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        ) : null}
-        {canEdit ? (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={disabled || saving}
-              onClick={() => {
-                setAdding(true);
-                setName('');
-                setHidden(false);
-                setError(undefined);
-                setConfirmRemoval(false);
-                setOpen(true);
-              }}
-            >
-              Add page
-            </Button>
-            {page ? (
+                {canEdit && item.id === page?.id ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={<Button variant="ghost" size="icon-sm" />}
+                      aria-label={`Page actions for ${item.name}`}
+                      disabled={disabled || saving}
+                    >
+                      <Ellipsis />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setAdding(false);
+                            setName(item.name);
+                            setHidden(item.hidden);
+                            setError(undefined);
+                            setConfirmRemoval(false);
+                            setOpen(true);
+                          }}
+                        >
+                          Rename page
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            void mutate(() =>
+                              callApi({
+                                action: 'updatePage',
+                                dashboardId: dashboard.id,
+                                pageId: item.id,
+                                hidden: !item.hidden,
+                              }),
+                            )
+                          }
+                        >
+                          {item.hidden ? 'Publish page' : 'Hide page'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={dashboard.pages[0]?.id === item.id}
+                          onClick={() =>
+                            void mutate(() =>
+                              callApi({
+                                action: 'updatePage',
+                                dashboardId: dashboard.id,
+                                pageId: item.id,
+                                position: dashboard.pages.indexOf(item) - 1,
+                              }),
+                            )
+                          }
+                        >
+                          Move left
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={dashboard.pages.at(-1)?.id === item.id}
+                          onClick={() =>
+                            void mutate(() =>
+                              callApi({
+                                action: 'updatePage',
+                                dashboardId: dashboard.id,
+                                pageId: item.id,
+                                position: dashboard.pages.indexOf(item) + 1,
+                              }),
+                            )
+                          }
+                        >
+                          Move right
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={dashboard.pages.length === 1}
+                          onClick={() => {
+                            setError(undefined);
+                            setConfirmRemoval(true);
+                            setOpen(true);
+                          }}
+                        >
+                          Remove page
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+            ))}
+            {canEdit ? (
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon-sm"
+                aria-label="Add page"
                 disabled={disabled || saving}
                 onClick={() => {
-                  setAdding(false);
-                  setName(page.name);
-                  setHidden(page.hidden);
+                  setAdding(true);
+                  setName('');
+                  setHidden(false);
                   setError(undefined);
                   setConfirmRemoval(false);
                   setOpen(true);
                 }}
               >
-                Page settings
+                <Plus />
               </Button>
             ) : null}
-          </div>
-        ) : null}
-      </div>
+          </TabsList>
+        </Tabs>
+      ) : null}
+      {error && !open ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
       {!page ? <p className="text-sm text-muted-foreground">No published pages.</p> : null}
       <Dialog
         open={open}
@@ -137,7 +214,7 @@ export function DashboardPages({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {confirmRemoval ? `Remove ${page?.name}?` : adding ? 'Add page' : 'Page settings'}
+              {confirmRemoval ? `Remove ${page?.name}?` : adding ? 'Add page' : 'Rename page'}
             </DialogTitle>
             <DialogDescription>
               {confirmRemoval
@@ -184,62 +261,18 @@ export function DashboardPages({
                     onChange={(event) => setName(event.target.value)}
                   />
                 </Field>
-                <Field orientation="horizontal">
-                  <FieldLabel htmlFor="page-hidden">Draft</FieldLabel>
-                  <Switch
-                    id="page-hidden"
-                    checked={hidden}
-                    disabled={saving}
-                    onCheckedChange={setHidden}
-                  />
-                </Field>
+                {adding ? (
+                  <Field orientation="horizontal">
+                    <FieldLabel htmlFor="page-hidden">Draft</FieldLabel>
+                    <Switch
+                      id="page-hidden"
+                      checked={hidden}
+                      disabled={saving}
+                      onCheckedChange={setHidden}
+                    />
+                  </Field>
+                ) : null}
               </FieldGroup>
-              {!adding && page ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={saving || dashboard.pages[0]?.id === page.id}
-                    onClick={() =>
-                      void mutate(() =>
-                        callApi({
-                          action: 'updatePage',
-                          dashboardId: dashboard.id,
-                          pageId: page.id,
-                          position: dashboard.pages.indexOf(page) - 1,
-                        }),
-                      )
-                    }
-                  >
-                    Move left
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={saving || dashboard.pages.at(-1)?.id === page.id}
-                    onClick={() =>
-                      void mutate(() =>
-                        callApi({
-                          action: 'updatePage',
-                          dashboardId: dashboard.id,
-                          pageId: page.id,
-                          position: dashboard.pages.indexOf(page) + 1,
-                        }),
-                      )
-                    }
-                  >
-                    Move right
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={saving || dashboard.pages.length === 1}
-                    onClick={() => setConfirmRemoval(true)}
-                  >
-                    Remove page
-                  </Button>
-                </div>
-              ) : null}
               <DialogFooter>
                 <Button
                   disabled={saving || !name.trim()}
@@ -253,7 +286,6 @@ export function DashboardPages({
                               dashboardId: dashboard.id,
                               pageId: page!.id,
                               name,
-                              hidden,
                             }),
                       adding,
                     )

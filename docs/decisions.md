@@ -61,7 +61,8 @@ explain. Update it when a decision changes, not when an implementation detail do
 - Dashboards have ordered pages. Shares and grants cover the dashboard. Hidden pages are drafts:
   viewers cannot read their definitions or query their widgets, and their controls do not filter
   published pages. A dashboard may have no published pages. It must keep at least one stored page.
-  Navigation is omitted when only one page is available to the current user.
+  Viewer navigation is omitted when only one page is available. Editors keep the page tab, its
+  action menu, and a trailing add button available even with one stored page.
 - Date and filter selections survive page navigation. Removing a populated page requires explicit
   confirmation, and widget IDs stay unique across the dashboard so query and control references
   remain stable when a widget moves.

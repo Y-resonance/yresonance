@@ -57,7 +57,7 @@ test('editors create, rename, reorder, hide, publish, and remove pages through t
 }) => {
   await mockYresonanceApi(page);
   await page.goto('/dashboards/dash_demo');
-  await expect(page.getByRole('tablist', { name: 'Dashboard pages' })).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Add page', exact: true }).click();
   await page.getByLabel('Page name').fill('Channels');
   await page.getByRole('dialog').getByRole('button', { name: 'Add page', exact: true }).click();
@@ -65,25 +65,29 @@ test('editors create, rename, reorder, hide, publish, and remove pages through t
     'aria-selected',
     'true',
   );
-  await page.getByRole('button', { name: 'Page settings' }).click();
+  await expect(page.getByRole('button', { name: /Page actions for/ })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Page actions for Channels' }).click();
+  await page.getByRole('menuitem', { name: 'Rename page' }).click();
   await page.getByLabel('Page name').fill('Delivery');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Page settings' }).click();
-  await page.getByRole('button', { name: 'Move left' }).click();
+  await page.getByRole('button', { name: 'Page actions for Delivery' }).click();
+  await page.getByRole('menuitem', { name: 'Move left' }).click();
   await expect(page.getByRole('tab').first()).toHaveText('Delivery');
-  await page.getByRole('button', { name: 'Page settings' }).click();
-  await page.getByRole('switch', { name: 'Draft' }).click();
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'Page actions for Delivery' }).click();
+  await page.getByRole('menuitem', { name: 'Hide page' }).click();
   await expect(page.getByRole('tab', { name: 'Delivery (draft)', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Page settings' }).click();
-  await page.getByRole('switch', { name: 'Draft' }).click();
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Page settings' }).click();
-  await page.getByRole('button', { name: 'Remove page', exact: true }).click();
+  await page.getByRole('button', { name: 'Page actions for Delivery' }).click();
+  await page.getByRole('menuitem', { name: 'Publish page' }).click();
+  await expect(page.getByRole('tab', { name: 'Delivery', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Page actions for Delivery' }).click();
+  await page.getByRole('menuitem', { name: 'Remove page', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('cannot be undone');
   await page.getByRole('dialog').getByRole('button', { name: 'Remove page', exact: true }).click();
-  await expect(page.getByRole('tablist', { name: 'Dashboard pages' })).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
   await expect(page.getByText('Media spend', { exact: true })).toBeVisible();
+  await page.getByRole('switch', { name: 'Viewer mode' }).click();
+  await expect(page.getByRole('tablist', { name: 'Dashboard pages' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add page', exact: true })).toHaveCount(0);
 });
 
 test('viewers get an empty state when every page is a draft', async ({ page }) => {
