@@ -103,7 +103,7 @@ export function DashboardPages({
                     >
                       <Ellipsis />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent>
+                    <DropdownMenuContent className="min-w-44">
                       <DropdownMenuGroup>
                         <DropdownMenuItem
                           onClick={() => {
