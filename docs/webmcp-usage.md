@@ -22,7 +22,7 @@ Tools by page, read-only first, then writes:
   `shareDashboard`, `createDashboard`.
 - Unlisted link: `getDashboard`, `queryWidget`, `explainWidget`, `getControlOptions`,
   `describeDatasource`. No writes.
-- Datasources: `listDataSources`, `listR2Objects`. Writes: `registerDatasource`.
+- Datasources: `listDataSources`, `listR2Objects`. Writes: `registerDatasource`, `updateDatasource`.
 - Admins additionally get `updateFieldMetadata` and `upsertLibraryMetric` on the datasource and
   metrics pages.
 
@@ -42,3 +42,8 @@ Page writes return the stored dashboard. `addWidget`, `copyWidget`, and `updateL
 placements. `updatePage` renames, changes draft status, or moves a page to a zero-based position.
 `removePage` requires `confirm: true` when it contains widgets and cannot remove the last page.
 View tools on shared links and viewer grants can read and query only published pages.
+
+`registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an
+existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from
+1 to 86400. `queryWidget` accepts `refresh: true` to bypass and replace a cached result, including
+on shared links. Expiry alone does not request data or refresh an open dashboard.

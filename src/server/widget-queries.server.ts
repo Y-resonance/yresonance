@@ -46,6 +46,7 @@ export async function queryWidget(
   state: ControlState | undefined,
   shareToken?: string,
   page = 0,
+  refresh = false,
   drillPath: DrillPath = [],
 ) {
   const access = await authorizeDashboard(dashboardId, 'viewer', shareToken);
@@ -88,10 +89,15 @@ export async function queryWidget(
       ? widget.definition.resultLimit.amount
       : undefined;
   const datasourceIdentity = await datasourceOperation(() => connector.cacheIdentity(dataSource));
+  const policy = dataSource.cachePolicy ?? { mode: 'default' };
   const ttlSeconds =
-    dataSource.location.kind === 'clickhouse' && dataSource.location.ownership === 'external'
-      ? dataSource.location.cacheTtlSeconds
-      : 86_400;
+    policy.mode === 'disabled'
+      ? 0
+      : policy.mode === 'duration'
+        ? policy.ttlSeconds
+        : dataSource.location.kind === 'clickhouse' && dataSource.location.ownership === 'external'
+          ? dataSource.location.cacheTtlSeconds
+          : 86_400;
   const cacheKey = await hashJson({
     workspaceId: dataSource.workspaceId,
     datasourceId: dataSource.id,
@@ -111,7 +117,7 @@ export async function queryWidget(
     page: pageSize === undefined ? 0 : page,
   });
   const cached =
-    ttlSeconds > 0
+    ttlSeconds > 0 && !refresh
       ? await env.QUERY_CACHE.get<{ cachedAt: number; result: Record<string, unknown> }>(
           cacheKey,
           'json',
@@ -121,7 +127,11 @@ export async function queryWidget(
     console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'hit' });
     return { ...cached.result, columns, cache: 'hit' };
   }
-  console.info('yresonance.query_cache', { dashboardId, widgetId, outcome: 'miss' });
+  console.info('yresonance.query_cache', {
+    dashboardId,
+    widgetId,
+    outcome: ttlSeconds === 0 ? 'disabled' : refresh ? 'refresh' : 'miss',
+  });
   const pageOffset = pageSize === undefined ? undefined : page * pageSize;
   const [{ rows, comparisonRows: alignedComparisonRows }, scaleBounds] = await Promise.all([
     executeWidgetQuery(query, pageOffset),
@@ -145,10 +155,31 @@ export async function queryWidget(
     cache: 'miss',
     ...(pageSize === undefined ? {} : { page, hasMore }),
   };
-  if (ttlSeconds > 0)
-    await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
-      expirationTtl: Math.max(60, ttlSeconds),
-    });
+  if (ttlSeconds > 0) {
+    // KV permits one write per key per second. Identical widgets can refresh together.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
+          expirationTtl: Math.max(60, ttlSeconds),
+        });
+        break;
+      } catch (error) {
+        if (attempt === 0 && error instanceof Error && error.message.includes('429')) {
+          console.info('yresonance.query_cache_write', { dashboardId, widgetId, outcome: 'retry' });
+          await new Promise((resolve) => setTimeout(resolve, 1100));
+          continue;
+        }
+        // A cache outage must not discard rows that the datasource already returned.
+        console.warn('yresonance.query_cache_write', {
+          dashboardId,
+          widgetId,
+          outcome: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        });
+        break;
+      }
+    }
+  }
   return result;
 }
 

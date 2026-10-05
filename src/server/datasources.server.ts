@@ -54,6 +54,23 @@ export async function listDataSources() {
   return sourceRows.map((row) => ({ ...row, fieldCount: totals.get(row.id) ?? 0 }));
 }
 
+export async function updateDatasource(
+  request: Extract<ApiRequest, { action: 'updateDatasource' }>,
+) {
+  const session = await requireSession();
+  const source = await loadDataSource(request.dataSourceId, session.workspace.id);
+  await database()
+    .update(dataSources)
+    .set({ cachePolicy: request.cachePolicy, updatedAt: new Date().toISOString() })
+    .where(and(eq(dataSources.id, source.id), eq(dataSources.workspaceId, session.workspace.id)));
+  console.info('yresonance.datasource_cache_policy', {
+    datasourceId: source.id,
+    workspaceId: session.workspace.id,
+    cachePolicy: request.cachePolicy,
+  });
+  return { ...source, cachePolicy: request.cachePolicy };
+}
+
 export async function describeDatasource(
   dataSourceId: string,
   dashboardId?: string,
@@ -226,6 +243,7 @@ export async function registerDatasource(
       id: `ds_${crypto.randomUUID()}`,
       workspaceId: session.workspace.id,
       name: request.name,
+      cachePolicy: request.cachePolicy,
       connectorType: connector.type,
       location: request.location,
     };
@@ -291,6 +309,7 @@ export async function registerDatasource(
       id: `ds_${crypto.randomUUID()}`,
       workspaceId: session.workspace.id,
       name: request.name,
+      cachePolicy: request.cachePolicy,
       connectorType: connector.type,
       location: request.location,
     };
@@ -306,9 +325,9 @@ export async function registerDatasource(
     }
     const inspection =
       imported?.inspection ?? (await datasourceOperation(() => connector.inspect(pending)));
-    const dataSource: DataSourceRecord = imported?.dataSource ?? {
-      ...pending,
-      version: inspection.version,
+    const dataSource: DataSourceRecord = {
+      ...(imported?.dataSource ?? { ...pending, version: inspection.version }),
+      cachePolicy: request.cachePolicy,
     };
     const discovered = inspection.description.map((column) =>
       seedField(dataSource.id, column, inspection.samples),
@@ -338,6 +357,7 @@ export async function registerDatasource(
         name: dataSource.name,
         connectorType: dataSource.connectorType,
         location: dataSource.location,
+        cachePolicy: dataSource.cachePolicy,
         version: dataSource.version,
         createdAt: now,
         updatedAt: now,

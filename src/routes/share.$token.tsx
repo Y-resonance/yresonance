@@ -1,3 +1,7 @@
+import {
+  DashboardQueryRefresh,
+  DashboardRefreshButton,
+} from '#/components/dashboard-query-refresh';
 import { DashboardPages } from '#/components/dashboard-pages';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { createFileRoute } from '@tanstack/react-router';
@@ -50,45 +54,52 @@ function SharedDashboard() {
   // The main width matches the signed-in dashboard, so an editor previewing viewer mode sees
   // what a share-link recipient gets.
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[100rem] px-4 py-6 sm:px-6">
-      <header className="mb-6">
-        <p className="text-sm font-medium text-muted-foreground">yresonance</p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {dashboard?.name ?? 'Shared dashboard'}
-        </h1>
-      </header>
-      {error ? (
-        <ErrorState error={error} />
-      ) : !dashboard ? (
-        <LoadingState />
-      ) : (
-        <div className="flex flex-col gap-4">
-          <DashboardPages
-            dashboard={dashboard}
-            pageId={search.page}
-            shareToken={token}
-            onPageChange={(page) => void navigate({ search: (current) => ({ ...current, page }) })}
-          />
-          <DashboardView
-            pageId={activeDashboardPage(dashboard, search.page)?.id}
-            dashboard={dashboard}
-            shareToken={token}
-            dateRange={parseDateRangeSearch(search.dateRange)}
-            onDateRangeChange={(range) => {
-              const defaultRange = dashboardDateControlRange(dashboard);
-              void navigate({
-                search: (current) => ({
-                  ...current,
-                  dateRange:
-                    defaultRange && sameDateRange(defaultRange, range)
-                      ? undefined
-                      : dateRangeSearchValue(range),
-                }),
-              });
-            }}
-          />
-        </div>
-      )}
-    </main>
+    <DashboardQueryRefresh key={token}>
+      <main className="mx-auto min-h-screen w-full max-w-[100rem] px-4 py-6 sm:px-6">
+        <header className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">yresonance</p>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {dashboard?.name ?? 'Shared dashboard'}
+            </h1>
+          </div>
+          {dashboard ? <DashboardRefreshButton /> : null}
+        </header>
+        {error ? (
+          <ErrorState error={error} />
+        ) : !dashboard ? (
+          <LoadingState />
+        ) : (
+          <div className="flex flex-col gap-4">
+            <DashboardPages
+              dashboard={dashboard}
+              pageId={search.page}
+              shareToken={token}
+              onPageChange={(page) =>
+                void navigate({ search: (current) => ({ ...current, page }) })
+              }
+            />
+            <DashboardView
+              pageId={activeDashboardPage(dashboard, search.page)?.id}
+              dashboard={dashboard}
+              shareToken={token}
+              dateRange={parseDateRangeSearch(search.dateRange)}
+              onDateRangeChange={(range) => {
+                const defaultRange = dashboardDateControlRange(dashboard);
+                void navigate({
+                  search: (current) => ({
+                    ...current,
+                    dateRange:
+                      defaultRange && sameDateRange(defaultRange, range)
+                        ? undefined
+                        : dateRangeSearchValue(range),
+                  }),
+                });
+              }}
+            />
+          </div>
+        )}
+      </main>
+    </DashboardQueryRefresh>
   );
 }

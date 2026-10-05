@@ -1,4 +1,9 @@
-import type { DataSourceLocation, FieldRole, SemanticType } from '#/domain/schema';
+import type {
+  DatasourceCachePolicy,
+  DataSourceLocation,
+  FieldRole,
+  SemanticType,
+} from '#/domain/schema';
 
 export interface DataSourceRecord {
   id: string;
@@ -6,6 +11,7 @@ export interface DataSourceRecord {
   name: string;
   connectorType: string;
   location: DataSourceLocation;
+  cachePolicy?: DatasourceCachePolicy;
   version: string;
 }
 

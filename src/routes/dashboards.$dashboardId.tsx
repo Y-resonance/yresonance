@@ -1,3 +1,7 @@
+import {
+  DashboardQueryRefresh,
+  DashboardRefreshButton,
+} from '#/components/dashboard-query-refresh';
 import { DashboardPages } from '#/components/dashboard-pages';
 import { dashboardWidgets } from '#/domain/schema';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
@@ -111,118 +115,127 @@ function DashboardContent() {
       : payload.dashboard);
   const activePage = displayedDashboard && activeDashboardPage(displayedDashboard, search.page);
   return (
-    <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
-      {error ? (
-        <ErrorState error={error} />
-      ) : !payload ? (
-        <LoadingState />
-      ) : (
-        <div className="flex flex-col gap-5">
-          <header className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-semibold tracking-tight">{payload.dashboard.name}</h1>
-                <Badge variant="secondary">{previewingAsViewer ? 'viewer' : payload.role}</Badge>
+    <DashboardQueryRefresh key={dashboardId}>
+      <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
+        {error ? (
+          <ErrorState error={error} />
+        ) : !payload ? (
+          <LoadingState />
+        ) : (
+          <div className="flex flex-col gap-5">
+            <header className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-semibold tracking-tight">
+                    {payload.dashboard.name}
+                  </h1>
+                  <Badge variant="secondary">{previewingAsViewer ? 'viewer' : payload.role}</Badge>
+                </div>
               </div>
-            </div>
-            {/* The editor controls stay put in both modes so the switch never moves under the
+              {/* The editor controls stay put in both modes so the switch never moves under the
                 cursor, even though a real viewer sees neither of them. */}
-            {canEdit ? (
               <div className="flex items-center gap-3">
-                {editing && webMcpAvailable ? (
-                  <Label className="text-muted-foreground" htmlFor="agent-mode">
-                    Agent mode
-                    <Switch
-                      id="agent-mode"
-                      checked={agentMode.enabled}
-                      onCheckedChange={(checked) => setAgentMode(selectAgentMode(checked))}
+                <DashboardRefreshButton />
+                {canEdit ? (
+                  <div className="flex items-center gap-3">
+                    {editing && webMcpAvailable ? (
+                      <Label className="text-muted-foreground" htmlFor="agent-mode">
+                        Agent mode
+                        <Switch
+                          id="agent-mode"
+                          checked={agentMode.enabled}
+                          onCheckedChange={(checked) => setAgentMode(selectAgentMode(checked))}
+                        />
+                      </Label>
+                    ) : null}
+                    <Label className="text-muted-foreground" htmlFor="viewer-mode">
+                      Viewer mode
+                      <Switch
+                        id="viewer-mode"
+                        checked={previewingAsViewer}
+                        onCheckedChange={(checked) =>
+                          void navigate({
+                            search: (current) => ({
+                              ...current,
+                              preview: checked ? ('viewer' as const) : undefined,
+                            }),
+                          })
+                        }
+                      />
+                    </Label>
+                    <SaveStatusIndicator status={saveStatus} />
+                    <DuplicateDashboard
+                      dashboard={{
+                        id: dashboardId,
+                        name: payload.dashboard.name,
+                        dataSourceIds: [
+                          ...new Set(
+                            dashboardWidgets(payload.dashboard).flatMap((widget) =>
+                              'dataSourceId' in widget.definition
+                                ? [widget.definition.dataSourceId]
+                                : [],
+                            ),
+                          ),
+                        ],
+                      }}
+                      dataSources={payload.dataSources}
+                      disabled={saveStatus !== 'saved'}
                     />
-                  </Label>
+                    <DashboardSharing
+                      dashboardId={dashboardId}
+                      sharing={payload.sharing ?? { links: [], grants: [] }}
+                      refresh={refresh}
+                    />
+                  </div>
                 ) : null}
-                <Label className="text-muted-foreground" htmlFor="viewer-mode">
-                  Viewer mode
-                  <Switch
-                    id="viewer-mode"
-                    checked={previewingAsViewer}
-                    onCheckedChange={(checked) =>
-                      void navigate({
-                        search: (current) => ({
-                          ...current,
-                          preview: checked ? ('viewer' as const) : undefined,
-                        }),
-                      })
-                    }
-                  />
-                </Label>
-                <SaveStatusIndicator status={saveStatus} />
-                <DuplicateDashboard
-                  dashboard={{
-                    id: dashboardId,
-                    name: payload.dashboard.name,
-                    dataSourceIds: [
-                      ...new Set(
-                        dashboardWidgets(payload.dashboard).flatMap((widget) =>
-                          'dataSourceId' in widget.definition
-                            ? [widget.definition.dataSourceId]
-                            : [],
-                        ),
-                      ),
-                    ],
-                  }}
-                  dataSources={payload.dataSources}
-                  disabled={saveStatus !== 'saved'}
-                />
-                <DashboardSharing
-                  dashboardId={dashboardId}
-                  sharing={payload.sharing ?? { links: [], grants: [] }}
-                  refresh={refresh}
-                />
               </div>
+            </header>
+            <DashboardPages
+              dashboard={displayedDashboard!}
+              pageId={activePage?.id}
+              canEdit={editing}
+              disabled={saveStatus === 'saving'}
+              refresh={refresh}
+              onPageChange={(page) =>
+                void navigate({ search: (current) => ({ ...current, page }) })
+              }
+            />
+            {activePage ? (
+              editing && !agentMode.enabled ? (
+                <DashboardBuilder
+                  key={activePage.id}
+                  controlState={builderControlState}
+                  setControlState={setBuilderControlState}
+                  dashboard={payload.dashboard}
+                  pageId={activePage.id}
+                  dataSources={payload.dataSources}
+                  refresh={refresh}
+                  onSaveStatusChange={setSaveStatus}
+                />
+              ) : (
+                <DashboardView
+                  dashboard={displayedDashboard!}
+                  pageId={activePage.id}
+                  dateRange={parseDateRangeSearch(search.dateRange)}
+                  onDateRangeChange={(range) => {
+                    const defaultRange = dashboardDateControlRange(payload.dashboard);
+                    void navigate({
+                      search: (current) => ({
+                        ...current,
+                        dateRange:
+                          defaultRange && sameDateRange(defaultRange, range)
+                            ? undefined
+                            : dateRangeSearchValue(range),
+                      }),
+                    });
+                  }}
+                />
+              )
             ) : null}
-          </header>
-          <DashboardPages
-            dashboard={displayedDashboard!}
-            pageId={activePage?.id}
-            canEdit={editing}
-            disabled={saveStatus === 'saving'}
-            refresh={refresh}
-            onPageChange={(page) => void navigate({ search: (current) => ({ ...current, page }) })}
-          />
-          {activePage ? (
-            editing && !agentMode.enabled ? (
-              <DashboardBuilder
-                key={activePage.id}
-                controlState={builderControlState}
-                setControlState={setBuilderControlState}
-                dashboard={payload.dashboard}
-                pageId={activePage.id}
-                dataSources={payload.dataSources}
-                refresh={refresh}
-                onSaveStatusChange={setSaveStatus}
-              />
-            ) : (
-              <DashboardView
-                dashboard={displayedDashboard!}
-                pageId={activePage.id}
-                dateRange={parseDateRangeSearch(search.dateRange)}
-                onDateRangeChange={(range) => {
-                  const defaultRange = dashboardDateControlRange(payload.dashboard);
-                  void navigate({
-                    search: (current) => ({
-                      ...current,
-                      dateRange:
-                        defaultRange && sameDateRange(defaultRange, range)
-                          ? undefined
-                          : dateRangeSearchValue(range),
-                    }),
-                  });
-                }}
-              />
-            )
-          ) : null}
-        </div>
-      )}
-    </main>
+          </div>
+        )}
+      </main>
+    </DashboardQueryRefresh>
   );
 }
 
