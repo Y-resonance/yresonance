@@ -513,14 +513,15 @@ function QueryCard({
   const definition = widget.definition;
   // Compare query inputs by content, since saves and refreshes replace their objects.
   const definitionKey = stableStringify(definition);
-  const queryControls = controlState;
+  // Empty selections are left out so a control that only gains an empty entry does not re-run
+  // the query. Controls with defaults always carry values, so no default is hidden by this.
   const controlsKey = stableStringify({
     dateRange: controlState.dateRange,
     values: Object.fromEntries(
       Object.entries(controlState.values ?? {}).filter(([, values]) => values.length > 0),
     ),
   });
-  const { revision, changePending } = useDashboardQueryRefresh();
+  const { revision, inputsRevision, changePending } = useDashboardQueryRefresh();
   const refreshed = useRef(revision);
   const [rows, setRows] = useState<Record<string, unknown>[]>();
   const [columns, setColumns] = useState<QueryResultColumn[]>();
@@ -567,8 +568,8 @@ function QueryCard({
     }>(
       widgetQueryRequest({
         dashboardId,
-        widget: { ...widget, definition },
-        controlState: queryControls,
+        widget,
+        controlState,
         drillPath: drillPath.length ? drillPath.map((step) => step.value) : undefined,
         preview: preview ?? false,
         shareToken,
@@ -603,6 +604,7 @@ function QueryCard({
     };
   }, [
     revision,
+    inputsRevision,
     changePending,
     controlsKey,
     dashboardId,

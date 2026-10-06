@@ -257,7 +257,6 @@ export function BuilderCanvas({
                     ))
                 : null}
               <GridLayout
-                key="canvas-grid"
                 // The grid only accepts drops on its own element, which otherwise ends at the
                 // lowest widget, so it has to span the spare rows (all of an empty canvas).
                 style={{ minHeight: canvasHeight }}

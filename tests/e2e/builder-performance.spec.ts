@@ -6,7 +6,8 @@ import { apiRequestSchema } from '#/api/contracts';
 test.use({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
 
 test('moving a widget keeps its in-flight query and skips sharing lookups', async ({ page }) => {
-  await mockYresonanceApi(page, { role: 'editor' });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.sharing.links.push({ token: 'kept-link', url: '/share/kept-link' });
   let release = () => {};
   const queryGate = new Promise<void>((resolve) => {
     release = resolve;
@@ -38,6 +39,9 @@ test('moving a widget keeps its in-flight query and skips sharing lookups', asyn
   release();
   await expect(card.locator('[data-slot="skeleton"]')).toHaveCount(0);
   expect(queries).toBe(initialQueries);
+  // The refresh carried no sharing payload, so the dialog must still list the loaded link.
+  await page.getByRole('button', { name: 'Share', exact: true }).first().click();
+  await expect(page.getByRole('link', { name: /\/share\/kept-link$/ })).toBeVisible();
 });
 
 for (const outcome of ['saved', 'failed'] as const) {

@@ -78,6 +78,7 @@ function DashboardContent() {
   const [error, setError] = useState<string>();
   const [saveStatus, setSaveStatus] = useState<DashboardSaveStatus>('saved');
   const [agentMode, setAgentMode] = useState(initialAgentModeState);
+  const [queryInputsRevision, setQueryInputsRevision] = useState(0);
   const loadDashboard = useCallback(
     async (includeSharing = true) => {
       try {
@@ -107,6 +108,12 @@ function DashboardContent() {
   const refresh = useCallback(() => loadDashboard(false), [loadDashboard]);
   const refreshSharing = useCallback(() => loadDashboard(true), [loadDashboard]);
   useEffect(() => void refreshSharing().catch(() => undefined), [refreshSharing]);
+  // Agent tools can change inputs that widget definitions do not carry (timezone, default date
+  // range, fields, metrics), so their mutations re-run the widget queries.
+  const refreshAfterTool = useCallback(async () => {
+    await refreshSharing();
+    setQueryInputsRevision((value) => value + 1);
+  }, [refreshSharing]);
   const canEdit = payload?.role === 'admin' || payload?.role === 'editor';
   const previewingAsViewer = canEdit && search.preview === 'viewer';
   // Viewer preview removes editor permissions and WebMCP write tools. Agent mode only swaps out
@@ -120,7 +127,7 @@ function DashboardContent() {
     canEdit: editing,
     isAdmin: payload?.role === 'admin' && editing,
     onToolUse: activateAgentMode,
-    onMutation: refreshSharing,
+    onMutation: refreshAfterTool,
   });
   const displayedDashboard =
     payload &&
@@ -129,7 +136,7 @@ function DashboardContent() {
       : payload.dashboard);
   const activePage = displayedDashboard && activeDashboardPage(displayedDashboard, search.page);
   return (
-    <DashboardQueryRefresh key={dashboardId}>
+    <DashboardQueryRefresh key={dashboardId} inputsRevision={queryInputsRevision}>
       <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
         {error ? (
           <ErrorState error={error} />
