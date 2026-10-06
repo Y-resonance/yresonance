@@ -16,10 +16,6 @@ Analytics use the non-production `yresonance_product_preview` dataset. ClickHous
 with the branch resources on PR closure. Preview build settings and GitHub cleanup secrets
 use the restricted `CLICKHOUSE_PREVIEW_*` credentials documented in [ClickHouse setup](clickhouse.md).
 
-Branch previews enable Smart Placement so Cloudflare can run the Worker closer to its backend
-services. Placement needs sufficient traffic to choose a location; enabling it does not guarantee
-that the Worker runs in the same data center as D1. Production and shared preview placement are unchanged.
-
 Cloudflare deploys the Preview, maintains its branch URL, and posts it to the PR.
 The separate `env.preview` remains available for deliberate shared deployments
 with `bun run deploy:preview`.

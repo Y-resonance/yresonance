@@ -120,7 +120,6 @@ async function manageResources(workerName: string) {
       await api('/r2/buckets', 'POST', { name: resourceName, locationHint: 'weur' });
     }
     const bindings = {
-      placement: template.placement,
       vars: {
         ...template.vars,
         CLICKHOUSE_DATABASE: previewClickhouseDatabase(branch),

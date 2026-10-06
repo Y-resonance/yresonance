@@ -56,9 +56,10 @@ five traced samples for each version. Removing network waits accounts for most o
 handler improvement. Initial datasource descriptions and query execution now also fetch
 the datasource and its metadata in one batch.
 
-Smart Placement is enabled only for branch previews. Sampled spans still show Worker
-execution in Düsseldorf and D1 in Marseille. These measurements do not establish a
-placement-related improvement.
+Smart Placement was tried on the branch preview during these measurements and later removed.
+Cloudflare needs consistent traffic from multiple locations before it places a Worker, which a
+branch preview never receives: no `cf-placement` header appeared and sampled spans kept the
+Worker in Düsseldorf with D1 in Marseille. A production-only trial would be the way to evaluate it.
 
 ## Four widgets requested together
 
