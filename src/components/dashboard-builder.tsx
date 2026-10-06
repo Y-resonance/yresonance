@@ -57,7 +57,11 @@ import {
 import { type BuilderDataSource, type BuilderType, message } from './dashboard-builder/shared';
 import { catalog, WidgetCatalog } from './dashboard-builder/catalog';
 import { defaultDefinition } from './dashboard-builder/datasource';
-import { layoutFor, BuilderCanvas } from './dashboard-builder/canvas-layout';
+import {
+  layoutFor,
+  BuilderCanvas,
+  type PendingCanvasWidget,
+} from './dashboard-builder/canvas-layout';
 import { WidgetSettings } from './dashboard-builder/widget-inspector';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
@@ -84,6 +88,7 @@ export function DashboardBuilder({
   const [error, setError] = useState<string>();
   const [pendingOperations, setPendingOperations] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pendingAddition, setPendingAddition] = useState<PendingCanvasWidget>();
   const [pendingWidgets, setPendingWidgets] = useState<Record<string, number>>({});
   const [removeTarget, setRemoveTarget] = useState<DashboardWidget>();
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -235,6 +240,19 @@ export function DashboardBuilder({
 
   async function addWidget(type: BuilderType, dropped?: LayoutItem) {
     const entry = catalog.find((item) => item.type === type)!;
+    const pendingId = `pending_${crypto.randomUUID()}`;
+    setPendingAddition({
+      id: pendingId,
+      title: entry.label,
+      layout: dropped
+        ? { x: dropped.x, y: dropped.y, width: dropped.w, height: dropped.h }
+        : appendPlacement(
+            dashboardRef.current.widgets,
+            entry.size.width,
+            entry.size.height,
+            dashboardRef.current.columns,
+          ),
+    });
     let revision: number | undefined;
     startSaving();
     setError(undefined);
@@ -252,6 +270,7 @@ export function DashboardBuilder({
         }),
       );
       const widget = result.widget;
+      setPendingAddition((current) => (current?.id === pendingId ? undefined : current));
       const next = updateDashboard((current) => ({
         ...current,
         canvasRows: Math.max(current.canvasRows, widget.layout.y + widget.layout.height + 2),
@@ -279,6 +298,7 @@ export function DashboardBuilder({
       if (revision === undefined || revision === mutationRevisionRef.current)
         setError(message(caught));
     } finally {
+      setPendingAddition((current) => (current?.id === pendingId ? undefined : current));
       finishSaving();
     }
   }
@@ -592,6 +612,7 @@ export function DashboardBuilder({
             setMobileOpen={setMobileOpen}
             setRemoveTarget={setRemoveTarget}
             pendingWidgets={pendingWidgets}
+            pendingAddition={pendingAddition}
             controlState={controlState}
             setControlState={setControlState}
             draggedType={draggedType}

@@ -1,3 +1,4 @@
+import { stableStringify } from '#/domain/hash';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { dashboardControlWidgets } from '#/domain/schema';
 
@@ -509,7 +510,18 @@ function QueryCard({
   preview?: boolean;
   controlState: ControlState;
 }) {
-  const { revision, changePending } = useDashboardQueryRefresh();
+  const definition = widget.definition;
+  // Compare query inputs by content, since saves and refreshes replace their objects.
+  const definitionKey = stableStringify(definition);
+  // Empty selections are left out so a control that only gains an empty entry does not re-run
+  // the query. Controls with defaults always carry values, so no default is hidden by this.
+  const controlsKey = stableStringify({
+    dateRange: controlState.dateRange,
+    values: Object.fromEntries(
+      Object.entries(controlState.values ?? {}).filter(([, values]) => values.length > 0),
+    ),
+  });
+  const { revision, inputsRevision, changePending } = useDashboardQueryRefresh();
   const refreshed = useRef(revision);
   const [rows, setRows] = useState<Record<string, unknown>[]>();
   const [columns, setColumns] = useState<QueryResultColumn[]>();
@@ -522,11 +534,11 @@ function QueryCard({
   const [hasMore, setHasMore] = useState(false);
   // Clicked values per drilled level. Kept across control changes, dropped when the widget changes.
   const [drillPath, setDrillPath] = useState<DrillStep[]>([]);
-  useEffect(() => setPage(0), [controlState, dashboardId, widget.definition, widget.id]);
+  useEffect(() => setPage(0), [controlsKey, dashboardId, definitionKey, widget.id]);
   // Keeps the same array when nothing is drilled, so mounting does not trigger a second query.
   useEffect(
     () => setDrillPath((path) => (path.length ? [] : path)),
-    [dashboardId, widget.definition, widget.id],
+    [dashboardId, definitionKey, widget.id],
   );
   useEffect(() => {
     let current = true;
@@ -592,19 +604,20 @@ function QueryCard({
     };
   }, [
     revision,
+    inputsRevision,
     changePending,
-    controlState,
+    controlsKey,
     dashboardId,
     drillPath,
     page,
     preview,
     retry,
     shareToken,
-    widget.definition,
+    definitionKey,
+    widget.definitionHash,
     widget.id,
     widget.layout.width,
   ]);
-  const definition = widget.definition;
   if (!('title' in definition)) return null;
   const canDrill = drillPath.length < drillLevels(definition).length - 1;
   // Dropping the old level's rows shows a skeleton and keeps a second click from drilling into a

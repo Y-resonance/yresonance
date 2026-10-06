@@ -171,6 +171,7 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
   const state = {
     dashboard: buildDashboard(),
     source: description(),
+    sharing: { links: [] as { token: string; url: string }[], grants: [] },
     nextWidget: 0,
     duplicateRequests: [] as unknown[],
   };
@@ -259,7 +260,10 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
               : state.dashboard,
           role: options.role ?? 'editor',
           dataSources: [{ id: dataSourceId, name: state.source.name }],
-          sharing: { links: [], grants: [] },
+          // Matches the server: builder refreshes opt out of the sharing payload.
+          ...(request.action === 'getDashboard' && request.includeSharing === false
+            ? {}
+            : { sharing: state.sharing }),
         });
       case 'listDataSources':
         return ok(route, [

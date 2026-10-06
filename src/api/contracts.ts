@@ -30,7 +30,11 @@ const libraryMetricInputSchema = z.object({
 export const apiRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('bootstrap') }),
   z.object({ action: z.literal('listDashboards') }),
-  z.object({ action: z.literal('getDashboard'), ...dashboardRef }),
+  z.object({
+    action: z.literal('getDashboard'),
+    ...dashboardRef,
+    includeSharing: z.boolean().optional(),
+  }),
   z.object({ action: z.literal('getSharedDashboard'), shareToken: z.string().min(1) }),
   z.object({
     action: z.literal('createDashboard'),

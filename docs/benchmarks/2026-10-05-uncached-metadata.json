@@ -1,0 +1,56 @@
+{
+  "previewId": "252fa8a9607547feae6600d63e624d14",
+  "workerVersion": "f3975883-df6a-49a1-89dd-c889a57e9630",
+  "runs": [
+    {
+      "baseUrl": "https://t3code-benchmark-uncached-query-performance-yresonance.rundown.workers.dev",
+      "dashboardId": "dash_98421f1f-d945-4b1b-9df8-803e33fbe539",
+      "endedAt": "2026-10-05T08:10:04.390Z",
+      "iterations": 10,
+      "rowCount": 100000,
+      "sources": [
+        {
+          "backend": "duckdb",
+          "cachePolicy": {
+            "mode": "disabled"
+          },
+          "id": "ds_597bb92d-bb36-45f0-9517-168b261c9aee"
+        },
+        {
+          "backend": "clickhouse",
+          "cachePolicy": {
+            "mode": "disabled"
+          },
+          "id": "ds_aacd707a-3ce0-45e1-a503-22835cc74030"
+        }
+      ],
+      "startedAt": "2026-10-05T08:08:20.528Z",
+      "uploadBytes": 4468346
+    },
+    {
+      "baseUrl": "https://t3code-benchmark-uncached-query-performance-yresonance.rundown.workers.dev",
+      "dashboardId": "dash_5d25068d-6b0f-421c-927f-5c1a27b90da8",
+      "endedAt": "2026-10-05T08:12:54.746Z",
+      "iterations": 5,
+      "rowCount": 1000000,
+      "sources": [
+        {
+          "backend": "duckdb",
+          "cachePolicy": {
+            "mode": "disabled"
+          },
+          "id": "ds_19c69b4e-ef56-4d51-a1a6-59c0f88f2a92"
+        },
+        {
+          "backend": "clickhouse",
+          "cachePolicy": {
+            "mode": "disabled"
+          },
+          "id": "ds_ff441ba5-59bf-440c-9617-5c2c9a574f60"
+        }
+      ],
+      "startedAt": "2026-10-05T08:10:47.816Z",
+      "uploadBytes": 44683044
+    }
+  ]
+}

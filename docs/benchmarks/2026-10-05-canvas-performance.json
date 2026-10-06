@@ -1,0 +1,5249 @@
+{
+  "previewUrl": "https://t3code-benchmark-uncached-query-performance-yresonance.rundown.workers.dev",
+  "commit": "234b8cfa1687397c1a51a65b3e6a9e87d66247c0",
+  "cachePolicy": "disabled",
+  "before": {
+    "runs": [
+      {
+        "dataDomAt": 147696.6000000015,
+        "dataPaintAt": 147714.8999999985,
+        "domInsertedAt": 142876.5,
+        "existingIds": [],
+        "label": "duckdb-baseline-1",
+        "skeletonSeen": true,
+        "startedAt": 142144.6000000015,
+        "timestamp": "2026-10-05T13:16:17.284Z",
+        "type": "scorecard",
+        "widgetId": "widget_cc812ede-21d6-4338-9cda-400bd2245b53",
+        "widgetPaintAt": 142895.3999999985
+      },
+      {
+        "dataDomAt": 377446.30000000075,
+        "dataPaintAt": 380992.80000000075,
+        "domInsertedAt": 377108.6000000015,
+        "existingIds": [],
+        "label": "clickhouse-baseline-1",
+        "skeletonSeen": true,
+        "startedAt": 376494.5,
+        "timestamp": "2026-10-05T13:20:11.634Z",
+        "type": "scorecard",
+        "widgetId": "widget_14a11c15-7115-4738-b6cd-2c23810b4d93",
+        "widgetPaintAt": 380992.80000000075
+      },
+      {
+        "dataDomAt": 402946.5,
+        "dataPaintAt": 407613.80000000075,
+        "domInsertedAt": 402946.5,
+        "existingIds": [],
+        "label": "text-baseline-1",
+        "startedAt": 402759.80000000075,
+        "timestamp": "2026-10-05T13:20:37.899Z",
+        "type": "text",
+        "widgetId": "widget_93eb4a7a-f3e9-40a4-bd35-4d5c4ea1b230",
+        "widgetPaintAt": 407613.80000000075
+      },
+      {
+        "dataDomAt": 439802.6000000015,
+        "dataPaintAt": 439824.3999999985,
+        "domInsertedAt": 435975.19999999925,
+        "existingIds": [],
+        "label": "duckdb-baseline-2",
+        "skeletonSeen": true,
+        "startedAt": 435237,
+        "timestamp": "2026-10-05T13:21:10.377Z",
+        "type": "scorecard",
+        "widgetId": "widget_7da16b2b-c636-4426-bae7-214c5d49cb21",
+        "widgetPaintAt": 435987.69999999925
+      }
+    ],
+    "requests": [
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45cb3302e3ca3eb-DUS",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 142345.30000000075,
+        "headersAt": 142344.3999999985,
+        "ok": true,
+        "run": "duckdb-baseline-1",
+        "startedAt": 142144.80000000075,
+        "status": 200,
+        "timestamp": "2026-10-05T13:16:17.284Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45cb3315a18a3eb-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "definitionType": "scorecard",
+        "finishedAt": 142853.6000000015,
+        "headersAt": 142853.30000000075,
+        "ok": true,
+        "run": "duckdb-baseline-1",
+        "startedAt": 142345.6000000015,
+        "status": 200,
+        "timestamp": "2026-10-05T13:16:17.485Z",
+        "widgetId": "widget_cc812ede-21d6-4338-9cda-400bd2245b53"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45cb3347cc4a3eb-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 143018.1000000015,
+        "headersAt": 143018,
+        "ok": true,
+        "run": "duckdb-baseline-1",
+        "startedAt": 142853.8999999985,
+        "status": 200,
+        "timestamp": "2026-10-05T13:16:17.993Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45cb3349d38a3eb-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 143074.80000000075,
+        "headersAt": 143074.6000000015,
+        "ok": true,
+        "run": "duckdb-baseline-1",
+        "startedAt": 142869.69999999925,
+        "status": 200,
+        "timestamp": "2026-10-05T13:16:18.009Z"
+      },
+      {
+        "abortedAt": 143622.1000000015,
+        "action": "queryWidget",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "error": "AbortError: signal is aborted without reason",
+        "failedAt": 143627.6000000015,
+        "run": "duckdb-baseline-1",
+        "startedAt": 142875.3999999985,
+        "timestamp": "2026-10-05T13:16:18.015Z",
+        "widgetId": "widget_cc812ede-21d6-4338-9cda-400bd2245b53"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45cb33588faa3eb-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 143613.5,
+        "headersAt": 143613.19999999925,
+        "ok": true,
+        "run": "duckdb-baseline-1",
+        "startedAt": 143018.19999999925,
+        "status": 200,
+        "timestamp": "2026-10-05T13:16:18.158Z"
+      },
+      {
+        "abortedAt": 143627,
+        "action": "queryWidget",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "error": "AbortError: signal is aborted without reason",
+        "failedAt": 143627.6000000015,
+        "run": "duckdb-baseline-1",
+        "startedAt": 143622.19999999925,
+        "timestamp": "2026-10-05T13:16:18.761Z",
+        "widgetId": "widget_cc812ede-21d6-4338-9cda-400bd2245b53"
+      },
+      {
+        "abortedAt": 366050.1000000015,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45cb3395d9ea3eb-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 147687.3999999985,
+        "headersAt": 147687.1000000015,
+        "ok": true,
+        "resultRows": 1,
+        "run": "duckdb-baseline-1",
+        "startedAt": 143627,
+        "status": 200,
+        "timestamp": "2026-10-05T13:16:18.766Z",
+        "widgetId": "widget_cc812ede-21d6-4338-9cda-400bd2245b53"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45cb8e8cc11f803-DUS",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 376684.19999999925,
+        "headersAt": 376683.6000000015,
+        "ok": true,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 376494.8999999985,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:11.634Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45cb8e9ff64f803-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "definitionType": "scorecard",
+        "finishedAt": 377091.19999999925,
+        "headersAt": 377090.3999999985,
+        "ok": true,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 376684.6000000015,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:11.824Z",
+        "widgetId": "widget_14a11c15-7115-4738-b6cd-2c23810b4d93"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45cb8ec7812f803-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 377293,
+        "headersAt": 377292.3999999985,
+        "ok": true,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 377092.19999999925,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:12.232Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45cb8ec8849f803-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 377294.69999999925,
+        "headersAt": 377294.3999999985,
+        "ok": true,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 377101.5,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:12.241Z"
+      },
+      {
+        "abortedAt": 377929.69999999925,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45cb8ec986ef803-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 377441.8999999985,
+        "headersAt": 377437.8999999985,
+        "ok": true,
+        "resultRows": 1,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 377107.5,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:12.247Z",
+        "widgetId": "widget_14a11c15-7115-4738-b6cd-2c23810b4d93"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45cb8edcc24f803-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 377903.3999999985,
+        "headersAt": 377902.8999999985,
+        "ok": true,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 377293.5,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:12.433Z"
+      },
+      {
+        "abortedAt": 377936.3999999985,
+        "action": "queryWidget",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "error": "AbortError: signal is aborted without reason",
+        "failedAt": 377937.19999999925,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 377930.30000000075,
+        "timestamp": "2026-10-05T13:20:13.070Z",
+        "widgetId": "widget_14a11c15-7115-4738-b6cd-2c23810b4d93"
+      },
+      {
+        "abortedAt": 390922.5,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45cb8f1c934f803-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 378320.19999999925,
+        "headersAt": 378319.19999999925,
+        "ok": true,
+        "resultRows": 1,
+        "run": "clickhouse-baseline-1",
+        "startedAt": 377936.3999999985,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:13.076Z",
+        "widgetId": "widget_14a11c15-7115-4738-b6cd-2c23810b4d93"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45cb98cec33f803-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "definitionType": "text",
+        "finishedAt": 402929.8999999985,
+        "headersAt": 402928.69999999925,
+        "ok": true,
+        "run": "text-baseline-1",
+        "startedAt": 402763.8999999985,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:37.903Z",
+        "widgetId": "widget_93eb4a7a-f3e9-40a4-bd35-4d5c4ea1b230"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45cb98dff1bf803-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 403098,
+        "headersAt": 403097.19999999925,
+        "ok": true,
+        "run": "text-baseline-1",
+        "startedAt": 402930.19999999925,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:38.070Z"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45cb98f0ab5f803-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 403476.30000000075,
+        "headersAt": 403475.8999999985,
+        "ok": true,
+        "run": "text-baseline-1",
+        "startedAt": 403098.1000000015,
+        "status": 200,
+        "timestamp": "2026-10-05T13:20:38.238Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45cba57e8a4f803-DUS",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 435499.5,
+        "headersAt": 435499.30000000075,
+        "ok": true,
+        "run": "duckdb-baseline-2",
+        "startedAt": 435237.1000000015,
+        "status": 200,
+        "timestamp": "2026-10-05T13:21:10.377Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45cba598e01f803-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "definitionType": "scorecard",
+        "finishedAt": 435962.80000000075,
+        "headersAt": 435962.5,
+        "ok": true,
+        "run": "duckdb-baseline-2",
+        "startedAt": 435499.5,
+        "status": 200,
+        "timestamp": "2026-10-05T13:21:10.639Z",
+        "widgetId": "widget_7da16b2b-c636-4426-bae7-214c5d49cb21"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45cba5c697df803-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 436187.69999999925,
+        "headersAt": 436187.30000000075,
+        "ok": true,
+        "run": "duckdb-baseline-2",
+        "startedAt": 435963,
+        "status": 200,
+        "timestamp": "2026-10-05T13:21:11.103Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45cba5c7987f803-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 436257.8999999985,
+        "headersAt": 436257.80000000075,
+        "ok": true,
+        "run": "duckdb-baseline-2",
+        "startedAt": 435969,
+        "status": 200,
+        "timestamp": "2026-10-05T13:21:11.109Z"
+      },
+      {
+        "abortedAt": 436598.30000000075,
+        "action": "queryWidget",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "error": "AbortError: signal is aborted without reason",
+        "failedAt": 436601.80000000075,
+        "run": "duckdb-baseline-2",
+        "startedAt": 435973.80000000075,
+        "timestamp": "2026-10-05T13:21:11.113Z",
+        "widgetId": "widget_7da16b2b-c636-4426-bae7-214c5d49cb21"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45cba5dde7cf803-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 436586.8999999985,
+        "headersAt": 436586.6000000015,
+        "ok": true,
+        "run": "duckdb-baseline-2",
+        "startedAt": 436187.80000000075,
+        "status": 200,
+        "timestamp": "2026-10-05T13:21:11.327Z"
+      },
+      {
+        "abortedAt": 436601.30000000075,
+        "action": "queryWidget",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "error": "AbortError: signal is aborted without reason",
+        "failedAt": 436601.8999999985,
+        "run": "duckdb-baseline-2",
+        "startedAt": 436598.30000000075,
+        "timestamp": "2026-10-05T13:21:11.738Z",
+        "widgetId": "widget_7da16b2b-c636-4426-bae7-214c5d49cb21"
+      },
+      {
+        "abortedAt": 455025.80000000075,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45cba606e02f803-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 439799.5,
+        "headersAt": 439799.1000000015,
+        "ok": true,
+        "resultRows": 1,
+        "run": "duckdb-baseline-2",
+        "startedAt": 436601.30000000075,
+        "status": 200,
+        "timestamp": "2026-10-05T13:21:11.741Z",
+        "widgetId": "widget_7da16b2b-c636-4426-bae7-214c5d49cb21"
+      }
+    ]
+  },
+  "after": {
+    "runs": [
+      {
+        "dataDomAt": 4069.099999997765,
+        "dataPaintAt": 4091.099999997765,
+        "domInsertedAt": 2444.89999999851,
+        "existingIds": [],
+        "label": "duckdb-final-1",
+        "pendingDomAt": 2083,
+        "skeletonSeen": true,
+        "startedAt": 2071.5,
+        "timestamp": "2026-10-05T15:05:13.316Z",
+        "type": "scorecard",
+        "widgetId": "widget_f02bd741-88e0-42d2-ac91-6a3600c342a0",
+        "widgetPaintAt": 2458.099999997765
+      },
+      {
+        "dataDomAt": 6012.199999999255,
+        "dataPaintAt": 6032.79999999702,
+        "domInsertedAt": 5817.39999999851,
+        "existingIds": [],
+        "label": "clickhouse-final-1",
+        "pendingDomAt": 5490.39999999851,
+        "skeletonSeen": true,
+        "startedAt": 5483.5,
+        "timestamp": "2026-10-05T15:05:16.728Z",
+        "type": "scorecard",
+        "widgetId": "widget_178a3a00-0164-44af-8dd2-be266eca2c24",
+        "widgetPaintAt": 5832.89999999851
+      },
+      {
+        "dataDomAt": 9231.699999999257,
+        "dataPaintAt": 9249.39999999851,
+        "domInsertedAt": 7789.29999999702,
+        "existingIds": [],
+        "label": "duckdb-final-2",
+        "pendingDomAt": 7488.599999997765,
+        "skeletonSeen": true,
+        "startedAt": 7483.099999997765,
+        "timestamp": "2026-10-05T15:05:18.728Z",
+        "type": "scorecard",
+        "widgetId": "widget_e1934931-92c2-4582-b083-b1eb77142f8b",
+        "widgetPaintAt": 7807.699999999255
+      },
+      {
+        "dataDomAt": 11143.099999997765,
+        "dataPaintAt": 11166.39999999851,
+        "domInsertedAt": 10962.5,
+        "existingIds": [],
+        "label": "clickhouse-final-2",
+        "pendingDomAt": 10681.199999999257,
+        "skeletonSeen": true,
+        "startedAt": 10670.599999997765,
+        "timestamp": "2026-10-05T15:05:21.915Z",
+        "type": "scorecard",
+        "widgetId": "widget_8df06c2d-4323-4338-8494-598e6fd267fb",
+        "widgetPaintAt": 10983
+      },
+      {
+        "dataDomAt": 14427.5,
+        "dataPaintAt": 14449.699999999257,
+        "domInsertedAt": 13209.5,
+        "existingIds": [],
+        "label": "duckdb-final-3",
+        "pendingDomAt": 12855.599999997765,
+        "skeletonSeen": true,
+        "startedAt": 12842.699999999257,
+        "timestamp": "2026-10-05T15:05:24.087Z",
+        "type": "scorecard",
+        "widgetId": "widget_04d01abe-7175-440a-b56c-8bd3df43e288",
+        "widgetPaintAt": 13224.699999999257
+      },
+      {
+        "dataDomAt": 16490.29999999702,
+        "dataPaintAt": 16508,
+        "domInsertedAt": 16271.89999999851,
+        "existingIds": [],
+        "label": "clickhouse-final-3",
+        "pendingDomAt": 15933.89999999851,
+        "skeletonSeen": true,
+        "startedAt": 15927.39999999851,
+        "timestamp": "2026-10-05T15:05:27.172Z",
+        "type": "scorecard",
+        "widgetId": "widget_8d8d098d-18ab-4ce8-a151-cbfbb55298dd",
+        "widgetPaintAt": 16283
+      },
+      {
+        "dataDomAt": 19786.79999999702,
+        "dataPaintAt": 19808.29999999702,
+        "domInsertedAt": 18461.29999999702,
+        "existingIds": [],
+        "label": "duckdb-final-4",
+        "pendingDomAt": 18177.39999999851,
+        "skeletonSeen": true,
+        "startedAt": 18167.699999999255,
+        "timestamp": "2026-10-05T15:05:29.412Z",
+        "type": "scorecard",
+        "widgetId": "widget_c640fdf8-e395-49fd-b4c6-2f22a29eed0d",
+        "widgetPaintAt": 18474.599999997765
+      },
+      {
+        "dataDomAt": 22185.5,
+        "dataPaintAt": 22209.699999999255,
+        "domInsertedAt": 21952.699999999255,
+        "existingIds": [],
+        "label": "clickhouse-final-4",
+        "pendingDomAt": 21651.89999999851,
+        "skeletonSeen": true,
+        "startedAt": 21645.199999999255,
+        "timestamp": "2026-10-05T15:05:32.890Z",
+        "type": "scorecard",
+        "widgetId": "widget_0e536bb5-36f7-48c0-a1a3-f1f233ef04bd",
+        "widgetPaintAt": 21974.5
+      },
+      {
+        "dataDomAt": 25155,
+        "dataPaintAt": 25174.599999997765,
+        "domInsertedAt": 23900.79999999702,
+        "existingIds": [],
+        "label": "duckdb-final-5",
+        "pendingDomAt": 23596.199999999255,
+        "skeletonSeen": true,
+        "startedAt": 23587.89999999851,
+        "timestamp": "2026-10-05T15:05:34.833Z",
+        "type": "scorecard",
+        "widgetId": "widget_f181d091-9bf4-4685-a3d8-591b673bbe48",
+        "widgetPaintAt": 23924.599999997765
+      },
+      {
+        "dataDomAt": 27110.89999999851,
+        "dataPaintAt": 27132.79999999702,
+        "domInsertedAt": 26881.89999999851,
+        "existingIds": [],
+        "label": "clickhouse-final-5",
+        "pendingDomAt": 26595.39999999851,
+        "skeletonSeen": true,
+        "startedAt": 26587.699999999255,
+        "timestamp": "2026-10-05T15:05:37.832Z",
+        "type": "scorecard",
+        "widgetId": "widget_d89dd57d-5619-40c4-9075-e788663c3d04",
+        "widgetPaintAt": 26907.89999999851
+      },
+      {
+        "dataDomAt": 28701,
+        "dataPaintAt": 28724.39999999851,
+        "domInsertedAt": 28701,
+        "existingIds": [],
+        "label": "text-final-1",
+        "pendingDomAt": 28553.199999999255,
+        "startedAt": 28545.89999999851,
+        "timestamp": "2026-10-05T15:05:39.791Z",
+        "type": "text",
+        "widgetId": "widget_ee7a3c8e-76f2-4f3b-bae8-9d4e0a40ff39",
+        "widgetPaintAt": 28724.39999999851
+      },
+      {
+        "dataDomAt": 30538.39999999851,
+        "dataPaintAt": 30566.099999997765,
+        "domInsertedAt": 30538.39999999851,
+        "existingIds": [],
+        "label": "text-final-2",
+        "pendingDomAt": 30387.199999999255,
+        "startedAt": 30379,
+        "timestamp": "2026-10-05T15:05:41.624Z",
+        "type": "text",
+        "widgetId": "widget_7dec57b8-4407-47cd-9cbc-419b641adaf3",
+        "widgetPaintAt": 30566.099999997765
+      },
+      {
+        "dataDomAt": 32396.89999999851,
+        "dataPaintAt": 32424.5,
+        "domInsertedAt": 32396.89999999851,
+        "existingIds": [],
+        "label": "text-final-3",
+        "pendingDomAt": 32234.29999999702,
+        "startedAt": 32229.79999999702,
+        "timestamp": "2026-10-05T15:05:43.475Z",
+        "type": "text",
+        "widgetId": "widget_75623e6d-b64f-4742-a0db-9c212e4a311d",
+        "widgetPaintAt": 32424.5
+      }
+    ],
+    "requests": [
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52c239a37162-DUS",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 2231.699999999255,
+        "headersAt": 2231.5,
+        "ok": true,
+        "run": "duckdb-final-1",
+        "startedAt": 2071.79999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:13.317Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d52c33a407162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "definitionType": "scorecard",
+        "finishedAt": 2424.29999999702,
+        "headersAt": 2424.099999997765,
+        "ok": true,
+        "run": "duckdb-final-1",
+        "startedAt": 2231.89999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:13.477Z",
+        "widgetId": "widget_f02bd741-88e0-42d2-ac91-6a3600c342a0"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d52c47b187162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 2559.39999999851,
+        "headersAt": 2559.199999999255,
+        "ok": true,
+        "run": "duckdb-final-1",
+        "startedAt": 2424.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:13.669Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52c48b2a7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 2578.79999999702,
+        "headersAt": 2578.599999997765,
+        "ok": true,
+        "run": "duckdb-final-1",
+        "startedAt": 2439.5,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:13.684Z"
+      },
+      {
+        "abortedAt": 4773.599999997765,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d52c49b327162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 4067.89999999851,
+        "headersAt": 4067.79999999702,
+        "ok": true,
+        "resultRows": 1,
+        "run": "duckdb-final-1",
+        "startedAt": 2443.89999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:13.689Z",
+        "widgetId": "widget_f02bd741-88e0-42d2-ac91-6a3600c342a0"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d52c54b9e7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 2666.5,
+        "headersAt": 2666.199999999255,
+        "includeSharing": false,
+        "ok": true,
+        "run": "duckdb-final-1",
+        "startedAt": 2559.5,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:13.804Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52d798147162-DUS",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 5589.199999999255,
+        "headersAt": 5589,
+        "ok": true,
+        "run": "clickhouse-final-1",
+        "startedAt": 5483.699999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:16.728Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d52d838717162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "definitionType": "scorecard",
+        "finishedAt": 5811.5,
+        "headersAt": 5811.29999999702,
+        "ok": true,
+        "run": "clickhouse-final-1",
+        "startedAt": 5589.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:16.834Z",
+        "widgetId": "widget_178a3a00-0164-44af-8dd2-be266eca2c24"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d52d999c87162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 5953.39999999851,
+        "headersAt": 5953.199999999255,
+        "ok": true,
+        "run": "clickhouse-final-1",
+        "startedAt": 5811.699999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:17.056Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52d9a9cc7162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 5952,
+        "headersAt": 5951.79999999702,
+        "ok": true,
+        "run": "clickhouse-final-1",
+        "startedAt": 5814.39999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:17.059Z"
+      },
+      {
+        "abortedAt": 6774.699999999255,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d52d9a9d07162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 6011.599999997765,
+        "headersAt": 6011.39999999851,
+        "ok": true,
+        "resultRows": 1,
+        "run": "clickhouse-final-1",
+        "startedAt": 5816.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:17.061Z",
+        "widgetId": "widget_178a3a00-0164-44af-8dd2-be266eca2c24"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d52da8a627162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 6081.89999999851,
+        "headersAt": 6081.699999999255,
+        "includeSharing": false,
+        "ok": true,
+        "run": "clickhouse-final-1",
+        "startedAt": 5953.5,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:17.198Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52e419c27162-DUS",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 7598.199999999255,
+        "headersAt": 7598,
+        "ok": true,
+        "run": "duckdb-final-2",
+        "startedAt": 7483.29999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:18.728Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d52e4ca4d7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "definitionType": "scorecard",
+        "finishedAt": 7783.599999997765,
+        "headersAt": 7783.29999999702,
+        "ok": true,
+        "run": "duckdb-final-2",
+        "startedAt": 7598.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:18.843Z",
+        "widgetId": "widget_e1934931-92c2-4582-b083-b1eb77142f8b"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d52e5fb227162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 7945.5,
+        "headersAt": 7945.29999999702,
+        "ok": true,
+        "run": "duckdb-final-2",
+        "startedAt": 7783.699999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:19.028Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52e5fb267162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 7944.29999999702,
+        "headersAt": 7944.099999997765,
+        "ok": true,
+        "run": "duckdb-final-2",
+        "startedAt": 7786.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:19.031Z"
+      },
+      {
+        "abortedAt": 9949.39999999851,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d52e5fb287162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 9231.099999997765,
+        "headersAt": 9231,
+        "ok": true,
+        "resultRows": 1,
+        "run": "duckdb-final-2",
+        "startedAt": 7788.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:19.033Z",
+        "widgetId": "widget_e1934931-92c2-4582-b083-b1eb77142f8b"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d52e6fc1e7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 8067.199999999255,
+        "headersAt": 8067.099999997765,
+        "includeSharing": false,
+        "ok": true,
+        "run": "duckdb-final-2",
+        "startedAt": 7945.5,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:19.190Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52f7fbb27162-DUS",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 10775.39999999851,
+        "headersAt": 10775,
+        "ok": true,
+        "run": "clickhouse-final-2",
+        "startedAt": 10671,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:21.916Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d52f8ac667162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "definitionType": "scorecard",
+        "finishedAt": 10952,
+        "headersAt": 10951.699999999257,
+        "ok": true,
+        "run": "clickhouse-final-2",
+        "startedAt": 10775.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:22.020Z",
+        "widgetId": "widget_8df06c2d-4323-4338-8494-598e6fd267fb"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d52f9cd8e7162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 11112.599999997765,
+        "headersAt": 11112.29999999702,
+        "ok": true,
+        "run": "clickhouse-final-2",
+        "startedAt": 10952.39999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:22.197Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d52f9cd967162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 11068.5,
+        "headersAt": 11068.099999997765,
+        "ok": true,
+        "run": "clickhouse-final-2",
+        "startedAt": 10957.5,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:22.202Z"
+      },
+      {
+        "abortedAt": 12038.599999997765,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d52f9cd9c7162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 11142,
+        "headersAt": 11141.599999997765,
+        "ok": true,
+        "resultRows": 1,
+        "run": "clickhouse-final-2",
+        "startedAt": 10961.099999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:22.206Z",
+        "widgetId": "widget_8df06c2d-4323-4338-8494-598e6fd267fb"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d52face5f7162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 11226.89999999851,
+        "headersAt": 11226.39999999851,
+        "includeSharing": false,
+        "ok": true,
+        "run": "clickhouse-final-2",
+        "startedAt": 11112.699999999257,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:22.358Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d5305983b7162-DUS",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 12989.79999999702,
+        "headersAt": 12989.5,
+        "ok": true,
+        "run": "duckdb-final-3",
+        "startedAt": 12843,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:24.088Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d530678fa7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "definitionType": "scorecard",
+        "finishedAt": 13199.29999999702,
+        "headersAt": 13198.89999999851,
+        "ok": true,
+        "run": "duckdb-final-3",
+        "startedAt": 12989.79999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:24.235Z",
+        "widgetId": "widget_04d01abe-7175-440a-b56c-8bd3df43e288"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d5307c9e07162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 13359.79999999702,
+        "headersAt": 13359.29999999702,
+        "ok": true,
+        "run": "duckdb-final-3",
+        "startedAt": 13199.699999999257,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:24.444Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d5307d9e67162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 13361.89999999851,
+        "headersAt": 13361.599999997765,
+        "ok": true,
+        "run": "duckdb-final-3",
+        "startedAt": 13204.89999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:24.450Z"
+      },
+      {
+        "abortedAt": 15197.5,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d5307d9ec7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 14426.699999999257,
+        "headersAt": 14426.5,
+        "ok": true,
+        "resultRows": 1,
+        "run": "duckdb-final-3",
+        "startedAt": 13208.39999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:24.453Z",
+        "widgetId": "widget_04d01abe-7175-440a-b56c-8bd3df43e288"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d5308caa67162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 13495.099999997765,
+        "headersAt": 13494.79999999702,
+        "includeSharing": false,
+        "ok": true,
+        "run": "duckdb-final-3",
+        "startedAt": 13359.79999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:24.605Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d5318df137162-DUS",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 16062.5,
+        "headersAt": 16062.199999999257,
+        "ok": true,
+        "run": "clickhouse-final-3",
+        "startedAt": 15927.699999999257,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:27.172Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d5319bfc77162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "definitionType": "scorecard",
+        "finishedAt": 16260.099999997765,
+        "headersAt": 16259.699999999257,
+        "ok": true,
+        "run": "clickhouse-final-3",
+        "startedAt": 16062.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:27.307Z",
+        "widgetId": "widget_8d8d098d-18ab-4ce8-a151-cbfbb55298dd"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d531ae8ec7162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 16420.599999997765,
+        "headersAt": 16420.099999997765,
+        "ok": true,
+        "run": "clickhouse-final-3",
+        "startedAt": 16260.29999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:27.505Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d531af8f57162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 16426.79999999702,
+        "headersAt": 16426.199999999255,
+        "ok": true,
+        "run": "clickhouse-final-3",
+        "startedAt": 16265.89999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:27.511Z"
+      },
+      {
+        "abortedAt": 17273.79999999702,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d531af8f97162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 16489.199999999255,
+        "headersAt": 16488.89999999851,
+        "ok": true,
+        "resultRows": 1,
+        "run": "clickhouse-final-3",
+        "startedAt": 16270.199999999257,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:27.515Z",
+        "widgetId": "widget_8d8d098d-18ab-4ce8-a151-cbfbb55298dd"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d531be9f87162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 16551,
+        "headersAt": 16550.599999997765,
+        "includeSharing": false,
+        "ok": true,
+        "run": "clickhouse-final-3",
+        "startedAt": 16420.79999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:27.666Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d5326da847162-DUS",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 18279,
+        "headersAt": 18278.699999999255,
+        "ok": true,
+        "run": "duckdb-final-4",
+        "startedAt": 18168,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:29.413Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d53278aea7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "definitionType": "scorecard",
+        "finishedAt": 18454.599999997765,
+        "headersAt": 18454.29999999702,
+        "ok": true,
+        "run": "duckdb-final-4",
+        "startedAt": 18279.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:29.524Z",
+        "widgetId": "widget_c640fdf8-e395-49fd-b4c6-2f22a29eed0d"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d5328abef7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 18615,
+        "headersAt": 18614.79999999702,
+        "ok": true,
+        "run": "duckdb-final-4",
+        "startedAt": 18454.699999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:29.700Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d5328abf47162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 18605.89999999851,
+        "headersAt": 18605.599999997765,
+        "ok": true,
+        "run": "duckdb-final-4",
+        "startedAt": 18457.699999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:29.703Z"
+      },
+      {
+        "abortedAt": 20521.89999999851,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d5328abf67162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 19784.699999999255,
+        "headersAt": 19783.699999999255,
+        "ok": true,
+        "resultRows": 1,
+        "run": "duckdb-final-4",
+        "startedAt": 18460.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:29.705Z",
+        "widgetId": "widget_c640fdf8-e395-49fd-b4c6-2f22a29eed0d"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d5329ac897162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 18747.599999997765,
+        "headersAt": 18747.199999999255,
+        "includeSharing": false,
+        "ok": true,
+        "run": "duckdb-final-4",
+        "startedAt": 18615.099999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:29.860Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d533c9aa87162-DUS",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 21762.599999997765,
+        "headersAt": 21762.39999999851,
+        "ok": true,
+        "run": "clickhouse-final-4",
+        "startedAt": 21645.39999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:32.890Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d533d5b347162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "definitionType": "scorecard",
+        "finishedAt": 21947.099999997765,
+        "headersAt": 21947,
+        "ok": true,
+        "run": "clickhouse-final-4",
+        "startedAt": 21762.699999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:33.007Z",
+        "widgetId": "widget_0e536bb5-36f7-48c0-a1a3-f1f233ef04bd"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d533e7c057162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 22084.89999999851,
+        "headersAt": 22084.599999997765,
+        "ok": true,
+        "run": "clickhouse-final-4",
+        "startedAt": 21947.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:33.192Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d533e7c087162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 22083.29999999702,
+        "headersAt": 22082.79999999702,
+        "ok": true,
+        "run": "clickhouse-final-4",
+        "startedAt": 21949.79999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:33.195Z"
+      },
+      {
+        "abortedAt": 22905,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d533e7c097162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 22184.39999999851,
+        "headersAt": 22184.099999997765,
+        "ok": true,
+        "resultRows": 1,
+        "run": "clickhouse-final-4",
+        "startedAt": 21951.89999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:33.197Z",
+        "widgetId": "widget_0e536bb5-36f7-48c0-a1a3-f1f233ef04bd"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d533f5c847162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 22203.099999997765,
+        "headersAt": 22202.79999999702,
+        "includeSharing": false,
+        "ok": true,
+        "run": "clickhouse-final-4",
+        "startedAt": 22084.89999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:33.330Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d5348bbec7162-DUS",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 23706.599999997765,
+        "headersAt": 23706.29999999702,
+        "ok": true,
+        "run": "duckdb-final-5",
+        "startedAt": 23588.29999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:34.833Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d53497c927162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "definitionType": "scorecard",
+        "finishedAt": 23886.29999999702,
+        "headersAt": 23885.79999999702,
+        "ok": true,
+        "run": "duckdb-final-5",
+        "startedAt": 23706.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:34.951Z",
+        "widgetId": "widget_f181d091-9bf4-4685-a3d8-591b673bbe48"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d534a9da97162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 24052.79999999702,
+        "headersAt": 24052.5,
+        "ok": true,
+        "run": "duckdb-final-5",
+        "startedAt": 23886.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:35.131Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d534aadae7162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+        "finishedAt": 24050.199999999255,
+        "headersAt": 24049.79999999702,
+        "ok": true,
+        "run": "duckdb-final-5",
+        "startedAt": 23895.39999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:35.140Z"
+      },
+      {
+        "abortedAt": 25877.099999997765,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d534aadb47162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 25153.89999999851,
+        "headersAt": 25153.599999997765,
+        "ok": true,
+        "resultRows": 1,
+        "run": "duckdb-final-5",
+        "startedAt": 23899.5,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:35.144Z",
+        "widgetId": "widget_f181d091-9bf4-4685-a3d8-591b673bbe48"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d534bae777162-DUS",
+        "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+        "finishedAt": 24174.5,
+        "headersAt": 24174.099999997765,
+        "includeSharing": false,
+        "ok": true,
+        "run": "duckdb-final-5",
+        "startedAt": 24052.79999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:35.298Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d535b7a9f7162-DUS",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 26711.099999997765,
+        "headersAt": 26711,
+        "ok": true,
+        "run": "clickhouse-final-5",
+        "startedAt": 26588,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:37.833Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d535c3b537162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "definitionType": "scorecard",
+        "finishedAt": 26876.5,
+        "headersAt": 26876.29999999702,
+        "ok": true,
+        "run": "clickhouse-final-5",
+        "startedAt": 26711.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:37.956Z",
+        "widgetId": "widget_d89dd57d-5619-40c4-9075-e788663c3d04"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d535d4c0f7162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 27045,
+        "headersAt": 27044.79999999702,
+        "ok": true,
+        "run": "clickhouse-final-5",
+        "startedAt": 26876.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:38.121Z"
+      },
+      {
+        "action": "describeDatasource",
+        "cfRay": "a45d535d4c107162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+        "finishedAt": 27015.39999999851,
+        "headersAt": 27015.099999997765,
+        "ok": true,
+        "run": "clickhouse-final-5",
+        "startedAt": 26879.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:38.124Z"
+      },
+      {
+        "abortedAt": 27866.099999997765,
+        "action": "queryWidget",
+        "cache": "miss",
+        "cfRay": "a45d535d4c147162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 27110.199999999255,
+        "headersAt": 27110,
+        "ok": true,
+        "resultRows": 1,
+        "run": "clickhouse-final-5",
+        "startedAt": 26881.099999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:38.126Z",
+        "widgetId": "widget_d89dd57d-5619-40c4-9075-e788663c3d04"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d535e5cd67162-DUS",
+        "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+        "finishedAt": 27165.699999999255,
+        "headersAt": 27165.599999997765,
+        "includeSharing": false,
+        "ok": true,
+        "run": "clickhouse-final-5",
+        "startedAt": 27045.099999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:38.290Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d5367cbf07162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "definitionType": "text",
+        "finishedAt": 28696.699999999255,
+        "headersAt": 28696.5,
+        "ok": true,
+        "run": "text-final-1",
+        "startedAt": 28553.199999999255,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:39.798Z",
+        "widgetId": "widget_ee7a3c8e-76f2-4f3b-bae8-9d4e0a40ff39"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d5368acb57162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 28817.5,
+        "headersAt": 28817.39999999851,
+        "ok": true,
+        "run": "text-final-1",
+        "startedAt": 28696.79999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:39.942Z"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d53696d427162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 28934.79999999702,
+        "headersAt": 28933.599999997765,
+        "includeSharing": false,
+        "ok": true,
+        "run": "text-final-1",
+        "startedAt": 28817.599999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:40.062Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d53733cee7162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "definitionType": "text",
+        "finishedAt": 30532,
+        "headersAt": 30531.79999999702,
+        "ok": true,
+        "run": "text-final-2",
+        "startedAt": 30387.29999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:41.632Z",
+        "widgetId": "widget_7dec57b8-4407-47cd-9cbc-419b641adaf3"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d53741d6f7162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 30682.29999999702,
+        "headersAt": 30682,
+        "ok": true,
+        "run": "text-final-2",
+        "startedAt": 30532.099999997765,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:41.777Z"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d53751e207162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 30811.099999997765,
+        "headersAt": 30810.699999999255,
+        "includeSharing": false,
+        "ok": true,
+        "run": "text-final-2",
+        "startedAt": 30682.39999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:41.927Z"
+      },
+      {
+        "action": "addWidget",
+        "cfRay": "a45d537eccfb7162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "definitionType": "text",
+        "finishedAt": 32392.699999999255,
+        "headersAt": 32392.39999999851,
+        "ok": true,
+        "run": "text-final-3",
+        "startedAt": 32234.29999999702,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:43.479Z",
+        "widgetId": "widget_75623e6d-b64f-4742-a0db-9c212e4a311d"
+      },
+      {
+        "action": "updateLayout",
+        "cfRay": "a45d537fcdef7162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 32548.39999999851,
+        "headersAt": 32548.199999999255,
+        "ok": true,
+        "run": "text-final-3",
+        "startedAt": 32392.89999999851,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:43.638Z"
+      },
+      {
+        "action": "getDashboard",
+        "cfRay": "a45d5380bec97162-DUS",
+        "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+        "finishedAt": 32689.699999999255,
+        "headersAt": 32689.5,
+        "includeSharing": false,
+        "ok": true,
+        "run": "text-final-3",
+        "startedAt": 32548.5,
+        "status": 200,
+        "timestamp": "2026-10-05T15:05:43.793Z"
+      }
+    ]
+  },
+  "creationSamples": {
+    "results": [
+      {
+        "cache": "miss",
+        "rows": [
+          {
+            "metric_1": "50097957840"
+          }
+        ]
+      },
+      {
+        "cache": "miss",
+        "rows": [
+          {
+            "metric_1": "50097957840"
+          }
+        ]
+      }
+    ],
+    "samples": [
+      {
+        "cfRay": "a45d3f4fb8d87527-DUS",
+        "ms": 181.30000000074503,
+        "timestamp": "2026-10-05T14:51:56.936Z"
+      },
+      {
+        "cfRay": "a45d3f51aded7527-DUS",
+        "ms": 188.30000000074503,
+        "timestamp": "2026-10-05T14:51:57.255Z"
+      },
+      {
+        "cfRay": "a45d3f53abbe7527-DUS",
+        "ms": 166.89999999850988,
+        "timestamp": "2026-10-05T14:51:57.551Z"
+      },
+      {
+        "cfRay": "a45d3f5588787527-DUS",
+        "ms": 174.89999999850988,
+        "timestamp": "2026-10-05T14:51:57.856Z"
+      },
+      {
+        "cfRay": "a45d3f576d8c7527-DUS",
+        "ms": 172.59999999776483,
+        "timestamp": "2026-10-05T14:51:58.158Z"
+      },
+      {
+        "cfRay": "a45d3f594add7527-DUS",
+        "ms": 161.80000000074506,
+        "timestamp": "2026-10-05T14:51:58.449Z"
+      },
+      {
+        "cfRay": "a45d3f5b28287527-DUS",
+        "ms": 167.60000000149012,
+        "timestamp": "2026-10-05T14:51:58.746Z"
+      },
+      {
+        "cfRay": "a45d3f5cfc9a7527-DUS",
+        "ms": 179.19999999925494,
+        "timestamp": "2026-10-05T14:51:59.050Z"
+      },
+      {
+        "cfRay": "a45d3f5ee9db7527-DUS",
+        "ms": 235.39999999850988,
+        "timestamp": "2026-10-05T14:51:59.422Z"
+      },
+      {
+        "cfRay": "a45d3f6148797527-DUS",
+        "ms": 172,
+        "timestamp": "2026-10-05T14:51:59.730Z"
+      },
+      {
+        "cfRay": "a45d3f631da37527-DUS",
+        "ms": 168.60000000149012,
+        "timestamp": "2026-10-05T14:52:00.019Z"
+      },
+      {
+        "cfRay": "a45d3f64fab47527-DUS",
+        "ms": 174.40000000223517,
+        "timestamp": "2026-10-05T14:52:00.329Z"
+      },
+      {
+        "cfRay": "a45d3f66efff7527-DUS",
+        "ms": 181.79999999701977,
+        "timestamp": "2026-10-05T14:52:00.643Z"
+      },
+      {
+        "cfRay": "a45d3f68fea37527-DUS",
+        "ms": 180.89999999850988,
+        "timestamp": "2026-10-05T14:52:00.968Z"
+      },
+      {
+        "cfRay": "a45d3f6add287527-DUS",
+        "ms": 168.39999999850988,
+        "timestamp": "2026-10-05T14:52:01.259Z"
+      },
+      {
+        "cfRay": "a45d3f6caac67527-DUS",
+        "ms": 191.20000000298023,
+        "timestamp": "2026-10-05T14:52:01.571Z"
+      },
+      {
+        "cfRay": "a45d3f6eb8ce7527-DUS",
+        "ms": 184.30000000074503,
+        "timestamp": "2026-10-05T14:52:01.897Z"
+      },
+      {
+        "cfRay": "a45d3f70be7c7527-DUS",
+        "ms": 192.09999999776483,
+        "timestamp": "2026-10-05T14:52:02.227Z"
+      },
+      {
+        "cfRay": "a45d3f72cc207527-DUS",
+        "ms": 159.5,
+        "timestamp": "2026-10-05T14:52:02.522Z"
+      },
+      {
+        "cfRay": "a45d3f74b8787527-DUS",
+        "ms": 179,
+        "timestamp": "2026-10-05T14:52:02.846Z"
+      },
+      {
+        "cfRay": "a45d3f769d117527-DUS",
+        "ms": 161.10000000149012,
+        "timestamp": "2026-10-05T14:52:03.137Z"
+      },
+      {
+        "cfRay": "a45d3f7869887527-DUS",
+        "ms": 188.90000000223517,
+        "timestamp": "2026-10-05T14:52:03.451Z"
+      },
+      {
+        "cfRay": "a45d3f7a6ecc7527-DUS",
+        "ms": 168.69999999925494,
+        "timestamp": "2026-10-05T14:52:03.747Z"
+      },
+      {
+        "cfRay": "a45d3f7c3b737527-DUS",
+        "ms": 166.09999999776483,
+        "timestamp": "2026-10-05T14:52:04.039Z"
+      },
+      {
+        "cfRay": "a45d3f7e086b7527-DUS",
+        "ms": 222.19999999925497,
+        "timestamp": "2026-10-05T14:52:04.383Z"
+      },
+      {
+        "cfRay": "a45d3f806f3e7527-DUS",
+        "ms": 157.79999999701977,
+        "timestamp": "2026-10-05T14:52:04.702Z"
+      },
+      {
+        "cfRay": "a45d3f823c327527-DUS",
+        "ms": 172.80000000074506,
+        "timestamp": "2026-10-05T14:52:05.004Z"
+      },
+      {
+        "cfRay": "a45d3f84295e7527-DUS",
+        "ms": 163.39999999850988,
+        "timestamp": "2026-10-05T14:52:05.307Z"
+      },
+      {
+        "cfRay": "a45d3f860e507527-DUS",
+        "ms": 174.89999999850988,
+        "timestamp": "2026-10-05T14:52:05.617Z"
+      },
+      {
+        "cfRay": "a45d3f87ec3f7527-DUS",
+        "ms": 173.09999999776483,
+        "timestamp": "2026-10-05T14:52:05.912Z"
+      }
+    ]
+  },
+  "creationHandlerDurationsMs": [
+    143,
+    151,
+    134,
+    136,
+    141,
+    132,
+    137,
+    147,
+    204,
+    135,
+    135,
+    140,
+    143,
+    141,
+    133,
+    159,
+    152,
+    148,
+    128,
+    145,
+    129,
+    155,
+    137,
+    129,
+    189,
+    125,
+    136,
+    132,
+    136,
+    141
+  ],
+  "traces": [
+    {
+      "action": "addWidget",
+      "rayId": "a45d3f7e086b7527",
+      "traceId": "17d8cc6e23926bb1403454f795be1659",
+      "handlerDurationMs": 189,
+      "bindingCalls": 3,
+      "sqlStatements": 7,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 43,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.47850000000000004,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 44,
+          "bindingDurationMs": 66,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.9269000000000001,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 110,
+          "bindingDurationMs": 79,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.389,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "addWidget",
+      "rayId": "a45d3f7869887527",
+      "traceId": "d2b2161a7390ff5a2b6c7ba045a142d5",
+      "handlerDurationMs": 155,
+      "bindingCalls": 3,
+      "sqlStatements": 7,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 40,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.5592,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 41,
+          "bindingDurationMs": 46,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 1.1056000000000001,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 87,
+          "bindingDurationMs": 68,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.3652,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "addWidget",
+      "rayId": "a45d3f64fab47527",
+      "traceId": "d443e28e037662938f206087adfbb12a",
+      "handlerDurationMs": 140,
+      "bindingCalls": 3,
+      "sqlStatements": 7,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 35,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.4816,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 36,
+          "bindingDurationMs": 41,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.7956000000000001,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 77,
+          "bindingDurationMs": 63,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.9229,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "addWidget",
+      "rayId": "a45d3f631da37527",
+      "traceId": "86599e163f7fbb4d1f05673716b1649d",
+      "handlerDurationMs": 135,
+      "bindingCalls": 3,
+      "sqlStatements": 7,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 35,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.6559999999999999,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 36,
+          "bindingDurationMs": 38,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.8563,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 74,
+          "bindingDurationMs": 61,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.265,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "addWidget",
+      "rayId": "a45d3f5b28287527",
+      "traceId": "99770abefcd1d63de7dfe494f2c77771",
+      "handlerDurationMs": 137,
+      "bindingCalls": 3,
+      "sqlStatements": 7,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 42,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.4605,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 43,
+          "bindingDurationMs": 33,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.6823,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 76,
+          "bindingDurationMs": 61,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.3255,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d3f4dec547527",
+      "traceId": "1e853673181476512bdb438f34f22484",
+      "handlerDurationMs": 151,
+      "bindingCalls": 2,
+      "sqlStatements": 3,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 101,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.9772,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 102,
+          "bindingDurationMs": 49,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.4159,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d3cfced147527",
+      "traceId": "e3ea4c4d677decd371ee517a5a05da19",
+      "handlerDurationMs": 64,
+      "bindingCalls": 2,
+      "sqlStatements": 3,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 34,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.6378,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 35,
+          "bindingDurationMs": 29,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.3349,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d3ce20ac47527",
+      "traceId": "b0f7567be93b925d9cdb45d87910d2a2",
+      "handlerDurationMs": 90,
+      "bindingCalls": 2,
+      "sqlStatements": 3,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 45,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 1.0666,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 46,
+          "bindingDurationMs": 44,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.6961,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d3b419f8f7527",
+      "traceId": "e124c7ea0365986b397e2896a7da1434",
+      "handlerDurationMs": 71,
+      "bindingCalls": 2,
+      "sqlStatements": 3,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 40,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.398,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 41,
+          "bindingDurationMs": 30,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.2909,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d3a7358587527",
+      "traceId": "5bce34d134462592c17732b2dc4e2bd8",
+      "handlerDurationMs": 83,
+      "bindingCalls": 2,
+      "sqlStatements": 3,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 42,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.8122,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 43,
+          "bindingDurationMs": 40,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.3111,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d3a6cfd327527",
+      "traceId": "4a1f5bba1f808df626eaccb0bef97a68",
+      "handlerDurationMs": 425,
+      "bindingCalls": 1,
+      "sqlStatements": 2,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 45,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.4837,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d38dcfb5d7527",
+      "traceId": "e10524634ead913008f97ff49e5cc98c",
+      "handlerDurationMs": 423,
+      "bindingCalls": 4,
+      "sqlStatements": 5,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 37,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.557,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 38,
+          "bindingDurationMs": 37,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.328,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 75,
+          "bindingDurationMs": 53,
+          "statementCount": 1,
+          "sql": "select \"dashboard_id\", \"clerk_user_id\", \"role\", \"granted_by\", \"granted_at\" from \"dashboard_grants\" where \"dashboard_grants\".\"dashboard_id\" = ?",
+          "sqlDurationMs": 0.5239,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 75,
+          "bindingDurationMs": 82,
+          "statementCount": 1,
+          "sql": "select \"token\", \"dashboard_id\", \"created_by\", \"created_at\", \"revoked_at\" from \"share_links\" where (\"share_links\".\"dashboard_id\" = ? and \"share_links\".\"revoked_at\" is null)",
+          "sqlDurationMs": 0.37,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    }
+  ],
+  "baselineCreationTraces": [
+    {
+      "traceId": "807a1b68c2043573c20883d27aa16976",
+      "startMs": 1791187898715,
+      "handlerDurationMs": 306,
+      "d1CallCount": 14,
+      "d1WaitUnionMs": 306,
+      "sqlDurationSumMs": 3.9534000000000002,
+      "calls": [
+        {
+          "table": "dashboards",
+          "offsetMs": 0,
+          "bindingDurationMs": 38,
+          "sqlDurationMs": 0.3271,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "workspaces",
+          "offsetMs": 39,
+          "bindingDurationMs": 29,
+          "sqlDurationMs": 0.3404,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 68,
+          "bindingDurationMs": 36,
+          "sqlDurationMs": 0.2342,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 104,
+          "bindingDurationMs": 40,
+          "sqlDurationMs": 0.4535,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 104,
+          "bindingDurationMs": 31,
+          "sqlDurationMs": 0.2499,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 104,
+          "bindingDurationMs": 41,
+          "sqlDurationMs": 0.3566,
+          "rowsRead": 5,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 145,
+          "bindingDurationMs": 40,
+          "sqlDurationMs": 0.2385,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 145,
+          "bindingDurationMs": 41,
+          "sqlDurationMs": 0.2487,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 145,
+          "bindingDurationMs": 40,
+          "sqlDurationMs": 0.3031,
+          "rowsRead": 5,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "dashboards",
+          "offsetMs": 187,
+          "bindingDurationMs": 48,
+          "sqlDurationMs": 0.3114,
+          "rowsRead": 2,
+          "rowsWritten": 1,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 235,
+          "bindingDurationMs": 31,
+          "sqlDurationMs": 0.3336,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 266,
+          "bindingDurationMs": 37,
+          "sqlDurationMs": 0.1785,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 266,
+          "bindingDurationMs": 39,
+          "sqlDurationMs": 0.1401,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 266,
+          "bindingDurationMs": 36,
+          "sqlDurationMs": 0.2378,
+          "rowsRead": 5,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        }
+      ]
+    },
+    {
+      "traceId": "3f59406a1655a6c8ef04a92320ce71ad",
+      "startMs": 1791187896492,
+      "handlerDurationMs": 324,
+      "d1CallCount": 14,
+      "d1WaitUnionMs": 324,
+      "sqlDurationSumMs": 4.0587,
+      "calls": [
+        {
+          "table": "dashboards",
+          "offsetMs": 0,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.2174,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "workspaces",
+          "offsetMs": 36,
+          "bindingDurationMs": 40,
+          "sqlDurationMs": 0.2626,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 76,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.5431,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 111,
+          "bindingDurationMs": 33,
+          "sqlDurationMs": 0.2447,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 111,
+          "bindingDurationMs": 37,
+          "sqlDurationMs": 0.2551,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 111,
+          "bindingDurationMs": 34,
+          "sqlDurationMs": 0.2692,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 149,
+          "bindingDurationMs": 33,
+          "sqlDurationMs": 0.2092,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 149,
+          "bindingDurationMs": 40,
+          "sqlDurationMs": 0.3483,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 149,
+          "bindingDurationMs": 34,
+          "sqlDurationMs": 0.2433,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "dashboards",
+          "offsetMs": 190,
+          "bindingDurationMs": 58,
+          "sqlDurationMs": 0.5331,
+          "rowsRead": 2,
+          "rowsWritten": 1,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 248,
+          "bindingDurationMs": 38,
+          "sqlDurationMs": 0.2639,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 286,
+          "bindingDurationMs": 37,
+          "sqlDurationMs": 0.1647,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 286,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.2455,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 286,
+          "bindingDurationMs": 38,
+          "sqlDurationMs": 0.2586,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        }
+      ]
+    },
+    {
+      "traceId": "707f3e07bb6fee34c4fee120daa70255",
+      "startMs": 1791187896133,
+      "handlerDurationMs": 307,
+      "d1CallCount": 14,
+      "d1WaitUnionMs": 307,
+      "sqlDurationSumMs": 3.8753,
+      "calls": [
+        {
+          "table": "dashboards",
+          "offsetMs": 0,
+          "bindingDurationMs": 38,
+          "sqlDurationMs": 0.3317,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "workspaces",
+          "offsetMs": 39,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.1932,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 74,
+          "bindingDurationMs": 36,
+          "sqlDurationMs": 0.2911,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 110,
+          "bindingDurationMs": 33,
+          "sqlDurationMs": 0.1528,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 110,
+          "bindingDurationMs": 33,
+          "sqlDurationMs": 0.2062,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 110,
+          "bindingDurationMs": 40,
+          "sqlDurationMs": 0.341,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 150,
+          "bindingDurationMs": 31,
+          "sqlDurationMs": 0.4927,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 150,
+          "bindingDurationMs": 34,
+          "sqlDurationMs": 0.1409,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 150,
+          "bindingDurationMs": 29,
+          "sqlDurationMs": 0.2814,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "dashboards",
+          "offsetMs": 185,
+          "bindingDurationMs": 51,
+          "sqlDurationMs": 0.3098,
+          "rowsRead": 2,
+          "rowsWritten": 1,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 236,
+          "bindingDurationMs": 33,
+          "sqlDurationMs": 0.3148,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 269,
+          "bindingDurationMs": 37,
+          "sqlDurationMs": 0.2006,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 269,
+          "bindingDurationMs": 37,
+          "sqlDurationMs": 0.2468,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 269,
+          "bindingDurationMs": 34,
+          "sqlDurationMs": 0.3723,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        }
+      ]
+    },
+    {
+      "traceId": "fd62fec297545984a3cf18f6dc52c2a7",
+      "startMs": 1791187718431,
+      "handlerDurationMs": 314,
+      "d1CallCount": 14,
+      "d1WaitUnionMs": 314,
+      "sqlDurationSumMs": 3.774,
+      "calls": [
+        {
+          "table": "dashboards",
+          "offsetMs": 0,
+          "bindingDurationMs": 36,
+          "sqlDurationMs": 0.2722,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "workspaces",
+          "offsetMs": 37,
+          "bindingDurationMs": 32,
+          "sqlDurationMs": 0.3142,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 69,
+          "bindingDurationMs": 34,
+          "sqlDurationMs": 0.3707,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 103,
+          "bindingDurationMs": 45,
+          "sqlDurationMs": 0.2667,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 103,
+          "bindingDurationMs": 44,
+          "sqlDurationMs": 0.1727,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 103,
+          "bindingDurationMs": 45,
+          "sqlDurationMs": 0.2976,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 149,
+          "bindingDurationMs": 32,
+          "sqlDurationMs": 0.2986,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 149,
+          "bindingDurationMs": 42,
+          "sqlDurationMs": 0.2148,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 149,
+          "bindingDurationMs": 39,
+          "sqlDurationMs": 0.3003,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "dashboards",
+          "offsetMs": 192,
+          "bindingDurationMs": 52,
+          "sqlDurationMs": 0.3198,
+          "rowsRead": 2,
+          "rowsWritten": 1,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 244,
+          "bindingDurationMs": 34,
+          "sqlDurationMs": 0.3536,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 278,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.1686,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 278,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.2036,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 278,
+          "bindingDurationMs": 36,
+          "sqlDurationMs": 0.2206,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        }
+      ]
+    },
+    {
+      "traceId": "3336cb04ca3bd7186ce9c990a6bce7d0",
+      "startMs": 1791187716783,
+      "handlerDurationMs": 298,
+      "d1CallCount": 14,
+      "d1WaitUnionMs": 298,
+      "sqlDurationSumMs": 5.2082,
+      "calls": [
+        {
+          "table": "dashboards",
+          "offsetMs": 0,
+          "bindingDurationMs": 29,
+          "sqlDurationMs": 0.2242,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "workspaces",
+          "offsetMs": 30,
+          "bindingDurationMs": 32,
+          "sqlDurationMs": 0.1767,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 62,
+          "bindingDurationMs": 30,
+          "sqlDurationMs": 0.1833,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 92,
+          "bindingDurationMs": 31,
+          "sqlDurationMs": 0.184,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 92,
+          "bindingDurationMs": 33,
+          "sqlDurationMs": 0.1675,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 92,
+          "bindingDurationMs": 32,
+          "sqlDurationMs": 0.2876,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 126,
+          "bindingDurationMs": 36,
+          "sqlDurationMs": 0.1462,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 126,
+          "bindingDurationMs": 28,
+          "sqlDurationMs": 0.204,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 126,
+          "bindingDurationMs": 50,
+          "sqlDurationMs": 0.221,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "dashboards",
+          "offsetMs": 176,
+          "bindingDurationMs": 55,
+          "sqlDurationMs": 0.2516,
+          "rowsRead": 2,
+          "rowsWritten": 1,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "data_sources",
+          "offsetMs": 231,
+          "bindingDurationMs": 31,
+          "sqlDurationMs": 0.2557,
+          "rowsRead": 1,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "library_metrics",
+          "offsetMs": 262,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.1497,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "calculated_fields",
+          "offsetMs": 262,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 0.2111,
+          "rowsRead": 0,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        },
+        {
+          "table": "fields",
+          "offsetMs": 262,
+          "bindingDurationMs": 35,
+          "sqlDurationMs": 2.5456,
+          "rowsRead": 6,
+          "rowsWritten": 0,
+          "region": "WEUR",
+          "colo": "MRS"
+        }
+      ]
+    }
+  ],
+  "firstPass": {
+    "commit": "1705394d64ea72e7dd3c6584eb870c53a31baf9a",
+    "after": {
+      "runs": [
+        {
+          "dataDomAt": 37338.29999999702,
+          "dataPaintAt": 37358.199999999255,
+          "domInsertedAt": 35072.29999999702,
+          "existingIds": [],
+          "label": "duckdb-after-1",
+          "pendingDomAt": 34643.39999999851,
+          "skeletonSeen": true,
+          "startedAt": 34632.79999999702,
+          "timestamp": "2026-10-05T14:47:46.964Z",
+          "type": "scorecard",
+          "widgetId": "widget_196b30ee-94dc-4f86-be3d-9481a3dccfbb",
+          "widgetPaintAt": 35335.79999999702
+        },
+        {
+          "dataDomAt": 86637.89999999851,
+          "dataPaintAt": 86662,
+          "domInsertedAt": 85194.69999999925,
+          "existingIds": [],
+          "label": "duckdb-after-2",
+          "pendingDomAt": 84861.79999999702,
+          "skeletonSeen": true,
+          "startedAt": 84852.19999999925,
+          "timestamp": "2026-10-05T14:48:37.184Z",
+          "type": "scorecard",
+          "widgetId": "widget_1a7f00f8-4cc6-4cd0-9ad8-f71f938c7d11",
+          "widgetPaintAt": 85212.29999999702
+        },
+        {
+          "dataDomAt": 113449.39999999852,
+          "dataPaintAt": 113470.59999999776,
+          "domInsertedAt": 111693.29999999702,
+          "existingIds": [],
+          "label": "duckdb-after-3",
+          "pendingDomAt": 111321.09999999776,
+          "skeletonSeen": true,
+          "startedAt": 111313.09999999776,
+          "timestamp": "2026-10-05T14:49:03.645Z",
+          "type": "scorecard",
+          "widgetId": "widget_731aaf88-9df6-40bf-a443-82b4828231a0",
+          "widgetPaintAt": 111704
+        },
+        {
+          "dataDomAt": 116637.29999999702,
+          "dataPaintAt": 116654,
+          "domInsertedAt": 115034.29999999702,
+          "existingIds": [],
+          "label": "duckdb-after-4",
+          "pendingDomAt": 114670.69999999924,
+          "skeletonSeen": true,
+          "startedAt": 114661.69999999924,
+          "timestamp": "2026-10-05T14:49:06.993Z",
+          "type": "scorecard",
+          "widgetId": "widget_0060686c-e097-4853-989b-322aabe4ac72",
+          "widgetPaintAt": 115053.79999999702
+        },
+        {
+          "dataDomAt": 120130.09999999776,
+          "dataPaintAt": 120145.89999999852,
+          "domInsertedAt": 118205.69999999924,
+          "existingIds": [],
+          "label": "duckdb-after-5",
+          "pendingDomAt": 117846.19999999924,
+          "skeletonSeen": true,
+          "startedAt": 117835.5,
+          "timestamp": "2026-10-05T14:49:10.167Z",
+          "type": "scorecard",
+          "widgetId": "widget_9181d6dd-145b-4189-a4cc-af4eb56487f5",
+          "widgetPaintAt": 118220.89999999852
+        },
+        {
+          "dataDomAt": 147994.29999999702,
+          "dataPaintAt": 148012.5,
+          "domInsertedAt": 147679.69999999923,
+          "existingIds": [],
+          "label": "clickhouse-after-1",
+          "pendingDomAt": 147348,
+          "skeletonSeen": true,
+          "startedAt": 147337.8999999985,
+          "timestamp": "2026-10-05T14:49:39.670Z",
+          "type": "scorecard",
+          "widgetId": "widget_c9bcc618-2371-41a2-b31e-858eff7ca854",
+          "widgetPaintAt": 147695.79999999702
+        },
+        {
+          "dataDomAt": 149662.3999999985,
+          "dataPaintAt": 149687.3999999985,
+          "domInsertedAt": 149482.3999999985,
+          "existingIds": [],
+          "label": "clickhouse-after-2",
+          "pendingDomAt": 149186,
+          "skeletonSeen": true,
+          "startedAt": 149176.09999999776,
+          "timestamp": "2026-10-05T14:49:41.508Z",
+          "type": "scorecard",
+          "widgetId": "widget_034888f2-5bed-46b2-baa7-fd52bd87569a",
+          "widgetPaintAt": 149498.19999999923
+        },
+        {
+          "dataDomAt": 151848.19999999923,
+          "dataPaintAt": 151870.59999999776,
+          "domInsertedAt": 151638.69999999923,
+          "existingIds": [],
+          "label": "clickhouse-after-3",
+          "pendingDomAt": 151280.19999999923,
+          "skeletonSeen": true,
+          "startedAt": 151269.8999999985,
+          "timestamp": "2026-10-05T14:49:43.602Z",
+          "type": "scorecard",
+          "widgetId": "widget_9b752cf7-315c-420a-bc1b-3b7981e83337",
+          "widgetPaintAt": 151654.09999999776
+        },
+        {
+          "dataDomAt": 153604.59999999776,
+          "dataPaintAt": 153629,
+          "domInsertedAt": 153422.69999999923,
+          "existingIds": [],
+          "label": "clickhouse-after-4",
+          "pendingDomAt": 153097.59999999776,
+          "skeletonSeen": true,
+          "startedAt": 153086.09999999776,
+          "timestamp": "2026-10-05T14:49:45.418Z",
+          "type": "scorecard",
+          "widgetId": "widget_3d2037d9-a115-48f2-b3fc-d72ae1ca9e57",
+          "widgetPaintAt": 153437.69999999923
+        },
+        {
+          "dataDomAt": 155355.29999999702,
+          "dataPaintAt": 155387.69999999923,
+          "domInsertedAt": 155184.19999999923,
+          "existingIds": [],
+          "label": "clickhouse-after-5",
+          "pendingDomAt": 154869.29999999702,
+          "skeletonSeen": true,
+          "startedAt": 154860.3999999985,
+          "timestamp": "2026-10-05T14:49:47.192Z",
+          "type": "scorecard",
+          "widgetId": "widget_ad92592d-2d8c-4d56-a2e1-e94611ffbf8b",
+          "widgetPaintAt": 155204.29999999702
+        },
+        {
+          "dataDomAt": 185929.59999999776,
+          "dataPaintAt": 185953.8999999985,
+          "domInsertedAt": 185929.5,
+          "existingIds": [],
+          "label": "text-after-1",
+          "pendingDomAt": 185774.3999999985,
+          "startedAt": 185766.79999999705,
+          "timestamp": "2026-10-05T14:50:18.099Z",
+          "type": "text",
+          "widgetId": "widget_4ba1124f-4091-4d83-b56b-fc6e9790f2f8",
+          "widgetPaintAt": 185953.8999999985
+        },
+        {
+          "dataDomAt": 187527.59999999776,
+          "dataPaintAt": 187554.09999999776,
+          "domInsertedAt": 187527.59999999776,
+          "existingIds": [],
+          "label": "text-after-2",
+          "pendingDomAt": 187395.3999999985,
+          "startedAt": 187386.69999999923,
+          "timestamp": "2026-10-05T14:50:19.719Z",
+          "type": "text",
+          "widgetId": "widget_883f677a-c05c-480a-9cde-e29c41a617d6",
+          "widgetPaintAt": 187554.09999999776
+        },
+        {
+          "dataDomAt": 189113.3999999985,
+          "dataPaintAt": 189129.19999999923,
+          "domInsertedAt": 189113.3999999985,
+          "existingIds": [],
+          "label": "text-after-3",
+          "pendingDomAt": 188989.3999999985,
+          "startedAt": 188980.19999999923,
+          "timestamp": "2026-10-05T14:50:21.312Z",
+          "type": "text",
+          "widgetId": "widget_e3ca388d-bf66-4e30-b884-a8eeb4c4780e",
+          "widgetPaintAt": 189129.19999999923
+        }
+      ],
+      "requests": [
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d39368f907527-DUS",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 34811.89999999851,
+          "headersAt": 34811.599999997765,
+          "ok": true,
+          "run": "duckdb-after-1",
+          "startedAt": 34633.39999999851,
+          "status": 200,
+          "timestamp": "2026-10-05T14:47:46.965Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3937aa3c7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "definitionType": "scorecard",
+          "finishedAt": 35027.39999999851,
+          "headersAt": 35027,
+          "ok": true,
+          "run": "duckdb-after-1",
+          "startedAt": 34812.099999997765,
+          "status": 200,
+          "timestamp": "2026-10-05T14:47:47.144Z",
+          "widgetId": "widget_196b30ee-94dc-4f86-be3d-9481a3dccfbb"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d39390d207527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 35191.29999999702,
+          "headersAt": 35190.89999999851,
+          "ok": true,
+          "run": "duckdb-after-1",
+          "startedAt": 35028.199999999255,
+          "status": 200,
+          "timestamp": "2026-10-05T14:47:47.360Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d39393d907527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 35251.89999999851,
+          "headersAt": 35246.599999997765,
+          "ok": true,
+          "run": "duckdb-after-1",
+          "startedAt": 35059.39999999851,
+          "status": 200,
+          "timestamp": "2026-10-05T14:47:47.391Z"
+        },
+        {
+          "abortedAt": 84166.79999999702,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d39394db47527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 37332.29999999702,
+          "headersAt": 37331.599999997765,
+          "ok": true,
+          "resultRows": 1,
+          "run": "duckdb-after-1",
+          "startedAt": 35070.099999997765,
+          "status": 200,
+          "timestamp": "2026-10-05T14:47:47.402Z",
+          "widgetId": "widget_196b30ee-94dc-4f86-be3d-9481a3dccfbb"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d393a0f857527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 35436.79999999702,
+          "headersAt": 35436.5,
+          "includeSharing": false,
+          "ok": true,
+          "run": "duckdb-after-1",
+          "startedAt": 35191.39999999851,
+          "status": 200,
+          "timestamp": "2026-10-05T14:47:47.523Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3a706f847527-DUS",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 85013.89999999851,
+          "headersAt": 85013.5,
+          "ok": true,
+          "run": "duckdb-after-2",
+          "startedAt": 84852.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:48:37.184Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3a716a747527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "definitionType": "scorecard",
+          "finishedAt": 85185.79999999702,
+          "headersAt": 85185.39999999851,
+          "ok": true,
+          "run": "duckdb-after-2",
+          "startedAt": 85014.09999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:48:37.346Z",
+          "widgetId": "widget_1a7f00f8-4cc6-4cd0-9ad8-f71f938c7d11"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3a728d8a7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 85322.79999999702,
+          "headersAt": 85322.59999999776,
+          "ok": true,
+          "run": "duckdb-after-2",
+          "startedAt": 85186,
+          "status": 200,
+          "timestamp": "2026-10-05T14:48:37.518Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3a728da97527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 85360.39999999851,
+          "headersAt": 85360.29999999702,
+          "ok": true,
+          "run": "duckdb-after-2",
+          "startedAt": 85190.79999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:48:37.522Z"
+        },
+        {
+          "abortedAt": 110634.5,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3a728dbf7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 86637.39999999851,
+          "headersAt": 86637.19999999925,
+          "ok": true,
+          "resultRows": 1,
+          "run": "duckdb-after-2",
+          "startedAt": 85193.79999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:48:37.525Z",
+          "widgetId": "widget_1a7f00f8-4cc6-4cd0-9ad8-f71f938c7d11"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3a7358587527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 85437.59999999776,
+          "headersAt": 85437.19999999925,
+          "includeSharing": false,
+          "ok": true,
+          "run": "duckdb-after-2",
+          "startedAt": 85322.89999999851,
+          "status": 200,
+          "timestamp": "2026-10-05T14:48:37.655Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3b15c8e57527-DUS",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 111486.89999999852,
+          "headersAt": 111486.5,
+          "ok": true,
+          "run": "duckdb-after-3",
+          "startedAt": 111313.29999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:03.645Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3b16ec067527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "definitionType": "scorecard",
+          "finishedAt": 111677,
+          "headersAt": 111676.39999999852,
+          "ok": true,
+          "run": "duckdb-after-3",
+          "startedAt": 111487.39999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:03.819Z",
+          "widgetId": "widget_731aaf88-9df6-40bf-a443-82b4828231a0"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3b181efc7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 111819.79999999702,
+          "headersAt": 111819.5,
+          "ok": true,
+          "run": "duckdb-after-3",
+          "startedAt": 111677.29999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:04.009Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3b182f297527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 111885.69999999924,
+          "headersAt": 111885.39999999852,
+          "ok": true,
+          "run": "duckdb-after-3",
+          "startedAt": 111686.39999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:04.018Z"
+        },
+        {
+          "abortedAt": 114003.29999999702,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3b182f387527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 113447.5,
+          "headersAt": 113447,
+          "ok": true,
+          "resultRows": 1,
+          "run": "duckdb-after-3",
+          "startedAt": 111691.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:04.023Z",
+          "widgetId": "widget_731aaf88-9df6-40bf-a443-82b4828231a0"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3b18f9517527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 111942.5,
+          "headersAt": 111942.19999999924,
+          "includeSharing": false,
+          "ok": true,
+          "run": "duckdb-after-3",
+          "startedAt": 111819.89999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:04.152Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3b2ab92a7527-DUS",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 114813.79999999702,
+          "headersAt": 114813.39999999852,
+          "ok": true,
+          "run": "duckdb-after-4",
+          "startedAt": 114662,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:06.994Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3b2bac137527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "definitionType": "scorecard",
+          "finishedAt": 115016.5,
+          "headersAt": 115016.09999999776,
+          "ok": true,
+          "run": "duckdb-after-4",
+          "startedAt": 114813.89999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:07.146Z",
+          "widgetId": "widget_0060686c-e097-4853-989b-322aabe4ac72"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3b2cf83b7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 115159,
+          "headersAt": 115158.59999999776,
+          "ok": true,
+          "run": "duckdb-after-4",
+          "startedAt": 115016.79999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:07.349Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3b2d08637527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 115201.69999999924,
+          "headersAt": 115201.19999999924,
+          "ok": true,
+          "run": "duckdb-after-4",
+          "startedAt": 115028.89999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:07.361Z"
+        },
+        {
+          "abortedAt": 117193.79999999702,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3b2d08727527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 116636.09999999776,
+          "headersAt": 116635.59999999776,
+          "ok": true,
+          "resultRows": 1,
+          "run": "duckdb-after-4",
+          "startedAt": 115033.19999999924,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:07.365Z",
+          "widgetId": "widget_0060686c-e097-4853-989b-322aabe4ac72"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3b2dda9f7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 115263.09999999776,
+          "headersAt": 115262.69999999924,
+          "includeSharing": false,
+          "ok": true,
+          "run": "duckdb-after-4",
+          "startedAt": 115159.09999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:07.491Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3b3e9e977527-DUS",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 118006.69999999924,
+          "headersAt": 118006.29999999702,
+          "ok": true,
+          "run": "duckdb-after-5",
+          "startedAt": 117835.89999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:10.168Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3b3faa1b7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "definitionType": "scorecard",
+          "finishedAt": 118193.89999999852,
+          "headersAt": 118193.5,
+          "ok": true,
+          "run": "duckdb-after-5",
+          "startedAt": 118006.79999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:10.339Z",
+          "widgetId": "widget_9181d6dd-145b-4189-a4cc-af4eb56487f5"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3b40cdae7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 118323.69999999924,
+          "headersAt": 118323.29999999702,
+          "ok": true,
+          "run": "duckdb-after-5",
+          "startedAt": 118194.09999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:10.526Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3b40ddc37527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "dataSourceId": "ds_597bb92d-bb36-45f0-9517-168b261c9aee",
+          "finishedAt": 118377.5,
+          "headersAt": 118377.09999999776,
+          "ok": true,
+          "run": "duckdb-after-5",
+          "startedAt": 118199.39999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:10.531Z"
+        },
+        {
+          "abortedAt": 146650.5,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3b40dddb7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 120128,
+          "headersAt": 120127,
+          "ok": true,
+          "resultRows": 1,
+          "run": "duckdb-after-5",
+          "startedAt": 118204.19999999924,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:10.536Z",
+          "widgetId": "widget_9181d6dd-145b-4189-a4cc-af4eb56487f5"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3b419f8f7527-DUS",
+          "dashboardId": "dash_e798771b-ee69-496b-9859-8c1e2ba06bf3",
+          "finishedAt": 118422,
+          "headersAt": 118421.69999999924,
+          "includeSharing": false,
+          "ok": true,
+          "run": "duckdb-after-5",
+          "startedAt": 118323.89999999852,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:10.656Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3bf6f9657527-DUS",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 147495.29999999702,
+          "headersAt": 147494.8999999985,
+          "ok": true,
+          "run": "clickhouse-after-1",
+          "startedAt": 147338.29999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:39.670Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3bf7ec557527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "definitionType": "scorecard",
+          "finishedAt": 147670.8999999985,
+          "headersAt": 147670.59999999776,
+          "ok": true,
+          "run": "clickhouse-after-1",
+          "startedAt": 147495.3999999985,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:39.827Z",
+          "widgetId": "widget_c9bcc618-2371-41a2-b31e-858eff7ca854"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3bf90f9a7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 147819.59999999776,
+          "headersAt": 147819.19999999923,
+          "ok": true,
+          "run": "clickhouse-after-1",
+          "startedAt": 147671.19999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:40.003Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3bf91fab7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 147836.19999999923,
+          "headersAt": 147835.8999999985,
+          "ok": true,
+          "run": "clickhouse-after-1",
+          "startedAt": 147675.69999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:40.008Z"
+        },
+        {
+          "abortedAt": 148548.8999999985,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3bf91fb07527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 147993.19999999923,
+          "headersAt": 147992.8999999985,
+          "ok": true,
+          "resultRows": 1,
+          "run": "clickhouse-after-1",
+          "startedAt": 147678.69999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:40.011Z",
+          "widgetId": "widget_c9bcc618-2371-41a2-b31e-858eff7ca854"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3bf9fa097527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 147914.19999999923,
+          "headersAt": 147913.8999999985,
+          "includeSharing": false,
+          "ok": true,
+          "run": "clickhouse-after-1",
+          "startedAt": 147819.69999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:40.152Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c0279377527-DUS",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 149317.79999999702,
+          "headersAt": 149317.5,
+          "ok": true,
+          "run": "clickhouse-after-2",
+          "startedAt": 149176.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:41.508Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3c035c367527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "definitionType": "scorecard",
+          "finishedAt": 149472.3999999985,
+          "headersAt": 149472,
+          "ok": true,
+          "run": "clickhouse-after-2",
+          "startedAt": 149317.79999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:41.650Z",
+          "widgetId": "widget_034888f2-5bed-46b2-baa7-fd52bd87569a"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3c044e9b7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 149606.59999999776,
+          "headersAt": 149606.19999999923,
+          "ok": true,
+          "run": "clickhouse-after-2",
+          "startedAt": 149472.69999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:41.805Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c045eb37527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 149624.09999999776,
+          "headersAt": 149623.79999999702,
+          "ok": true,
+          "run": "clickhouse-after-2",
+          "startedAt": 149477.59999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:41.809Z"
+        },
+        {
+          "abortedAt": 150250.19999999923,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3c045ec67527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 149661.3999999985,
+          "headersAt": 149660.8999999985,
+          "ok": true,
+          "resultRows": 1,
+          "run": "clickhouse-after-2",
+          "startedAt": 149481,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:41.813Z",
+          "widgetId": "widget_034888f2-5bed-46b2-baa7-fd52bd87569a"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3c05288d7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 149704.19999999923,
+          "headersAt": 149703.5,
+          "includeSharing": false,
+          "ok": true,
+          "run": "clickhouse-after-2",
+          "startedAt": 149606.79999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:41.939Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c0f8b547527-DUS",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 151453.29999999702,
+          "headersAt": 151453,
+          "ok": true,
+          "run": "clickhouse-after-3",
+          "startedAt": 151270.19999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:43.602Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3c10ae617527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "definitionType": "scorecard",
+          "finishedAt": 151631.59999999776,
+          "headersAt": 151631.29999999702,
+          "ok": true,
+          "run": "clickhouse-after-3",
+          "startedAt": 151453.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:43.785Z",
+          "widgetId": "widget_9b752cf7-315c-420a-bc1b-3b7981e83337"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3c11c97d7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 151767.8999999985,
+          "headersAt": 151767.59999999776,
+          "ok": true,
+          "run": "clickhouse-after-3",
+          "startedAt": 151631.69999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:43.964Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c11c99f7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 151816.59999999776,
+          "headersAt": 151816.19999999923,
+          "ok": true,
+          "run": "clickhouse-after-3",
+          "startedAt": 151635.29999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:43.967Z"
+        },
+        {
+          "abortedAt": 152456.69999999923,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3c11d9ac7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 151847.3999999985,
+          "headersAt": 151847.19999999923,
+          "ok": true,
+          "resultRows": 1,
+          "run": "clickhouse-after-3",
+          "startedAt": 151637.8999999985,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:43.970Z",
+          "widgetId": "widget_9b752cf7-315c-420a-bc1b-3b7981e83337"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3c12abdf7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 151880,
+          "headersAt": 151879.79999999702,
+          "includeSharing": false,
+          "ok": true,
+          "run": "clickhouse-after-3",
+          "startedAt": 151768.09999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:44.100Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c1ae8957527-DUS",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 153226.29999999702,
+          "headersAt": 153225.8999999985,
+          "ok": true,
+          "run": "clickhouse-after-4",
+          "startedAt": 153086.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:45.418Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3c1bcafb7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "definitionType": "scorecard",
+          "finishedAt": 153412.09999999776,
+          "headersAt": 153411.59999999776,
+          "ok": true,
+          "run": "clickhouse-after-4",
+          "startedAt": 153226.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:45.558Z",
+          "widgetId": "widget_3d2037d9-a115-48f2-b3fc-d72ae1ca9e57"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3c1cee827527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 153544.69999999923,
+          "headersAt": 153544.3999999985,
+          "ok": true,
+          "run": "clickhouse-after-4",
+          "startedAt": 153412.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:45.744Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c1cfe977527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 153574.09999999776,
+          "headersAt": 153573.79999999702,
+          "ok": true,
+          "run": "clickhouse-after-4",
+          "startedAt": 153417.8999999985,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:45.750Z"
+        },
+        {
+          "abortedAt": 154204.59999999776,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3c1cfeb17527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 153603.69999999923,
+          "headersAt": 153603.3999999985,
+          "ok": true,
+          "resultRows": 1,
+          "run": "clickhouse-after-4",
+          "startedAt": 153421.3999999985,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:45.753Z",
+          "widgetId": "widget_3d2037d9-a115-48f2-b3fc-d72ae1ca9e57"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3c1db91c7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 153639.8999999985,
+          "headersAt": 153639.69999999923,
+          "includeSharing": false,
+          "ok": true,
+          "run": "clickhouse-after-4",
+          "startedAt": 153544.8999999985,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:45.877Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c25ff157527-DUS",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 155006.29999999702,
+          "headersAt": 155006,
+          "ok": true,
+          "run": "clickhouse-after-5",
+          "startedAt": 154860.69999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:47.193Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3c26e9c27527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "definitionType": "scorecard",
+          "finishedAt": 155163.19999999923,
+          "headersAt": 155162.59999999776,
+          "ok": true,
+          "run": "clickhouse-after-5",
+          "startedAt": 155006.3999999985,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:47.338Z",
+          "widgetId": "widget_ad92592d-2d8c-4d56-a2e1-e94611ffbf8b"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3c27dc9c7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 155298.3999999985,
+          "headersAt": 155298,
+          "ok": true,
+          "run": "clickhouse-after-5",
+          "startedAt": 155163.59999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:47.495Z"
+        },
+        {
+          "action": "describeDatasource",
+          "cfRay": "a45d3c27fd017527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "dataSourceId": "ds_aacd707a-3ce0-45e1-a503-22835cc74030",
+          "finishedAt": 155335.8999999985,
+          "headersAt": 155335.59999999776,
+          "ok": true,
+          "run": "clickhouse-after-5",
+          "startedAt": 155177.09999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:47.509Z"
+        },
+        {
+          "abortedAt": 185080.8999999985,
+          "action": "queryWidget",
+          "cache": "miss",
+          "cfRay": "a45d3c27fd107527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 155353.59999999776,
+          "headersAt": 155353.29999999702,
+          "ok": true,
+          "resultRows": 1,
+          "run": "clickhouse-after-5",
+          "startedAt": 155181.79999999702,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:47.514Z",
+          "widgetId": "widget_ad92592d-2d8c-4d56-a2e1-e94611ffbf8b"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3c28befb7527-DUS",
+          "dashboardId": "dash_8bff20ba-c489-471d-b03b-5c9546026135",
+          "finishedAt": 155388.29999999702,
+          "headersAt": 155387.09999999776,
+          "includeSharing": false,
+          "ok": true,
+          "run": "clickhouse-after-5",
+          "startedAt": 155298.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:49:47.630Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3ce729957527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "definitionType": "text",
+          "finishedAt": 185920.5,
+          "headersAt": 185920.19999999923,
+          "ok": true,
+          "run": "text-after-1",
+          "startedAt": 185774.3999999985,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:18.106Z",
+          "widgetId": "widget_4ba1124f-4091-4d83-b56b-fc6e9790f2f8"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3ce81c6b7527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "finishedAt": 186050.69999999923,
+          "headersAt": 186050.5,
+          "ok": true,
+          "run": "text-after-1",
+          "startedAt": 185920.69999999923,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:18.253Z"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3ce8eed47527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "finishedAt": 186148.59999999776,
+          "headersAt": 186148.5,
+          "includeSharing": false,
+          "ok": true,
+          "run": "text-after-1",
+          "startedAt": 186050.79999999705,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:18.383Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3cf15c737527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "definitionType": "text",
+          "finishedAt": 187520.29999999705,
+          "headersAt": 187520,
+          "ok": true,
+          "run": "text-after-2",
+          "startedAt": 187395.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:19.727Z",
+          "widgetId": "widget_883f677a-c05c-480a-9cde-e29c41a617d6"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3cf21ea37527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "finishedAt": 187660,
+          "headersAt": 187659.3999999985,
+          "ok": true,
+          "run": "text-after-2",
+          "startedAt": 187520.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:19.852Z"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3cf2f8ec7527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "finishedAt": 187762.09999999776,
+          "headersAt": 187761.5,
+          "includeSharing": false,
+          "ok": true,
+          "run": "text-after-2",
+          "startedAt": 187660.09999999776,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:19.992Z"
+        },
+        {
+          "action": "addWidget",
+          "cfRay": "a45d3cfb4fec7527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "definitionType": "text",
+          "finishedAt": 189108.09999999776,
+          "headersAt": 189107.79999999705,
+          "ok": true,
+          "run": "text-after-3",
+          "startedAt": 188989.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:21.321Z",
+          "widgetId": "widget_e3ca388d-bf66-4e30-b884-a8eeb4c4780e"
+        },
+        {
+          "action": "updateLayout",
+          "cfRay": "a45d3cfc0a5c7527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "finishedAt": 189246.29999999705,
+          "headersAt": 189246.09999999776,
+          "ok": true,
+          "run": "text-after-3",
+          "startedAt": 189108.29999999705,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:21.440Z"
+        },
+        {
+          "action": "getDashboard",
+          "cfRay": "a45d3cfced147527-DUS",
+          "dashboardId": "dash_1c6e49bd-02aa-4968-a646-e19f6ff9d7b3",
+          "finishedAt": 189342.5,
+          "headersAt": 189342.09999999776,
+          "includeSharing": false,
+          "ok": true,
+          "run": "text-after-3",
+          "startedAt": 189246.5,
+          "status": 200,
+          "timestamp": "2026-10-05T14:50:21.578Z"
+        }
+      ]
+    }
+  },
+  "cachePolicies": [
+    {
+      "cachePolicy": {
+        "mode": "disabled"
+      },
+      "id": "ds_597bb92d-bb36-45f0-9517-168b261c9aee"
+    },
+    {
+      "cachePolicy": {
+        "mode": "disabled"
+      },
+      "id": "ds_aacd707a-3ce0-45e1-a503-22835cc74030"
+    },
+    {
+      "cachePolicy": {
+        "mode": "disabled"
+      },
+      "id": "ds_19c69b4e-ef56-4d51-a1a6-59c0f88f2a92"
+    },
+    {
+      "cachePolicy": {
+        "mode": "disabled"
+      },
+      "id": "ds_ff441ba5-59bf-440c-9617-5c2c9a574f60"
+    }
+  ],
+  "concurrentQueryLoads": [
+    {
+      "backend": "duckdb",
+      "iteration": 1,
+      "ms": 6957.199999999255,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:13.582Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b4569997162-DUS",
+          "ms": 4974,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b45699c7162-DUS",
+          "ms": 6956.5,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b45699e7162-DUS",
+          "ms": 6390.60000000149,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b45699f7162-DUS",
+          "ms": 5372.800000000745,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 1,
+      "ms": 728.4000000022352,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:14.310Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b70ec857162-DUS",
+          "ms": 379.1000000014901,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b70ec867162-DUS",
+          "ms": 694.8999999985099,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b70ec877162-DUS",
+          "ms": 727.5999999977648,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b70ec887162-DUS",
+          "ms": 692.5999999977648,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 2,
+      "ms": 2936.5,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:17.247Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b757fd77162-DUS",
+          "ms": 968.5,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b757fdd7162-DUS",
+          "ms": 1989.89999999851,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b757fe27162-DUS",
+          "ms": 2935.5,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b757fe37162-DUS",
+          "ms": 2389.800000000745,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 2,
+      "ms": 270.5999999977648,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:17.517Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b87dbf57162-DUS",
+          "ms": 247.19999999925497,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b87dbf87162-DUS",
+          "ms": 250,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b87dbfa7162-DUS",
+          "ms": 269.19999999925494,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b87dbfb7162-DUS",
+          "ms": 244.5,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 3,
+      "ms": 4427,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:21.945Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b898d3f7162-DUS",
+          "ms": 3681.60000000149,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b898d447162-DUS",
+          "ms": 2074.60000000149,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b898d487162-DUS",
+          "ms": 1158.300000000745,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4b898d4d7162-DUS",
+          "ms": 4425.800000000745,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 3,
+      "ms": 263.29999999701977,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:22.208Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba5296f7162-DUS",
+          "ms": 208.29999999701977,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba529717162-DUS",
+          "ms": 253.60000000149012,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba529737162-DUS",
+          "ms": 262.29999999701977,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba529767162-DUS",
+          "ms": 239.40000000223517,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 4,
+      "ms": 5032.60000000149,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:27.241Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba6dab17162-DUS",
+          "ms": 1465.300000000745,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba6dab27162-DUS",
+          "ms": 3450.79999999702,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba6dab47162-DUS",
+          "ms": 5032.199999999255,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4ba6dab57162-DUS",
+          "ms": 4282.900000002235,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 4,
+      "ms": 288.30000000074506,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:27.529Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc64c147162-DUS",
+          "ms": 282,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc64c167162-DUS",
+          "ms": 282.5,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc64c1a7162-DUS",
+          "ms": 287.69999999925494,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc64c1d7162-DUS",
+          "ms": 271.5,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 5,
+      "ms": 5330.800000000745,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:32.860Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc81da17162-DUS",
+          "ms": 2318.199999999255,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc81da37162-DUS",
+          "ms": 4215,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc81da57162-DUS",
+          "ms": 5329.900000002235,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4bc81da67162-DUS",
+          "ms": 3134.800000000745,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 5,
+      "ms": 335.30000000074506,
+      "rows": 100000,
+      "timestamp": "2026-10-05T15:00:33.195Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d4be96ff97162-DUS",
+          "ms": 247.19999999925497,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4be96ffc7162-DUS",
+          "ms": 239.19999999925497,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4be96ffe7162-DUS",
+          "ms": 334.3999999985099,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d4be96fff7162-DUS",
+          "ms": 273.30000000074506,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 1,
+      "ms": 6418.699999999255,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:11.836Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d5119ecd27162-DUS",
+          "ms": 1805.4000000022352,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5119ecd67162-DUS",
+          "ms": 6418.300000000745,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5119ecd97162-DUS",
+          "ms": 3070.599999997765,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5119ecda7162-DUS",
+          "ms": 4866,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 1,
+      "ms": 460.1000000014901,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:12.296Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d5141fa437162-DUS",
+          "ms": 263,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5141fa467162-DUS",
+          "ms": 307,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5141fa4b7162-DUS",
+          "ms": 459.6000000014901,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5141fa4e7162-DUS",
+          "ms": 278.3999999985099,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 2,
+      "ms": 7219.199999999255,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:19.640Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d5145ad117162-DUS",
+          "ms": 6305.699999999255,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5145ad127162-DUS",
+          "ms": 4765.10000000149,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5145ad157162-DUS",
+          "ms": 1818.29999999702,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5145ad167162-DUS",
+          "ms": 7218.699999999255,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 2,
+      "ms": 488.5,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:20.128Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d5172cf767162-DUS",
+          "ms": 278.80000000074506,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5172cf7a7162-DUS",
+          "ms": 351.5,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5172cf7d7162-DUS",
+          "ms": 487.19999999925494,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5172cf7e7162-DUS",
+          "ms": 289.6000000014901,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 3,
+      "ms": 6823.60000000149,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:27.099Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d5176ba8a7162-DUS",
+          "ms": 3279.60000000149,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5176ba8b7162-DUS",
+          "ms": 4652.89999999851,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5176ba8c7162-DUS",
+          "ms": 1692.699999999255,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d5176ba8d7162-DUS",
+          "ms": 6822.900000002235,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 3,
+      "ms": 541.6000000014901,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:27.641Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a16a247162-DUS",
+          "ms": 331.30000000074506,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a16a287162-DUS",
+          "ms": 344.1000000014901,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a16a2c7162-DUS",
+          "ms": 540.0999999977648,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a16a2e7162-DUS",
+          "ms": 308.3999999985099,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 4,
+      "ms": 6739.300000000745,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:34.520Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a5adbe7162-DUS",
+          "ms": 3214.20000000298,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a5adc27162-DUS",
+          "ms": 1842.5,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a5adc67162-DUS",
+          "ms": 4667.300000000745,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51a5adc97162-DUS",
+          "ms": 6739,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 4,
+      "ms": 456.19999999925494,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:34.976Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d51cfcef27162-DUS",
+          "ms": 289.1000000014901,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51cfcef77162-DUS",
+          "ms": 310.19999999925494,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51cfcef97162-DUS",
+          "ms": 455.5999999977648,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51cfcefb7162-DUS",
+          "ms": 288.3999999985099,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "duckdb",
+      "iteration": 5,
+      "ms": 6556,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:41.650Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d51d359647162-DUS",
+          "ms": 3037.29999999702,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51d359667162-DUS",
+          "ms": 1643.7000000029802,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51d3596a7162-DUS",
+          "ms": 4505.10000000149,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51d3596d7162-DUS",
+          "ms": 6555.60000000149,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    },
+    {
+      "backend": "clickhouse",
+      "iteration": 5,
+      "ms": 528.3999999985099,
+      "rows": 1000000,
+      "timestamp": "2026-10-05T15:04:42.178Z",
+      "widgets": [
+        {
+          "cache": "miss",
+          "cfRay": "a45d51fc59927162-DUS",
+          "ms": 375,
+          "resultRows": 1,
+          "workload": "Total"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51fc59957162-DUS",
+          "ms": 380.5,
+          "resultRows": 28,
+          "workload": "Daily trend"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51fc59987162-DUS",
+          "ms": 528,
+          "resultRows": 400,
+          "workload": "Campaign breakdown"
+        },
+        {
+          "cache": "miss",
+          "cfRay": "a45d51fc59997162-DUS",
+          "ms": 367,
+          "resultRows": 1,
+          "workload": "Comparison"
+        }
+      ]
+    }
+  ],
+  "creationSamplesCommit": "1705394d64ea72e7dd3c6584eb870c53a31baf9a",
+  "finalTraces": [
+    {
+      "action": "addWidget",
+      "rayId": "a45d537eccfb7162",
+      "traceId": "a20af0ca51b508f7bb4837862c810e0d",
+      "handlerDurationMs": 114,
+      "bindingCalls": 2,
+      "sqlStatements": 3,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 44,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.5489,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 45,
+          "bindingDurationMs": 69,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.4224,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d537b7a977162",
+      "traceId": "53f2745f126d8b0c276056febe737951",
+      "handlerDurationMs": 392,
+      "bindingCalls": 4,
+      "sqlStatements": 5,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 39,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.5702,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 40,
+          "bindingDurationMs": 42,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.2518,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 82,
+          "bindingDurationMs": 44,
+          "statementCount": 1,
+          "sql": "select \"dashboard_id\", \"clerk_user_id\", \"role\", \"granted_by\", \"granted_at\" from \"dashboard_grants\" where \"dashboard_grants\".\"dashboard_id\" = ?",
+          "sqlDurationMs": 0.3737,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 82,
+          "bindingDurationMs": 46,
+          "statementCount": 1,
+          "sql": "select \"token\", \"dashboard_id\", \"created_by\", \"created_at\", \"revoked_at\" from \"share_links\" where (\"share_links\".\"dashboard_id\" = ? and \"share_links\".\"revoked_at\" is null)",
+          "sqlDurationMs": 0.2938,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "addWidget",
+      "rayId": "a45d535c3b537162",
+      "traceId": "be215605e7860779e8976277f65eb643",
+      "handlerDurationMs": 129,
+      "bindingCalls": 3,
+      "sqlStatements": 7,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 37,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.38730000000000003,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 38,
+          "bindingDurationMs": 37,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 1.0171000000000001,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 75,
+          "bindingDurationMs": 54,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.363,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d53368e047162",
+      "traceId": "88f60643b3281cd16f7273d6c5bf4e7b",
+      "handlerDurationMs": 823,
+      "bindingCalls": 4,
+      "sqlStatements": 5,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 50,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.6504,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 51,
+          "bindingDurationMs": 36,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.4115,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 87,
+          "bindingDurationMs": 43,
+          "statementCount": 1,
+          "sql": "select \"dashboard_id\", \"clerk_user_id\", \"role\", \"granted_by\", \"granted_at\" from \"dashboard_grants\" where \"dashboard_grants\".\"dashboard_id\" = ?",
+          "sqlDurationMs": 0.4156,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 87,
+          "bindingDurationMs": 35,
+          "statementCount": 1,
+          "sql": "select \"token\", \"dashboard_id\", \"created_by\", \"created_at\", \"revoked_at\" from \"share_links\" where (\"share_links\".\"dashboard_id\" = ? and \"share_links\".\"revoked_at\" is null)",
+          "sqlDurationMs": 0.3992,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "queryWidget",
+      "rayId": "a45d5328abf67162",
+      "traceId": "cc400bdfd988b8b7c7c9dc84d92f3842",
+      "handlerDurationMs": 1279,
+      "bindingCalls": 6,
+      "sqlStatements": 10,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 53,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.5091,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 53,
+          "bindingDurationMs": 54,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 1.1935,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_run",
+          "offsetMs": 180,
+          "bindingDurationMs": 47,
+          "statementCount": 1,
+          "sql": "DELETE FROM query_read_budgets WHERE expires_at < ?",
+          "sqlDurationMs": 0.3074,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_run",
+          "offsetMs": 227,
+          "bindingDurationMs": 55,
+          "statementCount": 1,
+          "sql": "INSERT INTO query_read_budgets\n     (id, workspace_id, scanned_bytes, maximum_bytes, expires_at, created_at)\n     VALUES (?, ?, 0, ?, ?, ?)",
+          "sqlDurationMs": 0.3003,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_first",
+          "offsetMs": 1184,
+          "bindingDurationMs": 38,
+          "statementCount": 1,
+          "sql": "SELECT scanned_bytes FROM query_read_budgets WHERE id = ?",
+          "sqlDurationMs": 0.4795,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_run",
+          "offsetMs": 1222,
+          "bindingDurationMs": 57,
+          "statementCount": 1,
+          "sql": "DELETE FROM query_read_budgets WHERE id = ?",
+          "sqlDurationMs": 0.2194,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "queryWidget",
+      "rayId": "a45d5307d9ec7162",
+      "traceId": "e0892f1e146d273504073e82385abff3",
+      "handlerDurationMs": 1160,
+      "bindingCalls": 6,
+      "sqlStatements": 10,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 48,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 1.0172,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 48,
+          "bindingDurationMs": 53,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 1.1147,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_run",
+          "offsetMs": 183,
+          "bindingDurationMs": 51,
+          "statementCount": 1,
+          "sql": "DELETE FROM query_read_budgets WHERE expires_at < ?",
+          "sqlDurationMs": 0.32,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_run",
+          "offsetMs": 234,
+          "bindingDurationMs": 66,
+          "statementCount": 1,
+          "sql": "INSERT INTO query_read_budgets\n     (id, workspace_id, scanned_bytes, maximum_bytes, expires_at, created_at)\n     VALUES (?, ?, 0, ?, ?, ?)",
+          "sqlDurationMs": 0.3132,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_first",
+          "offsetMs": 1057,
+          "bindingDurationMs": 39,
+          "statementCount": 1,
+          "sql": "SELECT scanned_bytes FROM query_read_budgets WHERE id = ?",
+          "sqlDurationMs": 0.3847,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_run",
+          "offsetMs": 1096,
+          "bindingDurationMs": 64,
+          "statementCount": 1,
+          "sql": "DELETE FROM query_read_budgets WHERE id = ?",
+          "sqlDurationMs": 0.3266,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "addWidget",
+      "rayId": "a45d530678fa7162",
+      "traceId": "437af44bb5bd26801d0314cfd069850e",
+      "handlerDurationMs": 168,
+      "bindingCalls": 3,
+      "sqlStatements": 7,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 53,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.782,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_batch",
+          "offsetMs": 54,
+          "bindingDurationMs": 57,
+          "statementCount": 4,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"connector_type\", \"location\", \"cache_policy\", \"version\", \"created_at\", \"updated_at\" from \"data_sources\" where (\"data_sources\".\"id\" = ? and \"data_sources\".\"workspace_id\" = ?)\nselect \"id\", \"workspace_id\", \"data_source_id\", \"column_name\", \"canonical_name\", \"label\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"hidden\", \"cast_to\", \"sample_values\", \"cardinality\" from \"fields\" where \"fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"data_source_id\", \"canonical_name\", \"label\", \"expression\", \"role\", \"semantic_type\", \"default_aggregation\", \"description\", \"updated_at\" from \"calculated_fields\" where \"calculated_fields\".\"data_source_id\" = ?\nselect \"id\", \"workspace_id\", \"name\", \"canonical_name\", \"expression\", \"semantic_type\", \"description\", \"updated_at\" from \"library_metrics\" where \"library_metrics\".\"workspace_id\" = ?",
+          "sqlDurationMs": 1.5240000000000002,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 111,
+          "bindingDurationMs": 57,
+          "statementCount": 1,
+          "sql": "update \"dashboards\" set \"name\" = ?, \"document\" = ?, \"updated_at\" = ? where (\"dashboards\".\"id\" = ? and \"dashboards\".\"updated_at\" = ?) returning \"id\"",
+          "sqlDurationMs": 0.5211,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    },
+    {
+      "action": "getDashboard",
+      "rayId": "a45d52d41da17162",
+      "traceId": "b81bbeb11061b34af54536c9f44fbfff",
+      "handlerDurationMs": 415,
+      "bindingCalls": 4,
+      "sqlStatements": 5,
+      "calls": [
+        {
+          "operation": "d1_batch",
+          "offsetMs": 0,
+          "bindingDurationMs": 54,
+          "statementCount": 2,
+          "sql": "select \"id\", \"workspace_id\", \"name\", \"document\", \"created_by\", \"created_at\", \"updated_at\" from \"dashboards\" where \"dashboards\".\"id\" = ? limit ?\nselect \"id\", \"clerk_organization_id\", \"name\", \"r2_prefix\", \"preview_seeded_at\", \"preview_seed_claimed_at\", \"created_at\" from \"workspaces\" where \"workspaces\".\"clerk_organization_id\" = ? limit ?",
+          "sqlDurationMs": 0.7716000000000001,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 55,
+          "bindingDurationMs": 32,
+          "statementCount": 1,
+          "sql": "select \"id\", \"name\" from \"data_sources\" where \"data_sources\".\"workspace_id\" = ?",
+          "sqlDurationMs": 0.283,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 87,
+          "bindingDurationMs": 36,
+          "statementCount": 1,
+          "sql": "select \"dashboard_id\", \"clerk_user_id\", \"role\", \"granted_by\", \"granted_at\" from \"dashboard_grants\" where \"dashboard_grants\".\"dashboard_id\" = ?",
+          "sqlDurationMs": 0.6329,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        },
+        {
+          "operation": "d1_all",
+          "offsetMs": 87,
+          "bindingDurationMs": 45,
+          "statementCount": 1,
+          "sql": "select \"token\", \"dashboard_id\", \"created_by\", \"created_at\", \"revoked_at\" from \"share_links\" where (\"share_links\".\"dashboard_id\" = ? and \"share_links\".\"revoked_at\" is null)",
+          "sqlDurationMs": 0.5317,
+          "region": "WEUR",
+          "colo": "MRS",
+          "workerColo": "DUS"
+        }
+      ]
+    }
+  ]
+}

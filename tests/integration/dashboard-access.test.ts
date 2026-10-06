@@ -41,6 +41,14 @@ describe('dashboard grants', () => {
       dashboardId: dashboard.id,
     })) as OpenedDashboard;
     expect(opened.role).toBe('admin');
+    const refreshed = (await callService({
+      action: 'getDashboard',
+      dashboardId: dashboard.id,
+      includeSharing: false,
+    })) as OpenedDashboard;
+    expect(refreshed.role).toBe('admin');
+    expect(refreshed.dashboard).toEqual(opened.dashboard);
+    expect(refreshed.sharing).toBeUndefined();
     expect(opened.sharing?.grants).toEqual([
       expect.objectContaining({ clerkUserId: workspace.userId, role: 'editor' }),
     ]);

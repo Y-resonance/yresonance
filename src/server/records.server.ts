@@ -30,6 +30,10 @@ export async function loadDataSource(id: string, workspaceId: string): Promise<D
     where: and(eq(dataSources.id, id), eq(dataSources.workspaceId, workspaceId)),
   });
   if (!row) throw new ApiError(404, 'datasource_not_found', 'Datasource not found.');
+  return parseDataSource(row);
+}
+
+function parseDataSource(row: typeof dataSources.$inferSelect): DataSourceRecord {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -41,13 +45,44 @@ export async function loadDataSource(id: string, workspaceId: string): Promise<D
   };
 }
 
-export async function loadQueryMetadata(dataSourceId: string, workspaceId: string) {
-  const database = db();
-  const [fieldRows, calculatedRows, metricRows] = await Promise.all([
+function metadataStatements(
+  database: ReturnType<typeof db>,
+  dataSourceId: string,
+  workspaceId: string,
+) {
+  return [
     database.select().from(fields).where(eq(fields.dataSourceId, dataSourceId)),
     database.select().from(calculatedFields).where(eq(calculatedFields.dataSourceId, dataSourceId)),
     database.select().from(libraryMetrics).where(eq(libraryMetrics.workspaceId, workspaceId)),
+  ] as const;
+}
+
+export async function loadQueryMetadata(dataSourceId: string, workspaceId: string) {
+  const database = db();
+  const rows = await database.batch([...metadataStatements(database, dataSourceId, workspaceId)]);
+  return parseQueryMetadata(...rows);
+}
+
+// One database trip supplies the context shared by validation, hashing and compilation.
+export async function loadQueryContext(dataSourceId: string, workspaceId: string) {
+  const database = db();
+  const [sourceRows, ...metadataRows] = await database.batch([
+    database
+      .select()
+      .from(dataSources)
+      .where(and(eq(dataSources.id, dataSourceId), eq(dataSources.workspaceId, workspaceId))),
+    ...metadataStatements(database, dataSourceId, workspaceId),
   ]);
+  const row = sourceRows[0];
+  if (!row) throw new ApiError(404, 'datasource_not_found', 'Datasource not found.');
+  return { dataSource: parseDataSource(row), metadata: parseQueryMetadata(...metadataRows) };
+}
+
+function parseQueryMetadata(
+  fieldRows: (typeof fields.$inferSelect)[],
+  calculatedRows: (typeof calculatedFields.$inferSelect)[],
+  metricRows: (typeof libraryMetrics.$inferSelect)[],
+) {
   const parsedFields: FieldRecord[] = fieldRows.map((field) => ({
     ...field,
     role: fieldRoleSchema.parse(field.role),

@@ -15,7 +15,7 @@ import {
   controlDefaultValues,
   singleValueControlWithMultipleSelections,
 } from '#/domain/control-state';
-import { loadDataSource, loadQueryMetadata } from './records.server';
+import { loadQueryMetadata, loadQueryContext } from './records.server';
 import { queryResultColumns } from '#/domain/query-result';
 import { resolveDateRange, comparisonDateRange } from '#/domain/dates';
 import { dateBucketTarget, resolveDateGranularity } from '#/domain/date-granularity';
@@ -187,11 +187,10 @@ export async function explainWidget(dashboardId: string, widgetId: string, share
   const access = await authorizeDashboard(dashboardId, 'viewer', shareToken);
   const widget = widgetById(access.document, widgetId);
   if (!compilesToQuery(widget.definition)) return { sql: null, definitions: [] };
-  const dataSource = await loadDataSource(
+  const { dataSource, metadata } = await loadQueryContext(
     widget.definition.dataSourceId,
     access.document.workspaceId,
   );
-  const metadata = await loadQueryMetadata(dataSource.id, access.document.workspaceId);
   const explanation = await datasourceOperation(() =>
     connectorFor(dataSource).explainQuery(dataSource, {
       kind: 'widget',
@@ -226,11 +225,10 @@ export async function getControlOptions(
   if (control.definition.type !== 'control')
     throw new ApiError(400, 'not_a_control', 'The selected widget is not a filter control.');
   const controlDefinition = control.definition;
-  const dataSource = await loadDataSource(
+  const { dataSource, metadata } = await loadQueryContext(
     controlDefinition.dataSourceId,
     access.document.workspaceId,
   );
-  const metadata = await loadQueryMetadata(dataSource.id, access.document.workspaceId);
   const field =
     metadata.fields.find((item) => item.id === controlDefinition.fieldId) ??
     metadata.calculatedFields.find((item) => item.id === controlDefinition.fieldId);
@@ -270,6 +268,7 @@ export function defaultControlState(dashboard: DashboardDocument): ControlState 
 export async function validateDefinition(
   dashboard: DashboardDocument,
   definition: WidgetDefinition,
+  context?: Awaited<ReturnType<typeof loadQueryContext>>,
 ) {
   if (
     definition.type === 'control' &&
@@ -282,8 +281,8 @@ export async function validateDefinition(
       'A single-select filter accepts only one default value.',
     );
   if (!('dataSourceId' in definition)) return;
-  const dataSource = await loadDataSource(definition.dataSourceId, dashboard.workspaceId);
-  const metadata = await loadQueryMetadata(dataSource.id, dashboard.workspaceId);
+  const { dataSource, metadata } =
+    context ?? (await loadQueryContext(definition.dataSourceId, dashboard.workspaceId));
   const referenced = definitionFieldIds(definition);
   const known = new Set(
     [...metadata.fields, ...metadata.calculatedFields].map((field) => field.id),
@@ -376,8 +375,10 @@ async function prepareWidgetQuery(
     );
   const definition = drilled.definition;
   if (!compilesToQuery(definition)) return { controlState, query: undefined };
-  const dataSource = await loadDataSource(definition.dataSourceId, dashboard.workspaceId);
-  const metadata = await loadQueryMetadata(dataSource.id, dashboard.workspaceId);
+  const { dataSource, metadata } = await loadQueryContext(
+    definition.dataSourceId,
+    dashboard.workspaceId,
+  );
   const columns = queryResultColumns(definition, metadata);
   const resolvedControls = [
     ...(await resolveControls(
@@ -511,10 +512,14 @@ async function colorScaleBounds(
   );
 }
 
-export async function compiledSql(dashboard: DashboardDocument, widget: DashboardWidget) {
+export async function compiledSql(
+  dashboard: DashboardDocument,
+  widget: DashboardWidget,
+  context?: Awaited<ReturnType<typeof loadQueryContext>>,
+) {
   if (!compilesToQuery(widget.definition)) return null;
-  const dataSource = await loadDataSource(widget.definition.dataSourceId, dashboard.workspaceId);
-  const metadata = await loadQueryMetadata(dataSource.id, dashboard.workspaceId);
+  const { dataSource, metadata } =
+    context ?? (await loadQueryContext(widget.definition.dataSourceId, dashboard.workspaceId));
   return datasourceOperation(
     () =>
       connectorFor(dataSource).explainQuery(dataSource, {
@@ -528,10 +533,18 @@ export async function compiledSql(dashboard: DashboardDocument, widget: Dashboar
   );
 }
 
-export async function definitionHash(definition: WidgetDefinition, workspaceId: string) {
+export async function definitionHash(
+  definition: WidgetDefinition,
+  workspaceId: string,
+  metadata?: Awaited<ReturnType<typeof loadQueryMetadata>>,
+) {
   if (!('dataSourceId' in definition)) return hashJson(definition);
-  const metadata = await loadQueryMetadata(definition.dataSourceId, workspaceId);
-  return hashJson(widgetDependencyState(definition, metadata));
+  return hashJson(
+    widgetDependencyState(
+      definition,
+      metadata ?? (await loadQueryMetadata(definition.dataSourceId, workspaceId)),
+    ),
+  );
 }
 
 export function validateControlState(dashboard: DashboardDocument, input: ControlState) {

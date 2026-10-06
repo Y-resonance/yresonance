@@ -4,18 +4,28 @@ import { Button } from './ui/button';
 
 const RefreshContext = createContext({
   revision: 0,
+  inputsRevision: 0,
   changePending: (_delta: number) => {},
   pending: 0,
   refresh: () => {},
 });
 
-export function DashboardQueryRefresh({ children }: { children: ReactNode }) {
+// `inputsRevision` re-runs widget queries without bypassing the result cache. Bump it when
+// something widgets cannot see in their own definition changed, such as the dashboard timezone
+// or datasource fields.
+export function DashboardQueryRefresh({
+  children,
+  inputsRevision = 0,
+}: {
+  children: ReactNode;
+  inputsRevision?: number;
+}) {
   const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState(0);
   const changePending = useCallback((delta: number) => setPending((count) => count + delta), []);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
   return (
-    <RefreshContext.Provider value={{ revision, pending, changePending, refresh }}>
+    <RefreshContext.Provider value={{ revision, inputsRevision, pending, changePending, refresh }}>
       {children}
     </RefreshContext.Provider>
   );

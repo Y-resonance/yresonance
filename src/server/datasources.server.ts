@@ -3,7 +3,7 @@ import type { ManagedUploadImport } from '#/data/analytics-data-backend';
 import { requireSession, type SessionContext } from './auth.server';
 import { eq, count, and, or, inArray, lt } from 'drizzle-orm';
 import { dataSources, fields, calculatedFields, datasourceUploads } from '#/db/schema';
-import { loadDataSource, loadQueryMetadata } from './records.server';
+import { loadDataSource, loadQueryContext } from './records.server';
 import { ApiError } from './errors';
 import { scopedR2Prefix, isWorkspaceR2Key } from '#/domain/tenancy';
 import { listSourceObjects, prepareSourceUpload, deleteSourceObject } from '#/data/source.server';
@@ -80,8 +80,7 @@ export async function describeDatasource(
     dashboardId || shareToken
       ? await dashboardDatasourceWorkspace(dataSourceId, dashboardId, shareToken)
       : (await requireSession()).workspace.id;
-  const dataSource = await loadDataSource(dataSourceId, workspaceId);
-  const metadata = await loadQueryMetadata(dataSource.id, workspaceId);
+  const { dataSource, metadata } = await loadQueryContext(dataSourceId, workspaceId);
   const applicableMetrics = [];
   for (const metric of metadata.libraryMetrics) {
     if (

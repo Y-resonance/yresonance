@@ -1,3 +1,5 @@
+import { Card, CardHeader, CardTitle, CardContent } from '#/components/ui/card';
+import { Skeleton } from '#/components/ui/skeleton';
 import type { DashboardCanvas } from '#/domain/dashboard-pages';
 import { DASHBOARD_GRID } from '#/domain/layout';
 import {
@@ -22,6 +24,25 @@ import { type DashboardWidget } from '#/domain/schema';
 import { type Layout } from 'react-grid-layout';
 import { Button } from '#/components/ui/button';
 import { PlusIcon, MinusIcon } from 'lucide-react';
+
+export interface PendingCanvasWidget {
+  id: string;
+  title: string;
+  layout: DashboardWidget['layout'];
+}
+
+function PendingWidget({ widget }: { widget: PendingCanvasWidget }) {
+  return (
+    <Card className="h-full" role="status" aria-label={`Adding ${widget.title}`}>
+      <CardHeader>
+        <CardTitle>{widget.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-8 w-2/3" />
+      </CardContent>
+    </Card>
+  );
+}
 
 export function layoutFor(widgets: DashboardWidget[]): Layout {
   return widgets.map((widget) => ({
@@ -113,6 +134,7 @@ export function BuilderCanvas({
   setMobileOpen,
   setRemoveTarget,
   pendingWidgets,
+  pendingAddition,
   controlState,
   setControlState,
   draggedType,
@@ -130,6 +152,7 @@ export function BuilderCanvas({
   setMobileOpen: Dispatch<SetStateAction<boolean>>;
   setRemoveTarget: Dispatch<SetStateAction<DashboardWidget | undefined>>;
   pendingWidgets: Record<string, number>;
+  pendingAddition?: PendingCanvasWidget;
   controlState: ControlState;
   setControlState: Dispatch<SetStateAction<ControlState>>;
   draggedType: RefObject<BuilderType | undefined>;
@@ -145,8 +168,8 @@ export function BuilderCanvas({
   const gridGestureRef = useRef(false);
   const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
   const layout = useMemo<Layout>(
-    () =>
-      dashboard.widgets.map((widget) => {
+    () => [
+      ...dashboard.widgets.map((widget) => {
         const control =
           widget.definition.type === 'control' || widget.definition.type === 'dateControl';
         return {
@@ -159,9 +182,25 @@ export function BuilderCanvas({
           minH: control ? 1 : 2,
         };
       }),
-    [dashboard.widgets],
+      ...(pendingAddition
+        ? [
+            {
+              i: pendingAddition.id,
+              x: pendingAddition.layout.x,
+              y: pendingAddition.layout.y,
+              w: pendingAddition.layout.width,
+              h: pendingAddition.layout.height,
+              static: true,
+            },
+          ]
+        : []),
+    ],
+    [dashboard.widgets, pendingAddition],
   );
-  const gridRows = dashboard.canvasRows;
+  const gridRows = Math.max(
+    dashboard.canvasRows,
+    pendingAddition ? pendingAddition.layout.y + pendingAddition.layout.height + 2 : 0,
+  );
   // Matches the height GridBackground draws for the canvas rows.
   const canvasHeight =
     gridRows * (DASHBOARD_GRID.rowHeight + DASHBOARD_GRID.margin[1]) + DASHBOARD_GRID.margin[1];
@@ -305,6 +344,11 @@ export function BuilderCanvas({
                     </div>
                   </div>
                 ))}
+                {pendingAddition ? (
+                  <div key={pendingAddition.id} data-pending-widget-id={pendingAddition.id}>
+                    <PendingWidget widget={pendingAddition} />
+                  </div>
+                ) : null}
               </GridLayout>
             </>
           ) : null}
@@ -312,6 +356,11 @@ export function BuilderCanvas({
       ) : null}
       {desktop === false ? (
         <div className="flex flex-col gap-4">
+          {pendingAddition ? (
+            <div data-pending-widget-id={pendingAddition.id}>
+              <PendingWidget widget={pendingAddition} />
+            </div>
+          ) : null}
           {[...dashboard.widgets]
             .sort((left, right) => left.layout.y - right.layout.y || left.layout.x - right.layout.x)
             .map((widget) => (

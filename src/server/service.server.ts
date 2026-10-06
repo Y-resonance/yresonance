@@ -96,7 +96,7 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
     case 'listDashboards':
       return listDashboards();
     case 'getDashboard':
-      return getDashboard(request.dashboardId, request.shareToken);
+      return getDashboard(request.dashboardId, request.shareToken, request.includeSharing);
     case 'getSharedDashboard':
       return getSharedDashboard(request.shareToken);
     case 'createDashboard':

@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import clerkConfig from './playwright.config';
 
 const desktopOnly = [
+  '**/builder-performance.spec.ts',
   '**/builder-keyboard.spec.ts',
   '**/builder-selection.spec.ts',
   '**/builder-formula.spec.ts',

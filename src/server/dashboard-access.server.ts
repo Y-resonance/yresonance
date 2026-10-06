@@ -1,10 +1,10 @@
 import { dashboardWidgets } from '#/domain/schema';
 import { loadDashboard } from './records.server';
 import { and, eq, isNull, getTableColumns, sql } from 'drizzle-orm';
-import { shareLinks, dashboardGrants, dashboards } from '#/db/schema';
+import { shareLinks, dashboardGrants, dashboards, workspaces } from '#/db/schema';
 import { ApiError } from './errors';
-import { requireSession, type SessionContext } from './auth.server';
-import { type DashboardDocument } from '#/domain/schema';
+import { requireIdentity, workspaceSession, type SessionContext } from './auth.server';
+import { dashboardDocumentSchema, type DashboardDocument } from '#/domain/schema';
 import { database } from './database.server';
 
 export async function authorizeDashboard(
@@ -12,8 +12,8 @@ export async function authorizeDashboard(
   required: 'viewer' | 'editor',
   shareToken?: string,
 ) {
-  const loaded = await loadDashboard(id);
   if (shareToken) {
+    const loaded = await loadDashboard(id);
     const link = await database().query.shareLinks.findFirst({
       where: and(
         eq(shareLinks.token, shareToken),
@@ -36,7 +36,19 @@ export async function authorizeDashboard(
       session: null,
     };
   }
-  const session = await requireSession();
+  const identity = await requireIdentity();
+  const [dashboardRows, workspaceRows] = await database().batch([
+    database().select().from(dashboards).where(eq(dashboards.id, id)).limit(1),
+    database()
+      .select()
+      .from(workspaces)
+      .where(eq(workspaces.clerkOrganizationId, identity.orgId))
+      .limit(1),
+  ]);
+  const row = dashboardRows[0];
+  if (!row) throw new ApiError(404, 'dashboard_not_found', 'Dashboard not found.');
+  const loaded = { row, document: dashboardDocumentSchema.parse(row.document) };
+  const session = await workspaceSession(identity, workspaceRows[0]);
   if (loaded.document.workspaceId !== session.workspace.id)
     throw new ApiError(404, 'dashboard_not_found', 'Dashboard not found.');
   if (session.isAdmin) return { ...loaded, role: 'admin' as const, session };
