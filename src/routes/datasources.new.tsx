@@ -8,7 +8,16 @@ import { useWebMcpTools } from '#/webmcp/use-webmcp-tools';
 
 export const Route = createFileRoute('/datasources/new')({
   component: NewDatasourcePage,
-  head: () => ({ meta: [{ title: pageTitle('New datasource') }] }),
+  head: () => ({
+    meta: [
+      { title: pageTitle('New datasource') },
+      {
+        name: 'description',
+        content:
+          'Upload CSV or Parquet data or connect an existing data source for yresonance reporting.',
+      },
+    ],
+  }),
 });
 
 function NewDatasourcePage() {

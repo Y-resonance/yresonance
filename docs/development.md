@@ -22,12 +22,15 @@ cp reporting_example.csv dev-data/
 ```sh
 bun run dev
 CLERK_SECRET_KEY=... LANDING_USER_EMAIL=... bun run scripts/capture-landing.ts
+bun run scripts/convert-landing-images.ts
 ```
 
 The script signs in to the Clerk development instance with a sign-in token, seeds a demo datasource
 and dashboard from `scripts/landing-demo-data.ts`, shares the dashboard, and writes the shared view
-and the field metadata screen to `public/landing`. Reset the local environment before changing the
-demo data, because datasource names are unique per workspace.
+and the field metadata screen to `public/landing`. Install the libwebp tools for the conversion
+command. The landing page serves lossless WebP exports and keeps the PNG captures as source files.
+Reset the local environment before changing the demo data, because datasource names are unique
+per workspace.
 
 ## Environment reset
 

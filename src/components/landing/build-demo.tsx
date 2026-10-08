@@ -94,36 +94,44 @@ export function BuildDemo({ className }: { className?: string }) {
       aria-hidden
       className={cn('grid bg-background text-left lg:grid-cols-[19rem_1fr]', className)}
     >
-      <div className="relative h-48 border-b lg:h-auto lg:border-r lg:border-b-0">
-        <div className="absolute inset-0 flex flex-col justify-end gap-2 overflow-hidden mask-t-from-75% p-4 text-xs">
-          {reached('prompt') ? (
-            <p className="rounded-lg bg-muted px-3 py-2 leading-5 text-foreground">
-              <Typewriter text={prompt} instant={reducedMotion} />
+      <div className="relative h-80 border-b lg:h-auto lg:border-r lg:border-b-0">
+        <div className="absolute inset-0 flex flex-col gap-2 overflow-hidden p-4 text-xs">
+          {/* Reserve the complete transcript so typing and tool calls never move earlier lines. */}
+          <p className="grid rounded-lg bg-muted px-3 py-2 leading-5 text-foreground">
+            <span className="invisible col-start-1 row-start-1">{prompt}</span>
+            <span className="col-start-1 row-start-1">
+              {reached('prompt') ? (
+                <Typewriter text={prompt} instant={reducedMotion} />
+              ) : (
+                'Your agent, connected to the site tools'
+              )}
+            </span>
+          </p>
+          {toolCalls.map((call) => (
+            <p
+              key={`${call.tool}-${call.detail}`}
+              className={cn(
+                'flex items-center gap-2 font-mono transition-opacity duration-300 motion-reduce:transition-none',
+                !reached(call.at) && 'opacity-0',
+              )}
+            >
+              {step === stepIndex(call.at) ? (
+                <LoaderIcon className="size-3 animate-spin text-muted-foreground" />
+              ) : (
+                <CheckIcon className="size-3 text-success" />
+              )}
+              <span className="text-foreground">{call.tool}</span>
+              <span className="truncate text-muted-foreground">{call.detail}</span>
             </p>
-          ) : (
-            <p className="text-muted-foreground">Your agent, connected to the site tools</p>
-          )}
-          {toolCalls
-            .filter((call) => reached(call.at))
-            .map((call) => (
-              <p
-                key={`${call.tool}-${call.detail}`}
-                className="flex animate-in items-center gap-2 font-mono duration-300 fade-in slide-in-from-bottom-2 motion-reduce:animate-none"
-              >
-                {step === stepIndex(call.at) ? (
-                  <LoaderIcon className="size-3 animate-spin text-muted-foreground" />
-                ) : (
-                  <CheckIcon className="size-3 text-success" />
-                )}
-                <span className="text-foreground">{call.tool}</span>
-                <span className="truncate text-muted-foreground">{call.detail}</span>
-              </p>
-            ))}
-          {reached('ready') ? (
-            <p className="animate-in leading-5 text-foreground duration-300 fade-in slide-in-from-bottom-2 motion-reduce:animate-none">
-              Draft is ready. Adjust anything by hand.
-            </p>
-          ) : null}
+          ))}
+          <p
+            className={cn(
+              'leading-5 text-foreground transition-opacity duration-300 motion-reduce:transition-none',
+              !reached('ready') && 'opacity-0',
+            )}
+          >
+            Draft is ready. Adjust anything by hand.
+          </p>
         </div>
       </div>
 

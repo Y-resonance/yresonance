@@ -4,7 +4,15 @@ import { pageTitle } from '#/lib/page-title';
 
 export const Route = createFileRoute('/sign-in/$')({
   component: Page,
-  head: () => ({ meta: [{ title: pageTitle('Sign in') }] }),
+  head: () => ({
+    meta: [
+      { title: pageTitle('Sign in') },
+      {
+        name: 'description',
+        content: 'Sign in to yresonance to access your reporting dashboards and workspace.',
+      },
+    ],
+  }),
 });
 
 function Page() {

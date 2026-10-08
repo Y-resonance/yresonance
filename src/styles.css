@@ -236,23 +236,7 @@ body {
     }
   }
 
-  /* Landing page motion. Everything is declared under no-preference with a `both` fill, so
-     reduced-motion visitors and older browsers render the finished state. */
-  @keyframes hero-word {
-    from {
-      opacity: 0;
-      transform: translateY(0.35em);
-      filter: blur(10px);
-    }
-  }
-
-  @keyframes hero-rise {
-    from {
-      opacity: 0;
-      transform: translateY(2rem);
-    }
-  }
-
+  /* Scroll motion is only enabled when the visitor has not requested reduced motion. */
   @keyframes hero-tilt {
     from {
       transform: rotateX(5deg) scale(0.97);
@@ -282,15 +266,6 @@ body {
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .hero-word {
-      display: inline-block;
-      animation: hero-word 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    }
-
-    .hero-rise {
-      animation: hero-rise 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    }
-
     .aurora {
       animation: aurora-drift 14s ease-in-out infinite alternate;
     }

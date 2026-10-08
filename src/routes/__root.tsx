@@ -1,5 +1,5 @@
 import { ClerkProvider } from '@clerk/tanstack-react-start';
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router';
+import { HeadContent, Link, Scripts, createRootRoute } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { TooltipProvider } from '#/components/ui/tooltip';
 import { AnalyticsProvider } from '#/analytics/provider';
@@ -18,7 +18,7 @@ export const Route = createRootRoute({
       { title: 'yresonance' },
       {
         name: 'description',
-        content: 'yresonance dashboard reporting',
+        content: 'Create and share client reporting dashboards with yresonance.',
       },
     ],
     links: [
@@ -29,6 +29,17 @@ export const Route = createRootRoute({
     ],
   }),
   shellComponent: RootDocument,
+  notFoundComponent: () => (
+    <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+      <h1 className="text-3xl font-semibold tracking-tight">Page not found</h1>
+      <p className="mt-4 text-muted-foreground">
+        This address does not match a page on yresonance.
+      </p>
+      <Link to="/" className="mt-6 inline-block text-primary underline underline-offset-4">
+        Back to home
+      </Link>
+    </main>
+  ),
 });
 
 function RootDocument({ children }: { children: ReactNode }) {

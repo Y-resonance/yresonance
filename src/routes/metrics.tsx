@@ -22,7 +22,15 @@ import { pageTitle } from '#/lib/page-title';
 
 export const Route = createFileRoute('/metrics')({
   component: MetricsPage,
-  head: () => ({ meta: [{ title: pageTitle('Metric library') }] }),
+  head: () => ({
+    meta: [
+      { title: pageTitle('Metric library') },
+      {
+        name: 'description',
+        content: 'Define reusable reporting metrics and formulas for your yresonance workspace.',
+      },
+    ],
+  }),
 });
 
 interface MetricRecord {

@@ -25,7 +25,15 @@ export const Route = createFileRoute('/share/$token')({
     dateRange: z.string().optional().catch(undefined),
   }),
   component: SharedDashboard,
-  head: () => ({ meta: [{ title: pageTitle('Shared dashboard') }] }),
+  head: () => ({
+    meta: [
+      { title: pageTitle('Shared dashboard') },
+      {
+        name: 'description',
+        content: 'View a shared yresonance report and explore its charts, tables and filters.',
+      },
+    ],
+  }),
 });
 
 function SharedDashboard() {
