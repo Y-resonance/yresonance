@@ -7,6 +7,18 @@ import { cn } from '#/lib/utils';
 import { landingFaqs } from '#/lib/seo';
 import { Link } from '@tanstack/react-router';
 import { ArrowRightIcon } from 'lucide-react';
+import dashboard from '#/assets/landing/dashboard.png?format=webp&lossless';
+import dashboardDark from '#/assets/landing/dashboard-dark.png?format=webp&lossless';
+import dashboardBreakdown from '#/assets/landing/dashboard-breakdown.png?format=webp&lossless';
+import dashboardBreakdownDark from '#/assets/landing/dashboard-breakdown-dark.png?format=webp&lossless';
+import fieldMetadata from '#/assets/landing/field-metadata.png?format=webp&lossless';
+import fieldMetadataDark from '#/assets/landing/field-metadata-dark.png?format=webp&lossless';
+
+const screenshots = {
+  dashboard: { light: dashboard, dark: dashboardDark },
+  'dashboard-breakdown': { light: dashboardBreakdown, dark: dashboardBreakdownDark },
+  'field-metadata': { light: fieldMetadata, dark: fieldMetadataDark },
+};
 
 // Real action names from src/api/contracts.ts, split over two rows that scroll in opposite
 // directions.
@@ -94,8 +106,8 @@ const facts = [
 /**
  * Shows the screenshot that matches the active theme. The theme is a class on the document rather
  * than a media query, so CSS picks the variant the same way the header icons do and the server
- * needs no theme state. `bun run scripts/capture-landing.ts` writes the source PNGs.
- * `bun run scripts/convert-landing-images.ts` produces the lossless WebP assets.
+ * needs no theme state. `bun run scripts/capture-landing.ts` writes the source PNGs;
+ * vite-imagetools generates the lossless WebP assets from the imports above.
  *
  * Only the visible image is in the accessibility tree, and the hidden one is never fetched because
  * both load lazily.
@@ -107,7 +119,7 @@ function Screenshot({
   height,
   className,
 }: {
-  name: string;
+  name: keyof typeof screenshots;
   alt: string;
   width: number;
   height: number;
@@ -116,9 +128,9 @@ function Screenshot({
   const shared = { alt, width, height, loading: 'lazy', decoding: 'async' } as const;
   return (
     <>
-      <img src={`/landing/${name}.webp`} className={cn('dark:hidden', className)} {...shared} />
+      <img src={screenshots[name].light} className={cn('dark:hidden', className)} {...shared} />
       <img
-        src={`/landing/${name}-dark.webp`}
+        src={screenshots[name].dark}
         className={cn('hidden dark:block', className)}
         {...shared}
       />

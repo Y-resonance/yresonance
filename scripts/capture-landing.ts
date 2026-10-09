@@ -19,7 +19,7 @@ const baseUrl = process.env.YRESONANCE_BASE_URL ?? 'http://localhost:3140';
 const userEmail = process.env.LANDING_USER_EMAIL;
 const organizationName = process.env.LANDING_ORG_NAME ?? 'Acme Media';
 const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-const outputDirectory = 'public/landing';
+const outputDirectory = 'src/assets/landing';
 
 const viewport = { width: 1440, height: 1000 };
 const themes = ['light', 'dark'] as const;

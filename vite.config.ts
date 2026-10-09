@@ -5,6 +5,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import posthog from '@posthog/rollup-plugin';
 import { defineConfig } from 'vite';
+import { imagetools } from 'vite-imagetools';
 import { fileDataPlugin } from './dev/file-data-plugin.ts';
 import { queryEnginePlugin } from './dev/query-engine-plugin.ts';
 import { posthogHosts } from './src/analytics/config';
@@ -60,6 +61,7 @@ export default defineConfig(({ command, mode }) => ({
     watch: { ignored: ['**/.wrangler/**'] },
   },
   plugins: [
+    imagetools(),
     fileDataPlugin(),
     queryEnginePlugin(),
     cloudflare({
