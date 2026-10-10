@@ -1,7 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { SignInAction, SignUpAction } from './auth-actions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GetAccessButton, SignInAction } from './auth-actions';
+
+const clerk = vi.hoisted(() => ({ mode: 'public' as 'public' | 'waitlist' | 'restricted' }));
 
 vi.mock('@tanstack/react-router', () => ({
   useLocation: ({ select }: { select: (location: { href: string }) => unknown }) =>
@@ -9,6 +11,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 vi.mock('@clerk/tanstack-react-start', () => ({
+  useClerk: () => ({ __internal_environment: { userSettings: { signUp: { mode: clerk.mode } } } }),
   SignInButton: ({
     children,
     mode,
@@ -53,6 +56,9 @@ vi.mock('@clerk/tanstack-react-start', () => ({
 }));
 
 describe('authentication actions', () => {
+  beforeEach(() => {
+    clerk.mode = 'public';
+  });
   it.each([
     [
       'sign in',
@@ -60,12 +66,7 @@ describe('authentication actions', () => {
         <button>Sign in</button>
       </SignInAction>,
     ],
-    [
-      'sign up',
-      <SignUpAction key="sign-up">
-        <button>Create account</button>
-      </SignUpAction>,
-    ],
+    ['sign up', <GetAccessButton key="sign-up" />],
   ])('opens %s in a modal and returns every path through the current URL', (_, action) => {
     const html = renderToStaticMarkup(action);
 
@@ -74,13 +75,17 @@ describe('authentication actions', () => {
     expect(html).toContain('data-switch-redirect="/datasources?tab=fields"');
   });
 
-  it('keeps sign-up available inside the sign-in flow', () => {
-    const html = renderToStaticMarkup(
-      <SignInAction>
-        <button>Sign in</button>
-      </SignInAction>,
-    );
+  it.each(['public', 'waitlist', 'restricted'] as const)(
+    'offers inline sign-up only when access is public (%s)',
+    (mode) => {
+      clerk.mode = mode;
+      const html = renderToStaticMarkup(
+        <SignInAction>
+          <button>Sign in</button>
+        </SignInAction>,
+      );
 
-    expect(html).toContain('data-with-sign-up="true"');
-  });
+      expect(html).toContain(`data-with-sign-up="${mode === 'public'}"`);
+    },
+  );
 });

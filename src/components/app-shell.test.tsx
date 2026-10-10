@@ -3,7 +3,10 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from './app-shell';
 
-const clerk = vi.hoisted(() => ({ state: 'signed-in' as 'signed-in' | 'signed-out' }));
+const clerk = vi.hoisted(() => ({
+  state: 'signed-in' as 'signed-in' | 'signed-out',
+  mode: 'public' as 'public' | 'restricted' | 'waitlist' | undefined,
+}));
 const router = vi.hoisted(() => ({ pathname: '/' }));
 
 vi.mock('@clerk/tanstack-react-start', () => ({
@@ -12,6 +15,11 @@ vi.mock('@clerk/tanstack-react-start', () => ({
   UserButton: () => <span data-testid="user-button" />,
   SignInButton: ({ children }: { children: ReactNode }) => children,
   SignUpButton: ({ children }: { children: ReactNode }) => children,
+  useClerk: () => ({
+    __internal_environment: clerk.mode
+      ? { userSettings: { signUp: { mode: clerk.mode } } }
+      : undefined,
+  }),
   useAuth: () => ({ isLoaded: true, isSignedIn: true, orgId: 'org_1' }),
   useUser: () => ({ isLoaded: true, user: {} }),
   useOrganizationList: () => ({ isLoaded: true }),
@@ -87,6 +95,23 @@ describe('signed-in application shell', () => {
 
     expect(markup).not.toContain('aria-label="Menu"');
     expect(markup).not.toContain('href="/datasources"');
+  });
+});
+
+describe('signed-out access actions', () => {
+  it.each([
+    ['public', 'Create account'],
+    ['waitlist', 'Join waitlist'],
+    ['restricted', null],
+    [undefined, null],
+  ] as const)('follows Clerk access mode %s', (mode, label) => {
+    clerk.state = 'signed-out';
+    clerk.mode = mode;
+    const markup = header(renderToStaticMarkup(<AppShell>content</AppShell>));
+
+    expect(markup).toContain('Sign in');
+    expect(markup.includes('Create account')).toBe(label === 'Create account');
+    expect(markup.includes('Join waitlist')).toBe(label === 'Join waitlist');
   });
 });
 

@@ -2,7 +2,7 @@ import { Show, UserButton } from '@clerk/tanstack-react-start';
 import { Link } from '@tanstack/react-router';
 import { MenuIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { SignInAction, SignUpAction } from '#/components/auth-actions';
+import { GetAccessButton, SignInAction } from '#/components/auth-actions';
 import { ThemeToggle } from '#/components/theme-toggle';
 import { Button } from '#/components/ui/button';
 import {
@@ -78,9 +78,7 @@ export function AppShell({
                   Sign in
                 </Button>
               </SignInAction>
-              <SignUpAction>
-                <Button size="sm">Create account</Button>
-              </SignUpAction>
+              <GetAccessButton size="sm" />
             </Show>
             <Show when="signed-in">
               <UserButton />

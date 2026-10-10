@@ -34,6 +34,7 @@ export {
   unsupportedAuth as SignUp,
   unsupportedAuth as SignInButton,
   unsupportedAuth as SignUpButton,
+  unsupportedAuth as useClerk,
   unsupportedAuth as useUser,
   unsupportedAuth as useOrganizationList,
 };

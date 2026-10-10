@@ -1,28 +1,47 @@
-import { SignInButton, SignUpButton } from '@clerk/tanstack-react-start';
+import { SignInButton, SignUpButton, useClerk } from '@clerk/tanstack-react-start';
 import { useLocation } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import type { ComponentProps, ReactElement } from 'react';
+import { Button } from '#/components/ui/button';
+import { useSignUpMode } from '#/hooks/use-sign-up-mode';
 
 export function SignInAction({ children }: { children: ReactElement }) {
   const redirectUrl = useLocation({ select: (location) => location.href });
+  const mode = useSignUpMode();
 
   return (
     <SignInButton
       mode="modal"
       forceRedirectUrl={redirectUrl}
       signUpForceRedirectUrl={redirectUrl}
-      withSignUp
+      withSignUp={mode === 'public'}
     >
       {children}
     </SignInButton>
   );
 }
 
-export function SignUpAction({ children }: { children: ReactElement }) {
+export function GetAccessButton({ children, ...props }: ComponentProps<typeof Button>) {
   const redirectUrl = useLocation({ select: (location) => location.href });
+  const clerk = useClerk();
+  const mode = useSignUpMode();
+
+  if (mode === 'waitlist') {
+    return (
+      <Button {...props} onClick={() => clerk.openWaitlist()}>
+        Join waitlist
+        {children}
+      </Button>
+    );
+  }
+
+  if (mode !== 'public') return null;
 
   return (
     <SignUpButton mode="modal" forceRedirectUrl={redirectUrl} signInForceRedirectUrl={redirectUrl}>
-      {children}
+      <Button {...props}>
+        Create account
+        {children}
+      </Button>
     </SignUpButton>
   );
 }
