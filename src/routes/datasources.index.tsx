@@ -23,7 +23,15 @@ import { pageTitle } from '#/lib/page-title';
 
 export const Route = createFileRoute('/datasources/')({
   component: DatasourcesPage,
-  head: () => ({ meta: [{ title: pageTitle('Datasources') }] }),
+  head: () => ({
+    meta: [
+      { title: pageTitle('Datasources') },
+      {
+        name: 'description',
+        content: 'Manage the data sources used by your yresonance reporting dashboards.',
+      },
+    ],
+  }),
 });
 
 const helper = createColumnHelper<DataTableFeatures, DatasourceOverviewRow>();

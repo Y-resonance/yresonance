@@ -4,15 +4,21 @@ import { BuildDemo } from '#/components/landing/build-demo';
 import { useInView } from '#/components/landing/motion';
 import { Button } from '#/components/ui/button';
 import { cn } from '#/lib/utils';
-import { usePageTitle } from '#/lib/page-title';
+import { landingFaqs } from '#/lib/seo';
 import { Link } from '@tanstack/react-router';
 import { ArrowRightIcon } from 'lucide-react';
+import dashboard from '#/assets/landing/dashboard.png?format=webp&lossless';
+import dashboardDark from '#/assets/landing/dashboard-dark.png?format=webp&lossless';
+import dashboardBreakdown from '#/assets/landing/dashboard-breakdown.png?format=webp&lossless';
+import dashboardBreakdownDark from '#/assets/landing/dashboard-breakdown-dark.png?format=webp&lossless';
+import fieldMetadata from '#/assets/landing/field-metadata.png?format=webp&lossless';
+import fieldMetadataDark from '#/assets/landing/field-metadata-dark.png?format=webp&lossless';
 
-// The two sentences are styled apart, and each word animates in on its own.
-const headline = [
-  { words: ['Describe', 'the', 'report.'], className: undefined },
-  { words: ['Fine-tune', 'in', 'the', 'editor.'], className: 'text-muted-foreground' },
-];
+const screenshots = {
+  dashboard: { light: dashboard, dark: dashboardDark },
+  'dashboard-breakdown': { light: dashboardBreakdown, dark: dashboardBreakdownDark },
+  'field-metadata': { light: fieldMetadata, dark: fieldMetadataDark },
+};
 
 // Real action names from src/api/contracts.ts, split over two rows that scroll in opposite
 // directions.
@@ -100,7 +106,8 @@ const facts = [
 /**
  * Shows the screenshot that matches the active theme. The theme is a class on the document rather
  * than a media query, so CSS picks the variant the same way the header icons do and the server
- * needs no theme state. `bun run scripts/capture-landing.ts` writes both files.
+ * needs no theme state. `bun run scripts/capture-landing.ts` writes the source PNGs;
+ * vite-imagetools generates the lossless WebP assets from the imports above.
  *
  * Only the visible image is in the accessibility tree, and the hidden one is never fetched because
  * both load lazily.
@@ -112,18 +119,18 @@ function Screenshot({
   height,
   className,
 }: {
-  name: string;
+  name: keyof typeof screenshots;
   alt: string;
   width: number;
   height: number;
   className?: string;
 }) {
-  const shared = { alt, width, height, loading: 'lazy' } as const;
+  const shared = { alt, width, height, loading: 'lazy', decoding: 'async' } as const;
   return (
     <>
-      <img src={`/landing/${name}.png`} className={cn('dark:hidden', className)} {...shared} />
+      <img src={screenshots[name].light} className={cn('dark:hidden', className)} {...shared} />
       <img
-        src={`/landing/${name}-dark.png`}
+        src={screenshots[name].dark}
         className={cn('hidden dark:block', className)}
         {...shared}
       />
@@ -215,9 +222,6 @@ const sectionTitle = 'text-3xl font-semibold tracking-tight text-balance sm:text
 const sectionBody = 'mt-4 max-w-xl text-base leading-7 text-muted-foreground';
 
 export function LandingPage() {
-  usePageTitle();
-  const wordCount = headline.reduce((count, sentence) => count + sentence.words.length, 0);
-
   return (
     <main className="overflow-x-clip">
       <section className={cn(section, 'relative isolate pt-16 pb-24 text-center sm:pt-28')}>
@@ -227,39 +231,17 @@ export function LandingPage() {
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] mask-radial-from-0% mask-radial-to-70% mask-radial-at-top bg-[radial-gradient(circle,var(--color-muted-foreground)_1px,transparent_1px)] bg-size-[22px_22px] opacity-30"
         />
 
-        <p className="hero-rise text-sm font-medium text-muted-foreground">
-          Client reporting without the rebuild
+        <p className="text-sm font-medium text-muted-foreground">
+          CSV, Parquet and ClickHouse reporting
         </p>
         <h1 className="mx-auto mt-5 max-w-4xl text-5xl font-semibold tracking-tighter text-balance sm:text-7xl">
-          {headline.map((sentence, sentenceIndex) => {
-            const offset = sentenceIndex ? (headline[0]?.words.length ?? 0) : 0;
-            return (
-              <span key={sentence.words[0]} className={sentence.className}>
-                {sentence.words.map((word, index) => (
-                  <span key={word + index}>
-                    <span
-                      className="hero-word"
-                      style={{ animationDelay: `${120 + (offset + index) * 70}ms` }}
-                    >
-                      {word}
-                    </span>{' '}
-                  </span>
-                ))}
-              </span>
-            );
-          })}
+          Build client reporting dashboards.
         </h1>
-        <p
-          className="hero-rise mx-auto mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg"
-          style={{ animationDelay: `${200 + wordCount * 70}ms` }}
-        >
-          Your agent drafts the dashboard through site tools. You keep every formula, filter and
-          access rule in plain sight.
+        <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+          Connect your data, create charts and formulas, and share reports with clients. Let your
+          agent draft the dashboard, then edit it yourself.
         </p>
-        <div
-          className="hero-rise mt-8 flex flex-wrap items-center justify-center gap-3"
-          style={{ animationDelay: `${300 + wordCount * 70}ms` }}
-        >
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <SignUpAction>
             <Button className="group h-11 px-5 text-sm">
               Create account
@@ -273,10 +255,7 @@ export function LandingPage() {
           </SignInAction>
         </div>
 
-        <div
-          className="hero-rise mt-16 perspective-[2000px] sm:mt-20"
-          style={{ animationDelay: `${450 + wordCount * 70}ms` }}
-        >
+        <div className="mt-16 perspective-[2000px] sm:mt-20">
           <BrowserFrame
             url="yresonance.com/dashboards/q1-delivery"
             className="hero-tilt shadow-2xl ring-1 shadow-primary/15 ring-primary/10"
@@ -330,8 +309,8 @@ export function LandingPage() {
         <div className="reveal-on-scroll">
           <h2 className={sectionTitle}>Queries stay readable</h2>
           <p className={sectionBody}>
-            Widgets compile to SQL over your own CSV and Parquet files. No copies, no hidden
-            transforms, no second warehouse.
+            Widgets compile to SQL over CSV, Parquet or ClickHouse data. Inspect the formulas and
+            choose how long query results stay cached.
           </p>
           <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
             <li>Runs on</li>
@@ -377,6 +356,20 @@ export function LandingPage() {
         ))}
       </section>
 
+      <section className={cn(section, 'py-20 sm:py-28')} aria-labelledby="faq-title">
+        <h2 id="faq-title" className={sectionTitle}>
+          Frequently asked questions
+        </h2>
+        <dl className="mt-10 grid max-w-3xl gap-8">
+          {landingFaqs.map(({ question, answer }) => (
+            <div key={question}>
+              <dt className="text-lg font-semibold">{question}</dt>
+              <dd className="mt-2 text-base leading-7 text-muted-foreground">{answer}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
       <section className={cn(section, 'relative isolate py-28 text-center sm:py-40')}>
         <Aurora className="inset-0" />
         <div className="reveal-on-scroll">
@@ -400,7 +393,7 @@ export function LandingPage() {
         <span>yresonance</span>
         <span aria-hidden="true">·</span>
         <Link className="hover:text-foreground hover:underline" to="/imprint">
-          Imprint
+          Imprint and creator
         </Link>
       </footer>
     </main>

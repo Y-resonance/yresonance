@@ -17,7 +17,7 @@ cp reporting_example.csv dev-data/
 
 ## Landing page screenshots
 
-`public/landing/*.png` are captured from the running app, not drawn by hand:
+`src/assets/landing/*.png` are captured from the running app, not drawn by hand:
 
 ```sh
 bun run dev
@@ -26,8 +26,11 @@ CLERK_SECRET_KEY=... LANDING_USER_EMAIL=... bun run scripts/capture-landing.ts
 
 The script signs in to the Clerk development instance with a sign-in token, seeds a demo datasource
 and dashboard from `scripts/landing-demo-data.ts`, shares the dashboard, and writes the shared view
-and the field metadata screen to `public/landing`. Reset the local environment before changing the
-demo data, because datasource names are unique per workspace.
+and the field metadata screen to `src/assets/landing`. The landing page imports these PNGs through
+`vite-imagetools`, which generates lossless WebP assets automatically during development and builds.
+Only the source PNGs are committed.
+Reset the local environment before changing the demo data, because datasource names are unique
+per workspace.
 
 ## Environment reset
 

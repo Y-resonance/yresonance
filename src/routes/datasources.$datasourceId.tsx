@@ -46,7 +46,16 @@ import { pageTitle, usePageTitle } from '#/lib/page-title';
 
 export const Route = createFileRoute('/datasources/$datasourceId')({
   component: DatasourcePage,
-  head: () => ({ meta: [{ title: pageTitle('Datasource') }] }),
+  head: () => ({
+    meta: [
+      { title: pageTitle('Datasource') },
+      {
+        name: 'description',
+        content:
+          'Manage datasource fields, labels, calculated fields and query caching in yresonance.',
+      },
+    ],
+  }),
 });
 
 interface Description extends DatasourceDescription {

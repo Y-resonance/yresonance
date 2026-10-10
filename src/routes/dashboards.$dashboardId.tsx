@@ -50,7 +50,16 @@ export const Route = createFileRoute('/dashboards/$dashboardId')({
     preview: z.literal('viewer').optional().catch(undefined),
   }),
   component: DashboardPage,
-  head: () => ({ meta: [{ title: pageTitle('Dashboard') }] }),
+  head: () => ({
+    meta: [
+      { title: pageTitle('Dashboard') },
+      {
+        name: 'description',
+        content:
+          'View and edit dashboard charts, formulas, filters and sharing settings in yresonance.',
+      },
+    ],
+  }),
 });
 
 interface DashboardPayload {

@@ -9,7 +9,7 @@ test('the signed-out product shell is usable', async ({ page }) => {
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Describe the report. Fine-tune in the editor.',
+      name: /Build client reporting dashboards/,
     }),
   ).toBeVisible();
   await expect(page.getByRole('banner').getByRole('button', { name: 'Sign in' })).toBeVisible();
@@ -17,18 +17,19 @@ test('the signed-out product shell is usable', async ({ page }) => {
   await expect(
     page.getByRole('main').getByRole('button', { name: 'Create account' }).first(),
   ).toBeVisible();
-  await expect(page.getByText('Client reporting without the rebuild')).toBeVisible();
-  await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Imprint' })).toBeVisible();
+  await expect(
+    page.getByRole('contentinfo').getByRole('link', { name: 'Imprint and creator' }),
+  ).toBeVisible();
 });
 
 test('the footer links to the imprint', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('contentinfo').getByRole('link', { name: 'Imprint' }).click();
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Imprint and creator' }).click();
 
   await expect(page).toHaveURL('/imprint');
-  await expect(page).toHaveTitle('Imprint | yresonance');
+  await expect(page).toHaveTitle('Imprint and creator | yresonance');
   await expect(page.getByRole('heading', { level: 1, name: 'Imprint' })).toBeVisible();
-  await expect(page.getByText('Patrik Simms')).toBeVisible();
+  await expect(page.getByText('Patrik Simms', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'patriksimms@outlook.de' })).toHaveAttribute(
     'href',
     'mailto:patriksimms@outlook.de',
