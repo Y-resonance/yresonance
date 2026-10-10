@@ -56,6 +56,13 @@ test('a phone editor edits a widget in a sheet that closes on Escape', async ({ 
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
 
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 780 });
+    expect(await page.evaluate(documentOverflow)).toBeLessThanOrEqual(0);
+    await expect(page.getByRole('button', { name: 'Duplicate', exact: true })).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeInViewport();
+  }
+
   const edit = page.getByRole('button', { name: 'Edit Media spend' });
   await edit.click();
   const sheet = page.getByRole('dialog');
