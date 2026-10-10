@@ -97,7 +97,10 @@ export function DashboardOverviewActions({
         <DashboardSharing
           dashboardId={dashboard.id}
           sharing={sharing}
-          refresh={refreshSharing}
+          refresh={async () => {
+            await refreshSharing();
+            await onMutation();
+          }}
           linksOnly
           loading={loadingSharing}
           error={error}

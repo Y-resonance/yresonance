@@ -1,7 +1,7 @@
 import { type ApiRequest } from '#/api/contracts';
 import { ApiError } from './errors';
 import { shareLinks, dashboardGrants } from '#/db/schema';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, inArray } from 'drizzle-orm';
 import { clerkClient } from '@clerk/tanstack-react-start/server';
 import { authorizeDashboard } from './dashboard-access.server';
 import { database } from './database.server';
@@ -86,29 +86,55 @@ export async function sharingState(dashboardId: string) {
       .where(and(eq(shareLinks.dashboardId, dashboardId), isNull(shareLinks.revokedAt))),
     database().select().from(dashboardGrants).where(eq(dashboardGrants.dashboardId, dashboardId)),
   ]);
+  return {
+    links: links.map((link) => ({ ...link, url: `/share/${link.token}` })),
+    grants: await resolveCollaborators(grants),
+  };
+}
+
+// Only IDs already authorized by the caller enter this lookup. Resolve each profile once
+// across the overview, even when a person collaborates on multiple dashboards.
+export async function dashboardCollaborators(dashboardIds: string[]) {
+  const grantPages = await Promise.all(
+    chunk(dashboardIds, 100).map((ids) =>
+      database()
+        .select({
+          dashboardId: dashboardGrants.dashboardId,
+          clerkUserId: dashboardGrants.clerkUserId,
+          role: dashboardGrants.role,
+        })
+        .from(dashboardGrants)
+        .where(inArray(dashboardGrants.dashboardId, ids)),
+    ),
+  );
+  const grants = grantPages.flat();
+  const collaborators = await resolveCollaborators(grants);
+  return new Map(
+    dashboardIds.map((id) => [id, collaborators.filter((grant) => grant.dashboardId === id)]),
+  );
+}
+
+async function resolveCollaborators<T extends { clerkUserId: string }>(grants: T[]) {
+  const userIds = [...new Set(grants.map((grant) => grant.clerkUserId))];
   const userPages = await Promise.all(
-    chunk(grants, 100).map((page) =>
+    chunk(userIds, 100).map((page) =>
       clerkClient().users.getUserList({
-        userId: page.map((grant) => grant.clerkUserId),
+        userId: page,
         limit: page.length,
       }),
     ),
   );
   const userById = new Map(userPages.flatMap((page) => page.data).map((user) => [user.id, user]));
-  return {
-    links: links.map((link) => ({ ...link, url: `/share/${link.token}` })),
-    grants: grants.map((grant) => {
-      const user = userById.get(grant.clerkUserId);
-      return {
-        ...grant,
-        userEmail: user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress,
-        displayName:
-          [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
-          user?.username ||
-          undefined,
-      };
-    }),
-  };
+  return grants.map((grant) => {
+    const user = userById.get(grant.clerkUserId);
+    return {
+      ...grant,
+      imageUrl: user?.imageUrl,
+      userEmail: user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress,
+      displayName:
+        [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username || undefined,
+    };
+  });
 }
 
 function chunk<T>(values: T[], size: number) {

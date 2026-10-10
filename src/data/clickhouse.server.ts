@@ -1,3 +1,4 @@
+import { readResponseText } from './http-response';
 import { env } from 'cloudflare:workers';
 import { z } from 'zod';
 import { hashJson } from '#/domain/hash';
@@ -14,7 +15,7 @@ const configurationSchema = z.object({
     );
   }),
   CLICKHOUSE_USER: z.string().min(1),
-  CLICKHOUSE_PASSWORD: z.string().min(1),
+  CLICKHOUSE_PASSWORD: z.string(),
   CLICKHOUSE_ACCESS_CLIENT_ID: z.string().optional(),
   CLICKHOUSE_ACCESS_CLIENT_SECRET: z.string().optional(),
 });
@@ -138,9 +139,21 @@ export async function clickhouseRequest(
   workspaceId: string,
   sql: string,
   parameters: unknown[] = [],
-  options: { body?: ReadableStream<Uint8Array>; readonly?: boolean } = {},
+  options: {
+    body?: ReadableStream<Uint8Array>;
+    readonly?: boolean;
+    connection?: { url: string; user: string; password: string };
+  } = {},
 ) {
-  const config = configurationSchema.safeParse(env);
+  const config = configurationSchema.safeParse(
+    options.connection
+      ? {
+          CLICKHOUSE_URL: options.connection.url,
+          CLICKHOUSE_USER: options.connection.user,
+          CLICKHOUSE_PASSWORD: options.connection.password,
+        }
+      : env,
+  );
   if (!config.success)
     throw new DatasourceError('datasource_connector_failed', 'ClickHouse is not configured.');
   const queryId = crypto.randomUUID();
@@ -185,7 +198,7 @@ export async function clickhouseRequest(
         'ClickHouse could not complete the request.',
       );
     }
-    const text = await response.text();
+    const text = await readResponseText(response, 16_777_216);
     const result = text.trim() ? resultSchema.parse(JSON.parse(text)) : undefined;
     console.info('yresonance.query_execution', {
       backend: 'clickhouse',

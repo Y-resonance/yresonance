@@ -15,8 +15,10 @@ export interface ManagedUploadImport {
 
 // Query-only backends can omit the managed upload capability.
 export interface AnalyticsDataBackend extends DatasourceConnector {
+  managedStorage?: { references(location: unknown, key: string): boolean };
   managedUploads?: {
     import(dataSource: Omit<DataSourceRecord, 'version'>): Promise<ManagedUploadImport>;
   };
+  defaultCacheTtlSeconds(dataSource: DataSourceRecord): number;
   cacheIdentity(dataSource: DataSourceRecord): DatasourceIdentity | Promise<DatasourceIdentity>;
 }

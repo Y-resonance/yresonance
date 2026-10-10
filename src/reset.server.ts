@@ -12,6 +12,7 @@ const applicationTables = [
   'calculated_fields',
   'fields',
   'library_metrics',
+  'datasource_connections',
   'data_sources',
   'datasource_uploads',
   'ingestion_tokens',

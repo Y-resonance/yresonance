@@ -153,6 +153,7 @@ const description = () => ({
   name: 'Reporting example',
   location,
   cachePolicy: { mode: 'default' } as DatasourceCachePolicy,
+  defaultCacheTtlSeconds: 86_400,
   fields: fields.map((field) => ({ ...field })),
   calculatedFields: calculatedFields.map((field) => ({ ...field })),
   libraryMetrics: [] as DatasourceDescription['libraryMetrics'],

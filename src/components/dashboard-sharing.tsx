@@ -1,4 +1,4 @@
-import { CheckIcon, CopyIcon, Share2Icon, Trash2Icon } from 'lucide-react';
+import { CheckIcon, CopyIcon, UserRoundPlusIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useApi } from '#/api/query';
 import { Button } from '#/components/ui/button';
@@ -16,16 +16,12 @@ import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Separator } from '#/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/components/ui/tooltip';
 import { sharedUserLabel } from '#/domain/sharing';
+import type { DashboardCollaborator } from '#/domain/sharing';
+import { DashboardCollaborators, CollaboratorAvatar } from '#/components/dashboard-collaborators';
 
 export interface SharingState {
   links: Array<{ token: string; url: string; createdAt: string }>;
-  grants: Array<{
-    clerkUserId: string;
-    userEmail?: string;
-    displayName?: string;
-    role: string;
-    grantedAt: string;
-  }>;
+  grants: Array<DashboardCollaborator & { grantedAt: string }>;
 }
 
 export function DashboardSharing({
@@ -109,12 +105,15 @@ export function DashboardSharing({
               />
             }
           >
-            <Share2Icon aria-hidden="true" />
+            <UserRoundPlusIcon aria-hidden="true" />
           </TooltipTrigger>
           <TooltipContent>Share</TooltipContent>
         </Tooltip>
       ) : (
-        <DialogTrigger render={<Button variant="outline" />}>Share</DialogTrigger>
+        <DialogTrigger render={<Button variant="outline" />}>
+          <UserRoundPlusIcon data-icon="inline-start" />
+          Share
+        </DialogTrigger>
       )}
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
@@ -125,6 +124,7 @@ export function DashboardSharing({
               : 'Links are read-only. User grants require a Clerk account.'}
           </DialogDescription>
         </DialogHeader>
+        <DashboardCollaborators users={sharing.grants} />
         <div className="flex flex-col gap-3">
           <Button
             disabled={loading || pending || Boolean(error)}
@@ -227,6 +227,7 @@ export function DashboardSharing({
               const label = sharedUserLabel(grant);
               return (
                 <div className="flex items-center gap-3 text-sm" key={grant.clerkUserId}>
+                  <CollaboratorAvatar user={grant} />
                   <span className="min-w-0 flex-1 truncate">{label}</span>
                   <span className="text-muted-foreground">{grant.role}</span>
                   <Button

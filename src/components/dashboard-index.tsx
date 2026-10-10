@@ -3,6 +3,8 @@ import { PlusIcon } from 'lucide-react';
 import { useCallback, useState, type FormEvent } from 'react';
 import { useApi, useApiQuery } from '#/api/query';
 import { DashboardOverviewActions } from '#/components/dashboard-overview-actions';
+import { DashboardCollaborators } from '#/components/dashboard-collaborators';
+import type { DashboardCollaborator } from '#/domain/sharing';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ interface Bootstrap {
     id: string;
     name: string;
     canEdit: boolean;
+    collaborators: DashboardCollaborator[];
     dataSourceIds: string[];
     updatedAt: string;
   }>;
@@ -170,13 +173,16 @@ export default function DashboardIndex() {
                       </TableCell>
                       <TableCell>{new Date(dashboard.updatedAt).toLocaleString()}</TableCell>
                       <TableCell>
-                        {dashboard.canEdit ? (
-                          <DashboardOverviewActions
-                            dashboard={dashboard}
-                            dataSources={data.dataSources}
-                            onMutation={refresh}
-                          />
-                        ) : null}
+                        <div className="flex items-center justify-end gap-3">
+                          <DashboardCollaborators users={dashboard.collaborators} size="sm" />
+                          {dashboard.canEdit ? (
+                            <DashboardOverviewActions
+                              dashboard={dashboard}
+                              dataSources={data.dataSources}
+                              onMutation={refresh}
+                            />
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

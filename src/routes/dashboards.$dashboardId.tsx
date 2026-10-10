@@ -24,7 +24,6 @@ import {
 } from '#/components/dashboard-view';
 import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { ErrorState, LoadingState } from '#/components/request-state';
-import { Badge } from '#/components/ui/badge';
 import { Label } from '#/components/ui/label';
 import { Switch } from '#/components/ui/switch';
 import {
@@ -167,14 +166,7 @@ function DashboardContent() {
         ) : (
           <div className="flex flex-col gap-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-3xl font-semibold tracking-tight">
-                    {payload.dashboard.name}
-                  </h1>
-                  <Badge variant="secondary">{previewingAsViewer ? 'viewer' : payload.role}</Badge>
-                </div>
-              </div>
+              <h1 className="text-3xl font-semibold tracking-tight">{payload.dashboard.name}</h1>
               {/* The editor controls stay put in both modes so the switch never moves under the
                 cursor, even though a real viewer sees neither of them. */}
               <div className="flex items-center gap-3">

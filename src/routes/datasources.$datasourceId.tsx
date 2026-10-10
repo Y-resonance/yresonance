@@ -61,6 +61,7 @@ export const Route = createFileRoute('/datasources/$datasourceId')({
 interface Description extends DatasourceDescription {
   location: DataSourceLocation;
   cachePolicy?: DatasourceCachePolicy;
+  defaultCacheTtlSeconds: number;
 }
 
 // Emerald dimensions and blue metrics match the builder's field colour coding.
@@ -213,12 +214,7 @@ function DatasourceContent() {
             <DatasourceCacheSettings
               key={`${datasourceId}:${JSON.stringify(description.cachePolicy)}`}
               dataSourceId={datasourceId}
-              defaultTtlSeconds={
-                description.location.kind === 'clickhouse' &&
-                description.location.ownership === 'external'
-                  ? description.location.cacheTtlSeconds
-                  : 86_400
-              }
+              defaultTtlSeconds={description.defaultCacheTtlSeconds}
               initialPolicy={description.cachePolicy ?? { mode: 'default' }}
               onSaved={refresh}
             />

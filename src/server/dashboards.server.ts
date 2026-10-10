@@ -38,7 +38,7 @@ import {
   definitionHash,
   compiledSql,
 } from './widget-queries.server';
-import { sharingState } from './sharing.server';
+import { sharingState, dashboardCollaborators } from './sharing.server';
 import { persistDashboard, widgetById, nextDashboardTimestamp } from './dashboard-records.server';
 import { validateLibraryMetricInput, newLibraryMetricValues } from './formulas.server';
 
@@ -52,12 +52,14 @@ export async function bootstrap() {
       .from(dataSources)
       .where(eq(dataSources.workspaceId, session.workspace.id)),
   ]);
+  const collaborators = await dashboardCollaborators(dashboardRows.map((row) => row.id));
   return {
     userId: session.userId,
     workspace: { id: session.workspace.id, name: session.workspace.name },
     isAdmin: session.isAdmin,
     dashboards: dashboardRows.map((row) => ({
       ...summary(row),
+      collaborators: collaborators.get(row.id) ?? [],
       canEdit: session.isAdmin || row.role === 'editor',
     })),
     dataSources: sourceRows,
@@ -66,7 +68,9 @@ export async function bootstrap() {
 
 export async function listDashboards() {
   const session = await requireSession();
-  return (await visibleDashboardRows(session)).map(summary);
+  const rows = await visibleDashboardRows(session);
+  const collaborators = await dashboardCollaborators(rows.map((row) => row.id));
+  return rows.map((row) => ({ ...summary(row), collaborators: collaborators.get(row.id) ?? [] }));
 }
 
 export async function getDashboard(id: string, shareToken?: string, includeSharing = true) {

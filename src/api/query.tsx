@@ -29,6 +29,7 @@ const reads = new Set<ApiRequest['action']>([
   'explainWidget',
   'getControlOptions',
   'listDataSources',
+  'listDatasourceProviders',
   'listLibraryMetrics',
   'describeDatasource',
   'listR2Objects',

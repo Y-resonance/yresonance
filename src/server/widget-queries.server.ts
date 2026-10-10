@@ -95,9 +95,7 @@ export async function queryWidget(
       ? 0
       : policy.mode === 'duration'
         ? policy.ttlSeconds
-        : dataSource.location.kind === 'clickhouse' && dataSource.location.ownership === 'external'
-          ? dataSource.location.cacheTtlSeconds
-          : 86_400;
+        : connector.defaultCacheTtlSeconds(dataSource);
   const cacheKey = await hashJson({
     workspaceId: dataSource.workspaceId,
     datasourceId: dataSource.id,

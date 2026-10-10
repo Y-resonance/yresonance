@@ -47,3 +47,9 @@ View tools on shared links and viewer grants can read and query only published p
 existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from
 1 to 86400. `queryWidget` accepts `refresh: true` to bypass and replace a cached result, including
 on shared links. Expiry alone does not request data or refresh an open dashboard.
+
+`listDatasourceProviders` returns Managed and Bring your own providers with their connection fields,
+source shape, and upload capabilities. `registerDatasource` accepts a `provider` ID and, for Bring
+your own providers, a `connection` object containing the named setup fields. A successful response
+contains datasource and field metadata, never credentials. Existing `backend` requests remain
+supported for managed files and authorized managed-host ClickHouse tables.

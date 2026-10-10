@@ -30,6 +30,15 @@ import's claim expires after one hour.
 
 More detail: [docs/decisions.md](./decisions.md).
 
+Datasource providers separate setup from analytics execution. Their catalog supplies the two-step
+creation screen and `listDatasourceProviders`; their server implementations prepare registrations
+through `DatasourceProvider`. All backends implement `AnalyticsDataBackend`, including cache
+defaults. Bring your own ClickHouse uses a datasource-scoped HTTPS connection, while Bring your own
+DuckDB uses S3-compatible storage. Encrypted connection records are stored separately from datasource
+metadata and cascade with datasource/workspace deletion. The Worker proxies exact S3 objects to
+DuckDB using encrypted expiring capabilities and query read budgets; customer credentials and
+presigned storage URLs never reach the query container.
+
 Browser API reads and writes use TanStack Query through `src/api/query.tsx`. Query clients are
 created inside Start's router factory, so SSR requests never share a cache in a Worker isolate.
 The Router SSR integration owns the provider and hydration. HTML responses are private and

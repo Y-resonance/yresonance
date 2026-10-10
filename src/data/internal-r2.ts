@@ -106,6 +106,14 @@ export async function handleBrowserUploadRequest(
 
 export async function handleInternalR2Request(request: Request, environment: Cloudflare.Env) {
   const url = new URL(request.url);
+  if (url.hostname === INTERNAL_R2_HOST && url.pathname.startsWith('/api/connector-file/')) {
+    const { handleExternalFileRequest } = await import('./external-file');
+    return handleExternalFileRequest(
+      request,
+      url.pathname.slice('/api/connector-file/'.length),
+      environment,
+    );
+  }
   if (url.hostname !== INTERNAL_R2_HOST || !url.pathname.startsWith('/capability/'))
     return new Response('Not found.', { status: 404 });
   const capability = await verifyR2Capability(
@@ -223,7 +231,7 @@ async function serveObject(
   return new Response(object.body, { status: range ? 206 : 200, headers });
 }
 
-async function claimQueryReadBytes(database: D1Database, queryId: string, bytes: number) {
+export async function claimQueryReadBytes(database: D1Database, queryId: string, bytes: number) {
   const claimed = await database
     .prepare(
       `UPDATE query_read_budgets
