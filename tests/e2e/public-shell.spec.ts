@@ -1,4 +1,25 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { z } from 'zod';
+
+const environmentResponse = z.looseObject({
+  user_settings: z.looseObject({
+    sign_up: z.looseObject({ mode: z.enum(['public', 'restricted', 'waitlist']) }),
+  }),
+});
+
+async function setAccessMode(page: Page, mode: 'public' | 'waitlist') {
+  // Override only this browser's configuration. Never change the shared Clerk instance.
+  await page.route('**/v1/environment*', async (route) => {
+    const response = await route.fetch();
+    const body = environmentResponse.parse(await response.json());
+    body.user_settings.sign_up.mode = mode;
+    await route.fulfill({ response, json: body });
+  });
+}
+
+test.beforeEach(async ({ page }) => {
+  await setAccessMode(page, 'public');
+});
 
 const opacityOf = (locator: Locator) =>
   locator.evaluate((element) => Number(getComputedStyle(element).opacity));
@@ -34,6 +55,26 @@ test('the footer links to the imprint', async ({ page }) => {
     'href',
     'mailto:patriksimms@outlook.de',
   );
+});
+
+test('waitlist access opens in place from the landing page', async ({ page }) => {
+  await setAccessMode(page, 'waitlist');
+  await page.goto('/?entry=waitlist');
+  const initialUrl = page.url();
+
+  await expect(page.getByRole('button', { name: 'Join waitlist', exact: true })).toHaveCount(3);
+  await expect(page.getByRole('button', { name: 'Create account' })).toHaveCount(0);
+  await expect(page.getByText(/Access is by invitation/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Get early access to yresonance.' })).toHaveCount(
+    1,
+  );
+  await page.getByRole('main').getByRole('button', { name: 'Join waitlist' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('textbox', { name: 'Email address' })).toBeVisible();
+  expect(page.url()).toBe(initialUrl);
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  expect(page.url()).toBe(initialUrl);
 });
 
 test('authentication opens in place and closing it preserves the URL', async ({ page }) => {

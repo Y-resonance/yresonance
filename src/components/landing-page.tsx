@@ -1,4 +1,5 @@
-import { SignInAction, SignUpAction } from '#/components/auth-actions';
+import { GetAccessButton, SignInAction } from '#/components/auth-actions';
+import { useSignUpMode } from '#/hooks/use-sign-up-mode';
 import { BrowserFrame } from '#/components/browser-frame';
 import { BuildDemo } from '#/components/landing/build-demo';
 import { useInView } from '#/components/landing/motion';
@@ -222,6 +223,7 @@ const sectionTitle = 'text-3xl font-semibold tracking-tight text-balance sm:text
 const sectionBody = 'mt-4 max-w-xl text-base leading-7 text-muted-foreground';
 
 export function LandingPage() {
+  const mode = useSignUpMode();
   return (
     <main className="overflow-x-clip">
       <section className={cn(section, 'relative isolate pt-16 pb-24 text-center sm:pt-28')}>
@@ -242,18 +244,24 @@ export function LandingPage() {
           agent draft the dashboard, then edit it yourself.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <SignUpAction>
-            <Button className="group h-11 px-5 text-sm">
-              Create account
-              <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
-            </Button>
-          </SignUpAction>
+          <GetAccessButton className="group h-11 px-5 text-sm">
+            <ArrowRightIcon
+              data-icon="inline-end"
+              className="transition-transform group-hover:translate-x-0.5"
+            />
+          </GetAccessButton>
           <SignInAction>
             <Button variant="outline" className="h-11 px-5 text-sm">
               Sign in
             </Button>
           </SignInAction>
         </div>
+
+        {mode === 'waitlist' && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Access is by invitation. Join the waitlist and we'll email you when you're invited.
+          </p>
+        )}
 
         <div className="mt-16 perspective-[2000px] sm:mt-20">
           <BrowserFrame
@@ -374,15 +382,17 @@ export function LandingPage() {
         <Aurora className="inset-0" />
         <div className="reveal-on-scroll">
           <h2 className={cn(sectionTitle, 'mx-auto max-w-3xl')}>
-            Point yresonance at a file you already have and see the first dashboard.
+            {mode === 'waitlist'
+              ? 'Get early access to yresonance.'
+              : 'Point yresonance at a file you already have and see the first dashboard.'}
           </h2>
           <div className="mt-9">
-            <SignUpAction>
-              <Button className="group h-11 px-5 text-sm">
-                Create account
-                <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
-              </Button>
-            </SignUpAction>
+            <GetAccessButton className="group h-11 px-5 text-sm">
+              <ArrowRightIcon
+                data-icon="inline-end"
+                className="transition-transform group-hover:translate-x-0.5"
+              />
+            </GetAccessButton>
           </div>
         </div>
       </section>
