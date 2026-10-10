@@ -1,5 +1,7 @@
 import { ClerkProvider } from '@clerk/tanstack-react-start';
-import { HeadContent, Link, Scripts, createRootRoute } from '@tanstack/react-router';
+import { HeadContent, Link, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
+import { queryOptions, type QueryClient } from '@tanstack/react-query';
+import { ApiSessionBoundary } from '#/api/query';
 import type { ReactNode } from 'react';
 import { TooltipProvider } from '#/components/ui/tooltip';
 import { AnalyticsProvider } from '#/analytics/provider';
@@ -8,8 +10,15 @@ import { browserAnalytics } from '#/analytics/browser';
 
 import appCss from '../styles.css?url';
 
-export const Route = createRootRoute({
-  loader: () => getAnalyticsConfig(),
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(
+      queryOptions({
+        queryKey: ['analytics-config'],
+        queryFn: () => getAnalyticsConfig(),
+      }),
+    ),
+  headers: () => ({ 'Cache-Control': 'private, no-store' }),
   onCatch: (error) => browserAnalytics()?.captureException(error),
   head: () => ({
     meta: [
@@ -61,10 +70,12 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body>
         <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up">
           <AnalyticsProvider config={analytics ?? null}>
-            <TooltipProvider>
-              {children}
-              <Scripts />
-            </TooltipProvider>
+            <ApiSessionBoundary>
+              <TooltipProvider>
+                {children}
+                <Scripts />
+              </TooltipProvider>
+            </ApiSessionBoundary>
           </AnalyticsProvider>
         </ClerkProvider>
       </body>

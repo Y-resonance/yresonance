@@ -1,7 +1,7 @@
 import { type WidgetDefinition } from '#/domain/schema';
 import { yearToDateRange } from '#/domain/dates';
 import { remapWidgetDefinition } from '#/domain/remap';
-import { callApi } from '#/api/client';
+import type { ApiExecutor } from '#/api/query';
 import {
   type BuilderType,
   type BuilderDataSource,
@@ -10,6 +10,7 @@ import {
 } from './shared';
 
 export async function defaultDefinition(
+  callApi: ApiExecutor,
   type: BuilderType,
   source?: BuilderDataSource,
 ): Promise<WidgetDefinition> {
@@ -17,7 +18,7 @@ export async function defaultDefinition(
   if (type === 'text')
     return { type, content: { schemaVersion: 'plain-text-v1', document: 'Add text' } };
   if (!source) throw new Error('Register a datasource before adding a data widget.');
-  const description = await describeSource(source.id);
+  const description = await describeSource(callApi, source.id);
   const fields = [...description.fields, ...description.calculatedFields];
   const date = fields.find((field) => field.semanticType === 'date');
   const dimension = fields.find(
@@ -89,14 +90,15 @@ export async function defaultDefinition(
 }
 
 export async function changeSource(
+  callApi: ApiExecutor,
   definition: QueryDefinition,
   sourceId: string,
   dashboardId: string,
   latestDefinition: () => WidgetDefinition = () => definition,
 ) {
   const [currentSource, targetSource] = await Promise.all([
-    describeSource(definition.dataSourceId, dashboardId),
-    describeSource(sourceId, dashboardId),
+    describeSource(callApi, definition.dataSourceId, dashboardId),
+    describeSource(callApi, sourceId, dashboardId),
   ]);
   const latest = latestDefinition();
   if (!('dataSourceId' in latest) || latest.dataSourceId !== definition.dataSourceId)
@@ -105,7 +107,7 @@ export async function changeSource(
   return remapped.type === 'control' ? { ...remapped, defaultValues: undefined } : remapped;
 }
 
-export function describeSource(sourceId: string, dashboardId?: string) {
+export function describeSource(callApi: ApiExecutor, sourceId: string, dashboardId?: string) {
   return callApi<SourceDescription>({
     action: 'describeDatasource',
     dataSourceId: sourceId,

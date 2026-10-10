@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import { apiRequestSchema, type ApiRequest } from '#/api/contracts';
 
 interface ToolDefinition {
@@ -43,6 +43,7 @@ const duplicateDashboardDescription =
   'Copy a dashboard under a new name. dataSourceMapping ({ sourceId: targetId }) points widgets at another datasource, matching fields by canonical name. Fails without storing anything and lists the unmatched canonical fields per widget when the target lacks them. Share links and grants are not copied. Returns the new dashboard.';
 
 export function useWebMcpTools(options: WebMcpOptions) {
+  const callApi = useApi();
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
@@ -387,6 +388,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
     options.isAdmin,
     options.onToolUse,
     options.onMutation,
+    callApi,
   ]);
 
   return { available };

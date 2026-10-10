@@ -1,10 +1,12 @@
+import { useMutation } from '@tanstack/react-query';
 import { DatasourceCacheFields } from './datasource-cache-fields';
 import type { DatasourceCachePolicy } from '#/domain/schema';
 import { Toggle } from '@base-ui/react/toggle';
 import { ToggleGroup } from '@base-ui/react/toggle-group';
 import { CheckIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ApiClientError, callApi } from '#/api/client';
+import { ApiClientError } from '#/api/client';
+import { useApi, useR2Objects } from '#/api/query';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
 import { Button } from '#/components/ui/button';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '#/components/ui/field';
@@ -35,13 +37,15 @@ export function DatasourceRegisterForm({
 }: {
   onRegistered: (dataSource: RegisteredDatasource) => void;
 }) {
+  const callApi = useApi();
   const [backend, setBackend] = useState<'duckdb' | 'clickhouse'>('duckdb');
   const [database, setDatabase] = useState('');
   const [table, setTable] = useState('');
   const [cachePolicy, setCachePolicy] = useState<DatasourceCachePolicy>({ mode: 'default' });
   const [useExistingData, setUseExistingData] = useState(false);
-  const [objects, setObjects] = useState<Array<{ key: string }>>([]);
-  const [objectsCursor, setObjectsCursor] = useState<string>();
+  const objectsQuery = useR2Objects(useExistingData && backend !== 'clickhouse');
+  const objects = objectsQuery.data?.pages.flatMap((page) => page.objects) ?? [];
+  const objectsCursor = objectsQuery.hasNextPage;
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [kind, setKind] = useState<'object' | 'prefix'>('object');
@@ -64,35 +68,18 @@ export function DatasourceRegisterForm({
     if (!key && objects[0]) setKey(objects[0].key);
   }, [key, objects]);
 
-  useEffect(() => {
-    if (!useExistingData || backend === 'clickhouse' || objects.length) return;
-    void callApi<{ objects: Array<{ key: string }>; cursor?: string }>({
-      action: 'listR2Objects',
-    })
-      .then((listing) => {
-        setObjects(listing.objects);
-        setObjectsCursor(listing.cursor);
-      })
-      .catch((caught: unknown) =>
-        setFormError(caught instanceof Error ? caught.message : String(caught)),
-      );
-  }, [backend, objects.length, useExistingData]);
-
+  const uploadMutation = useMutation({
+    mutationFn: ({ file, uploadUrl }: { file: File; uploadUrl: string }) =>
+      uploadDatasourceFile(file, uploadUrl, setProgress, (request) => {
+        uploadRequest.current = request;
+      }),
+    retry: false,
+    gcTime: 0,
+  });
+  useEffect(() => () => uploadRequest.current?.abort(), []);
   const inferredExistingFormat = kind === 'object' ? datasourceUploadFormat(key) : undefined;
-
   async function loadMoreObjects() {
-    if (!objectsCursor) return;
-    try {
-      const listing = await callApi<{ objects: Array<{ key: string }>; cursor?: string }>({
-        action: 'listR2Objects',
-        cursor: objectsCursor,
-      });
-      setFormError(undefined);
-      setObjects((current) => [...current, ...listing.objects]);
-      setObjectsCursor(listing.cursor);
-    } catch (caught) {
-      setFormError(caught instanceof Error ? caught.message : String(caught));
-    }
+    await objectsQuery.fetchNextPage();
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -133,7 +120,7 @@ export function DatasourceRegisterForm({
 
     uploadStartedAt.current = Date.now();
     setProgress(0);
-    trackUpload('started', file, uploadFormat, 0);
+    trackUpload(callApi, 'started', file, uploadFormat, 0);
     setPhase('preparing');
     let prepared: { key: string; uploadUrl: string; cleanupToken: string };
     try {
@@ -144,19 +131,18 @@ export function DatasourceRegisterForm({
         format: uploadFormat,
       });
       setPhase('uploading');
-      await uploadDatasourceFile(file, prepared.uploadUrl, setProgress, (request) => {
-        uploadRequest.current = request;
-      });
+      await uploadMutation.mutateAsync({ file, uploadUrl: prepared.uploadUrl });
       setUploadedKey(prepared.key);
       setCleanupToken(prepared.cleanupToken);
       setPhase('inspecting');
-      trackUpload('completed', file, uploadFormat, Date.now() - uploadStartedAt.current);
+      trackUpload(callApi, 'completed', file, uploadFormat, Date.now() - uploadStartedAt.current);
     } catch (caught) {
       setPhase('idle');
       setProgress(0);
       uploadRequest.current = undefined;
       const cancelled = caught instanceof UploadCancelledError;
       trackUpload(
+        callApi,
         cancelled ? 'cancelled' : 'failed',
         file,
         uploadFormat,
@@ -182,6 +168,7 @@ export function DatasourceRegisterForm({
         cleanupToken: prepared.cleanupToken,
       });
       trackUpload(
+        callApi,
         'datasource_registered',
         file,
         uploadFormat,
@@ -201,7 +188,13 @@ export function DatasourceRegisterForm({
         caught instanceof ApiClientError && caught.code === 'datasource_inspection_failed';
       setRegistrationFailure(inspectionFailed ? 'inspection' : 'other');
       if (inspectionFailed)
-        trackUpload('inspection_failed', file, uploadFormat, Date.now() - uploadStartedAt.current);
+        trackUpload(
+          callApi,
+          'inspection_failed',
+          file,
+          uploadFormat,
+          Date.now() - uploadStartedAt.current,
+        );
       setFormError(caught instanceof Error ? caught.message : String(caught));
     }
   }
@@ -235,7 +228,13 @@ export function DatasourceRegisterForm({
     setPhase('removing');
     try {
       await callApi({ action: 'removeDatasourceUpload', key: uploadedKey, cleanupToken });
-      trackUpload('file_removed', file, uploadFormat, Date.now() - uploadStartedAt.current);
+      trackUpload(
+        callApi,
+        'file_removed',
+        file,
+        uploadFormat,
+        Date.now() - uploadStartedAt.current,
+      );
       setFile(undefined);
       if (fileInput.current) fileInput.current.value = '';
       setUploadedKey(undefined);
@@ -435,7 +434,7 @@ export function DatasourceRegisterForm({
             </Button>
           ) : null}
         </div>
-        {formError ? (
+        {formError || objectsQuery.error ? (
           <Alert variant="destructive">
             <AlertTitle>
               {uploadedKey
@@ -444,7 +443,7 @@ export function DatasourceRegisterForm({
                   : 'File uploaded, registration failed'
                 : 'Could not continue'}
             </AlertTitle>
-            <AlertDescription>{formError}</AlertDescription>
+            <AlertDescription>{formError ?? objectsQuery.error?.message}</AlertDescription>
           </Alert>
         ) : null}
         {uploadedKey ? (
@@ -495,6 +494,7 @@ function uploadDatasourceFile(
 class UploadCancelledError extends Error {}
 
 function trackUpload(
+  callApi: import('#/api/query').ApiExecutor,
   event: DatasourceUploadEvent['event'],
   file: File,
   format: DatasourceUploadFormat,

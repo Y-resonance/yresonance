@@ -11,7 +11,7 @@ import { Button } from '#/components/ui/button';
 import { PlusIcon } from 'lucide-react';
 import { cn } from '#/lib/utils';
 import { CalculatedFieldDialog } from '#/components/calculated-field-dialog';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import { Field, FieldLabel } from '#/components/ui/field';
 import { Input } from '#/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
@@ -137,6 +137,7 @@ export function DatasourceFieldRow({
   dashboardId: string;
   onSaved: () => Promise<void>;
 }) {
+  const callApi = useApi();
   const [value, setValue] = useState(field);
   const [saveError, setSaveError] = useState<string>();
   const [savingField, setSavingField] = useState(false);

@@ -1,3 +1,4 @@
+import { useApi, useApiQuery } from '#/api/query';
 import {
   type DashboardDocument,
   type DashboardWidget,
@@ -17,7 +18,7 @@ import {
 import { type LibraryMetricDraft } from '#/components/metric-formula-dialog';
 import { useState, useRef, useEffect } from 'react';
 import { type DatasourceFieldRow } from '#/domain/datasource-fields';
-import { describeSource, changeSource } from './datasource';
+import { changeSource } from './datasource';
 import { calculatedFieldRow, DatasourceDialog } from './datasource-dialog';
 import { widgetLabel } from '#/domain/widget-label';
 import { Button } from '#/components/ui/button';
@@ -76,8 +77,8 @@ export function WidgetSettings({
   onRemoveEmptyRowAbove?: () => void;
   onRemoveEmptyRowBelow?: () => void;
 }) {
+  const callApi = useApi();
   const [definition, setDefinition] = useState(widget.definition);
-  const [source, setSource] = useState<SourceDescription>();
   const [sourceOpen, setSourceOpen] = useState(false);
   const [fieldEditorOpen, setFieldEditorOpen] = useState(false);
   const [editedField, setEditedField] = useState<DatasourceFieldRow>();
@@ -93,24 +94,11 @@ export function WidgetSettings({
     sourceRequestRef.current += 1;
     setSettingsError(undefined);
   }, [widget.id]);
-  useEffect(() => {
-    if (!sourceId) return;
-    const currentSourceId = sourceId;
-    let current = true;
-    async function loadSource() {
-      try {
-        const next = await describeSource(currentSourceId, dashboardId);
-        if (current) setSource(next);
-      } catch (caught) {
-        if (current) setSettingsError(message(caught));
-      }
-    }
-    void loadSource();
-    return () => {
-      current = false;
-    };
-  }, [dashboardId, sourceId]);
-
+  const sourceQuery = useApiQuery<SourceDescription>(
+    { action: 'describeDatasource', dataSourceId: sourceId ?? '', dashboardId },
+    { enabled: Boolean(sourceId) },
+  );
+  const source = sourceQuery.data;
   async function commit(next: WidgetDefinition) {
     definitionRef.current = next;
     setDefinition(next);
@@ -135,6 +123,7 @@ export function WidgetSettings({
     setSettingsError(undefined);
     try {
       const next = await changeSource(
+        callApi,
         currentDefinition,
         dataSourceId,
         dashboardId,
@@ -181,9 +170,9 @@ export function WidgetSettings({
           </Button>
         ) : null}
       </div>
-      {settingsError ? (
+      {settingsError || sourceQuery.error ? (
         <Alert variant="destructive">
-          <AlertDescription>{settingsError}</AlertDescription>
+          <AlertDescription>{settingsError ?? sourceQuery.error?.message}</AlertDescription>
         </Alert>
       ) : null}
       {'title' in definition ? (
@@ -330,7 +319,7 @@ export function WidgetSettings({
               onOpenChange={setSourceOpen}
               dashboardId={dashboardId}
               source={source}
-              onRefresh={() => describeSource(source.id, dashboardId).then(setSource)}
+              onRefresh={() => sourceQuery.refetch().then(() => undefined)}
             />
           ) : null}
           {source ? (
@@ -340,7 +329,7 @@ export function WidgetSettings({
               dashboardId={dashboardId}
               datasource={source}
               field={editedField}
-              onSaved={() => describeSource(definition.dataSourceId, dashboardId).then(setSource)}
+              onSaved={() => sourceQuery.refetch().then(() => undefined)}
             />
           ) : null}
         </>

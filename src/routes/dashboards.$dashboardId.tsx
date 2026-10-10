@@ -9,7 +9,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { CloudAlertIcon, CloudCheckIcon, LoaderCircleIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
-import { callApi } from '#/api/client';
+import { useApi, useApiQuery } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
 import {
   DashboardBuilder,
@@ -78,10 +78,16 @@ function DashboardPage() {
 }
 
 function DashboardContent() {
+  const callApi = useApi();
   const { dashboardId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [payload, setPayload] = useState<DashboardPayload>();
+  const dashboardQuery = useApiQuery<DashboardPayload>({
+    action: 'getDashboard',
+    dashboardId,
+    includeSharing: true,
+  });
+  const payload = dashboardQuery.data;
   const [builderControlState, setBuilderControlState] = useState<ControlState>({});
   const controlDashboardIdRef = useRef<string>(undefined);
   const [error, setError] = useState<string>();
@@ -100,7 +106,7 @@ function DashboardContent() {
           controlDashboardIdRef.current = loaded.dashboard.id;
           setBuilderControlState(initialControlState(loaded.dashboard));
         }
-        setPayload((current) => ({
+        dashboardQuery.setData((current) => ({
           ...loaded,
           sharing:
             loaded.sharing ??
@@ -112,11 +118,16 @@ function DashboardContent() {
         throw caught;
       }
     },
-    [dashboardId],
+    [dashboardId, callApi, dashboardQuery.setData],
   );
   const refresh = useCallback(() => loadDashboard(false), [loadDashboard]);
   const refreshSharing = useCallback(() => loadDashboard(true), [loadDashboard]);
-  useEffect(() => void refreshSharing().catch(() => undefined), [refreshSharing]);
+  useEffect(() => {
+    if (payload && controlDashboardIdRef.current !== payload.dashboard.id) {
+      controlDashboardIdRef.current = payload.dashboard.id;
+      setBuilderControlState(initialControlState(payload.dashboard));
+    }
+  }, [payload]);
   // Agent tools can change inputs that widget definitions do not carry (timezone, default date
   // range, fields, metrics), so their mutations re-run the widget queries.
   const refreshAfterTool = useCallback(async () => {
@@ -147,8 +158,10 @@ function DashboardContent() {
   return (
     <DashboardQueryRefresh key={dashboardId} inputsRevision={queryInputsRevision}>
       <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
-        {error ? (
-          <ErrorState error={error} />
+        {error || dashboardQuery.error ? (
+          <ErrorState
+            error={error ?? dashboardQuery.error?.message ?? 'Failed to load dashboard.'}
+          />
         ) : !payload ? (
           <LoadingState />
         ) : (

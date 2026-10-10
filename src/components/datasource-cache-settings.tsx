@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import type { DatasourceCachePolicy } from '#/domain/schema';
 import { DatasourceCacheFields } from './datasource-cache-fields';
 import { Button } from './ui/button';
@@ -16,6 +16,7 @@ export function DatasourceCacheSettings({
   onSaved: () => Promise<void>;
   defaultTtlSeconds: number;
 }) {
+  const callApi = useApi();
   const [open, setOpen] = useState(false);
   const [policy, setPolicy] = useState(initialPolicy);
   const [busy, setBusy] = useState(false);

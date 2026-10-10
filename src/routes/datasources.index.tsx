@@ -1,8 +1,8 @@
 import { createColumnHelper, useTable } from '@tanstack/react-table';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { PlusIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { callApi } from '#/api/client';
+import { useCallback, useMemo, useState } from 'react';
+import { useApiQuery } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
 import {
   DataTable,
@@ -70,24 +70,17 @@ function DatasourcesPage() {
 
 function DatasourcesContent() {
   const navigate = useNavigate();
-  const [entries, setEntries] = useState<DatasourceListEntry[]>();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [error, setError] = useState<string>();
+  const sourcesQuery = useApiQuery<DatasourceListEntry[]>({ action: 'listDataSources' });
+  const bootstrapQuery = useApiQuery<{ isAdmin: boolean }>({ action: 'bootstrap' });
+  const entries = sourcesQuery.data;
+  const isAdmin = bootstrapQuery.data?.isAdmin ?? false;
+  const error = (sourcesQuery.error ?? bootstrapQuery.error)?.message;
   const [search, setSearch] = useState('');
+  const { refetch: refetchSources } = sourcesQuery;
+  const { refetch: refetchBootstrap } = bootstrapQuery;
   const refresh = useCallback(async () => {
-    try {
-      const [sources, bootstrap] = await Promise.all([
-        callApi<DatasourceListEntry[]>({ action: 'listDataSources' }),
-        callApi<{ isAdmin: boolean }>({ action: 'bootstrap' }),
-      ]);
-      setEntries(sources);
-      setIsAdmin(bootstrap.isAdmin);
-      setError(undefined);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
-  }, []);
-  useEffect(() => void refresh(), [refresh]);
+    await Promise.all([refetchSources(), refetchBootstrap()]);
+  }, [refetchSources, refetchBootstrap]);
   useWebMcpTools({ canManageDataSources: Boolean(entries), isAdmin, onMutation: refresh });
   const rows = useMemo(() => datasourceOverviewRows(entries ?? []), [entries]);
   const table = useTable({

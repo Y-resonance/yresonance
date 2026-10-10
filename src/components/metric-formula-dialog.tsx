@@ -1,6 +1,7 @@
+import { useDebouncedValue } from '#/lib/use-debounced-value';
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useApiQuery } from '#/api/query';
 import {
   errorRange,
   formulaContext,
@@ -55,7 +56,6 @@ export function MetricFormulaDialog({
   const [expression, setExpression] = useState('');
   const [saveLibrary, setSaveLibrary] = useState(false);
   const [dialogError, setDialogError] = useState<string>();
-  const [remoteValidation, setRemoteValidation] = useState<FormulaValidation>();
   const [submitting, setSubmitting] = useState(false);
   const editor = useRef<ReactCodeMirrorRef>(null);
   const submittingRef = useRef(false);
@@ -66,7 +66,6 @@ export function MetricFormulaDialog({
     setExpression(metric?.source.kind === 'expression' ? metric.source.expression : '');
     setSaveLibrary(false);
     setDialogError(undefined);
-    setRemoteValidation(undefined);
   }, [open, metric]);
 
   const context = useMemo(() => (source ? formulaContext(source) : undefined), [source]);
@@ -81,35 +80,25 @@ export function MetricFormulaDialog({
     [context, expression],
   );
 
-  useEffect(() => {
-    if (!open || !source || !localValidation.valid) {
-      setRemoteValidation(undefined);
-      return;
-    }
-    setRemoteValidation(undefined);
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => {
-      void callApi<FormulaValidation>(
-        {
-          action: 'validateMetricExpression',
-          dashboardId,
-          dataSourceId: source.id,
-          expression,
-        },
-        { signal: controller.signal },
-      )
-        .then(setRemoteValidation)
-        .catch((error: unknown) => {
-          if (controller.signal.aborted) return;
-          const message = error instanceof Error ? error.message : String(error);
-          setRemoteValidation({ valid: false, error: errorRange(message, expression) });
-        });
-    }, 250);
-    return () => {
-      window.clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [open, source, localValidation, dashboardId, expression]);
+  const debouncedExpression = useDebouncedValue(expression);
+  const validationQuery = useApiQuery<FormulaValidation>(
+    {
+      action: 'validateMetricExpression',
+      dashboardId,
+      dataSourceId: source?.id ?? '',
+      expression: debouncedExpression,
+    },
+    {
+      enabled:
+        open && Boolean(source) && localValidation.valid && expression === debouncedExpression,
+    },
+  );
+  const remoteValidation =
+    expression !== debouncedExpression
+      ? undefined
+      : validationQuery.error
+        ? { valid: false as const, error: errorRange(validationQuery.error.message, expression) }
+        : validationQuery.data;
 
   const validationError = !localValidation.valid
     ? localValidation.error.message

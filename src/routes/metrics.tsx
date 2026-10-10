@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useCallback, useState, type FormEvent } from 'react';
+import { useApi, useApiQuery } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
 import { ErrorState, LoadingState } from '#/components/request-state';
 import { Button } from '#/components/ui/button';
@@ -51,8 +51,11 @@ function MetricsPage() {
 }
 
 function MetricsContent() {
-  const [metrics, setMetrics] = useState<MetricRecord[]>();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const callApi = useApi();
+  const metricsQuery = useApiQuery<MetricRecord[]>({ action: 'listLibraryMetrics' });
+  const bootstrapQuery = useApiQuery<{ isAdmin: boolean }>({ action: 'bootstrap' });
+  const metrics = metricsQuery.data;
+  const isAdmin = bootstrapQuery.data?.isAdmin ?? false;
   const [error, setError] = useState<string>();
   const [form, setForm] = useState({
     name: '',
@@ -60,20 +63,12 @@ function MetricsContent() {
     semanticType: 'ratio' as SemanticType,
     description: '',
   });
+  const { refetch: refetchMetrics } = metricsQuery;
+  const { refetch: refetchBootstrap } = bootstrapQuery;
   const refresh = useCallback(async () => {
-    try {
-      const [records, bootstrap] = await Promise.all([
-        callApi<MetricRecord[]>({ action: 'listLibraryMetrics' }),
-        callApi<{ isAdmin: boolean }>({ action: 'bootstrap' }),
-      ]);
-      setMetrics(records);
-      setIsAdmin(bootstrap.isAdmin);
-      setError(undefined);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
-  }, []);
-  useEffect(() => void refresh(), [refresh]);
+    setError(undefined);
+    await Promise.all([refetchMetrics(), refetchBootstrap()]);
+  }, [refetchMetrics, refetchBootstrap]);
   useWebMcpTools({ isAdmin, onMutation: refresh });
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -93,8 +88,14 @@ function MetricsContent() {
   }
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
-      {error ? (
-        <ErrorState error={error} />
+      {error || metricsQuery.error || bootstrapQuery.error ? (
+        <ErrorState
+          error={
+            error ??
+            (metricsQuery.error ?? bootstrapQuery.error)?.message ??
+            'Failed to load metrics.'
+          }
+        />
       ) : !metrics ? (
         <LoadingState />
       ) : (

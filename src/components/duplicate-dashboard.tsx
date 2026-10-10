@@ -1,6 +1,6 @@
 import { CopyIcon } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import { Button } from '#/components/ui/button';
 import {
   Dialog,
@@ -32,6 +32,7 @@ export function DuplicateDashboard({
   // The server copies the stored version, so the builder blocks this while edits are unsaved.
   disabled?: boolean;
 }) {
+  const callApi = useApi();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({});

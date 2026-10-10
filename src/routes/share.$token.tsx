@@ -5,9 +5,8 @@ import {
 import { DashboardPages } from '#/components/dashboard-pages';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
-import { callApi } from '#/api/client';
+import { useApiQuery } from '#/api/query';
 import { DashboardView, dashboardDateControlRange } from '#/components/dashboard-view';
 import { ErrorState, LoadingState } from '#/components/request-state';
 import {
@@ -40,23 +39,12 @@ function SharedDashboard() {
   const { token } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [dashboard, setDashboard] = useState<DashboardDocument>();
-  const [error, setError] = useState<string>();
-  const refresh = useCallback(async () => {
-    try {
-      const result = await callApi<{ dashboard: DashboardDocument }>({
-        action: 'getSharedDashboard',
-        shareToken: token,
-      });
-      setDashboard(result.dashboard);
-      setError(undefined);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
-  }, [token]);
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const { data, error: queryError } = useApiQuery<{ dashboard: DashboardDocument }>({
+    action: 'getSharedDashboard',
+    shareToken: token,
+  });
+  const dashboard = data?.dashboard;
+  const error = queryError?.message;
   usePageTitle(dashboard?.name ?? 'Shared dashboard');
   useWebMcpTools({ dashboardId: dashboard?.id, shareToken: token });
   // The main width matches the signed-in dashboard, so an editor previewing viewer mode sees

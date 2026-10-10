@@ -1,6 +1,6 @@
 import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import { DashboardSharing, type SharingState } from '#/components/dashboard-sharing';
 import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { Button } from '#/components/ui/button';
@@ -24,6 +24,7 @@ export function DashboardOverviewActions({
   dataSources: Array<{ id: string; name: string }>;
   onMutation: () => Promise<void>;
 }) {
+  const callApi = useApi();
   const [action, setAction] = useState<'rename' | 'delete'>();
   const [name, setName] = useState(dashboard.name);
   const [pending, setPending] = useState(false);

@@ -29,3 +29,19 @@ concurrent requests wait up to two minutes for another Worker isolate to finish.
 import's claim expires after one hour.
 
 More detail: [docs/decisions.md](./decisions.md).
+
+Browser API reads and writes use TanStack Query through `src/api/query.tsx`. Query clients are
+created inside Start's router factory, so SSR requests never share a cache in a Worker isolate.
+The Router SSR integration owns the provider and hydration. HTML responses are private and
+uncacheable, as are authenticated API responses. Browser keys include the Clerk
+session, user, and workspace; switching identity remounts the UI and cancels/removes the old cache.
+Authenticated API reads remain client-side. The analytics configuration server function uses the
+request's query client in the root loader.
+
+API POST actions are classified as reads or mutations. Reads deduplicate and consume Query's abort
+signal; writes never retry or wait offline for later replay. Mutations invalidate metadata, while
+builder callbacks retain the lean dashboard refresh without sharing-directory lookups. Analytics
+queries defer TTL checks to the server on mount or input changes, keep explicit dashboard refresh
+semantics, and do not refetch on focus or reconnect. File
+uploads are mutations with XMLHttpRequest transport for progress and cancellation. Worker-side
+service requests continue using native fetch and Cloudflare bindings.

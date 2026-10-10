@@ -1,6 +1,6 @@
 import { CheckIcon, CopyIcon, Share2Icon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import { Button } from '#/components/ui/button';
 import {
   Dialog,
@@ -45,6 +45,7 @@ export function DashboardSharing({
   sharing: SharingState;
   refresh: () => Promise<void>;
 }) {
+  const callApi = useApi();
   const [pending, setPending] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'viewer' | 'editor'>('viewer');
