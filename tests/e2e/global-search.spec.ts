@@ -52,11 +52,13 @@ test('global search paginates, filters both resource types, and opens results', 
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/dashboards\/dash_demo$/);
+  await expect(page.getByRole('heading', { name: 'Client weekly', exact: true })).toBeVisible();
   await expect(dialog).toHaveCount(0);
   await trigger.click();
   await dialog.getByRole('combobox').fill('Reporting example');
   await dialog.getByRole('option', { name: 'Reporting example' }).click();
   await expect(page).toHaveURL(/\/datasources\/src_reporting$/);
+  await expect(page.getByRole('heading', { name: 'Reporting example', exact: true })).toBeVisible();
   await page.keyboard.press('Control+k');
   await expect(dialog).toBeVisible();
   await page.keyboard.press('Escape');
