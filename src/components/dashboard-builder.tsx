@@ -21,7 +21,7 @@ import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from 
 import { createSerialQueue } from '#/domain/serial-queue';
 import { type Layout, type LayoutItem } from 'react-grid-layout';
 import { sameDateRange } from '#/domain/date-range-search';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import {
   rollbackFailedLayoutState,
   insertRow,
@@ -83,6 +83,7 @@ export function DashboardBuilder({
   refresh: () => Promise<void>;
   onSaveStatusChange: (status: DashboardSaveStatus) => void;
 }) {
+  const callApi = useApi();
   const [dashboard, setDashboard] = useState(() => dashboardCanvas(initialDashboard, pageId));
   const [selectedId, setSelectedId] = useState<string>();
   const [error, setError] = useState<string>();
@@ -257,7 +258,7 @@ export function DashboardBuilder({
     startSaving();
     setError(undefined);
     try {
-      const definition = await defaultDefinition(type, dataSources[0]);
+      const definition = await defaultDefinition(callApi, type, dataSources[0]);
       revision = ++mutationRevisionRef.current;
       const result = await enqueueMutation(() =>
         callApi<{ widget: DashboardWidget }>({

@@ -29,3 +29,28 @@ concurrent requests wait up to two minutes for another Worker isolate to finish.
 import's claim expires after one hour.
 
 More detail: [docs/decisions.md](./decisions.md).
+
+Datasource providers separate setup from analytics execution. Their catalog supplies the two-step
+creation screen and `listDatasourceProviders`; their server implementations prepare registrations
+through `DatasourceProvider`. All backends implement `AnalyticsDataBackend`, including cache
+defaults. Bring your own ClickHouse uses a datasource-scoped HTTPS connection, while Bring your own
+DuckDB uses S3-compatible storage. Encrypted connection records are stored separately from datasource
+metadata and cascade with datasource/workspace deletion. The Worker proxies exact S3 objects to
+DuckDB using encrypted expiring capabilities and query read budgets; customer credentials and
+presigned storage URLs never reach the query container.
+
+Browser API reads and writes use TanStack Query through `src/api/query.tsx`. Query clients are
+created inside Start's router factory, so SSR requests never share a cache in a Worker isolate.
+The Router SSR integration owns the provider and hydration. HTML responses are private and
+uncacheable, as are authenticated API responses. Browser keys include the Clerk
+session, user, and workspace; switching identity remounts the UI and cancels/removes the old cache.
+Authenticated API reads remain client-side. The analytics configuration server function uses the
+request's query client in the root loader.
+
+API POST actions are classified as reads or mutations. Reads deduplicate and consume Query's abort
+signal; writes never retry or wait offline for later replay. Mutations invalidate metadata, while
+builder callbacks retain the lean dashboard refresh without sharing-directory lookups. Analytics
+queries defer TTL checks to the server on mount or input changes, keep explicit dashboard refresh
+semantics, and do not refetch on focus or reconnect. File
+uploads are mutations with XMLHttpRequest transport for progress and cancellation. Worker-side
+service requests continue using native fetch and Cloudflare bindings.

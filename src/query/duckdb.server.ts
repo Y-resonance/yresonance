@@ -26,9 +26,10 @@ export class QueryEngineError extends Error {
 export async function runPreparedQuery<T extends Record<string, unknown>>(
   dataSource: DataSourceRecord,
   compile: (sourceSql: string) => { sql: string; parameters: unknown[] },
+  resolveSource: typeof resolveDataSource = resolveDataSource,
 ) {
   const queryId = crypto.randomUUID();
-  const source = await resolveDataSource(dataSource, queryId);
+  const source = await resolveSource(dataSource, queryId);
   const startedAt = Date.now();
   let result;
   let scannedBytes = 0;
@@ -76,9 +77,12 @@ export async function runPreparedQuery<T extends Record<string, unknown>>(
   return result.data;
 }
 
-export async function describeDataSource(dataSource: DataSourceRecord) {
+export async function describeDataSource(
+  dataSource: DataSourceRecord,
+  resolveSource: typeof resolveDataSource = resolveDataSource,
+) {
   const queryId = crypto.randomUUID();
-  const source = await resolveDataSource(dataSource, queryId);
+  const source = await resolveSource(dataSource, queryId);
   try {
     const result = await queryEngineRequest<{
       description: Array<{ column_name: string; column_type: string }>;

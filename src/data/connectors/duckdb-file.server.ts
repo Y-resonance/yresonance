@@ -7,6 +7,7 @@ import type { AnalyticsDataBackend } from '#/data/analytics-data-backend';
 import { importManagedFile } from '#/data/file-ingestion.server';
 import { collectObjectPages, matchingSourceObjects } from '#/data/listing';
 import { headSourceObject, listSourceObjects } from '#/data/source.server';
+import { dataSourceLocationReferencesKey } from '#/domain/datasource-upload';
 import { hashJson } from '#/domain/hash';
 import { describeDataSource, QueryEngineError, runPreparedQuery } from '#/query/duckdb.server';
 import type { DataSourceRecord } from '#/query/types';
@@ -14,6 +15,8 @@ import { DatasourceError, DUCKDB_FILE_CONNECTOR, type DatasourceQuery } from './
 
 export const duckdbFileConnector: AnalyticsDataBackend = {
   type: DUCKDB_FILE_CONNECTOR,
+  defaultCacheTtlSeconds: () => 86_400,
+  managedStorage: { references: dataSourceLocationReferencesKey },
   managedUploads: {
     import(dataSource) {
       return importManagedFile(dataSource, duckdbFileConnector.inspect);

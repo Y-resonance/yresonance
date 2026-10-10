@@ -1,13 +1,21 @@
+import { useMutation } from '@tanstack/react-query';
 import { DatasourceCacheFields } from './datasource-cache-fields';
 import type { DatasourceCachePolicy } from '#/domain/schema';
-import { Toggle } from '@base-ui/react/toggle';
-import { ToggleGroup } from '@base-ui/react/toggle-group';
-import { CheckIcon } from 'lucide-react';
+import type { DatasourceProviderDefinition } from '#/data/providers/catalog';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ApiClientError, callApi } from '#/api/client';
+import { ApiClientError } from '#/api/client';
+import { useApi, useR2Objects } from '#/api/query';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
 import { Button } from '#/components/ui/button';
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '#/components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+  FieldLegend,
+} from '#/components/ui/field';
 import { Input } from '#/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
 import { Progress, ProgressLabel, ProgressValue } from '#/components/ui/progress';
@@ -25,23 +33,26 @@ interface RegisteredDatasource {
   name: string;
 }
 
-const analyticsBackends = [
-  { id: 'duckdb', name: 'DuckDB', description: 'CSV and Parquet files' },
-  { id: 'clickhouse', name: 'ClickHouse', description: 'Uploads and external tables' },
-] as const;
-
 export function DatasourceRegisterForm({
   onRegistered,
+  provider,
 }: {
   onRegistered: (dataSource: RegisteredDatasource) => void;
+  provider: DatasourceProviderDefinition;
 }) {
-  const [backend, setBackend] = useState<'duckdb' | 'clickhouse'>('duckdb');
+  const callApi = useApi();
+  const [connection, setConnection] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      provider.connectionFields.map((field) => [field.name, field.defaultValue ?? '']),
+    ),
+  );
   const [database, setDatabase] = useState('');
   const [table, setTable] = useState('');
   const [cachePolicy, setCachePolicy] = useState<DatasourceCachePolicy>({ mode: 'default' });
-  const [useExistingData, setUseExistingData] = useState(false);
-  const [objects, setObjects] = useState<Array<{ key: string }>>([]);
-  const [objectsCursor, setObjectsCursor] = useState<string>();
+  const [useExistingData, setUseExistingData] = useState(!provider.supportsUploads);
+  const objectsQuery = useR2Objects(useExistingData && provider.supportsWorkspaceFiles);
+  const objects = objectsQuery.data?.pages.flatMap((page) => page.objects) ?? [];
+  const objectsCursor = objectsQuery.hasNextPage;
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [kind, setKind] = useState<'object' | 'prefix'>('object');
@@ -64,35 +75,18 @@ export function DatasourceRegisterForm({
     if (!key && objects[0]) setKey(objects[0].key);
   }, [key, objects]);
 
-  useEffect(() => {
-    if (!useExistingData || backend === 'clickhouse' || objects.length) return;
-    void callApi<{ objects: Array<{ key: string }>; cursor?: string }>({
-      action: 'listR2Objects',
-    })
-      .then((listing) => {
-        setObjects(listing.objects);
-        setObjectsCursor(listing.cursor);
-      })
-      .catch((caught: unknown) =>
-        setFormError(caught instanceof Error ? caught.message : String(caught)),
-      );
-  }, [backend, objects.length, useExistingData]);
-
+  const uploadMutation = useMutation({
+    mutationFn: ({ file, uploadUrl }: { file: File; uploadUrl: string }) =>
+      uploadDatasourceFile(file, uploadUrl, setProgress, (request) => {
+        uploadRequest.current = request;
+      }),
+    retry: false,
+    gcTime: 0,
+  });
+  useEffect(() => () => uploadRequest.current?.abort(), []);
   const inferredExistingFormat = kind === 'object' ? datasourceUploadFormat(key) : undefined;
-
   async function loadMoreObjects() {
-    if (!objectsCursor) return;
-    try {
-      const listing = await callApi<{ objects: Array<{ key: string }>; cursor?: string }>({
-        action: 'listR2Objects',
-        cursor: objectsCursor,
-      });
-      setFormError(undefined);
-      setObjects((current) => [...current, ...listing.objects]);
-      setObjectsCursor(listing.cursor);
-    } catch (caught) {
-      setFormError(caught instanceof Error ? caught.message : String(caught));
-    }
+    await objectsQuery.fetchNextPage();
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -106,9 +100,10 @@ export function DatasourceRegisterForm({
           action: 'registerDatasource',
           cachePolicy,
           name,
-          backend,
+          provider: provider.id,
+          connection: provider.connectionFields.length ? connection : undefined,
           location:
-            backend === 'clickhouse'
+            provider.source === 'table'
               ? { kind: 'clickhouse', database, table, ownership: 'external', cacheTtlSeconds: 300 }
               : { kind, key, format: inferredExistingFormat ?? format },
         });
@@ -133,7 +128,7 @@ export function DatasourceRegisterForm({
 
     uploadStartedAt.current = Date.now();
     setProgress(0);
-    trackUpload('started', file, uploadFormat, 0);
+    trackUpload(callApi, 'started', file, uploadFormat, 0);
     setPhase('preparing');
     let prepared: { key: string; uploadUrl: string; cleanupToken: string };
     try {
@@ -144,19 +139,18 @@ export function DatasourceRegisterForm({
         format: uploadFormat,
       });
       setPhase('uploading');
-      await uploadDatasourceFile(file, prepared.uploadUrl, setProgress, (request) => {
-        uploadRequest.current = request;
-      });
+      await uploadMutation.mutateAsync({ file, uploadUrl: prepared.uploadUrl });
       setUploadedKey(prepared.key);
       setCleanupToken(prepared.cleanupToken);
       setPhase('inspecting');
-      trackUpload('completed', file, uploadFormat, Date.now() - uploadStartedAt.current);
+      trackUpload(callApi, 'completed', file, uploadFormat, Date.now() - uploadStartedAt.current);
     } catch (caught) {
       setPhase('idle');
       setProgress(0);
       uploadRequest.current = undefined;
       const cancelled = caught instanceof UploadCancelledError;
       trackUpload(
+        callApi,
         cancelled ? 'cancelled' : 'failed',
         file,
         uploadFormat,
@@ -177,11 +171,12 @@ export function DatasourceRegisterForm({
         action: 'registerDatasource',
         cachePolicy,
         name,
-        backend,
+        provider: provider.id,
         location: { kind: 'object', key: prepared.key, format: uploadFormat },
         cleanupToken: prepared.cleanupToken,
       });
       trackUpload(
+        callApi,
         'datasource_registered',
         file,
         uploadFormat,
@@ -201,7 +196,13 @@ export function DatasourceRegisterForm({
         caught instanceof ApiClientError && caught.code === 'datasource_inspection_failed';
       setRegistrationFailure(inspectionFailed ? 'inspection' : 'other');
       if (inspectionFailed)
-        trackUpload('inspection_failed', file, uploadFormat, Date.now() - uploadStartedAt.current);
+        trackUpload(
+          callApi,
+          'inspection_failed',
+          file,
+          uploadFormat,
+          Date.now() - uploadStartedAt.current,
+        );
       setFormError(caught instanceof Error ? caught.message : String(caught));
     }
   }
@@ -235,7 +236,13 @@ export function DatasourceRegisterForm({
     setPhase('removing');
     try {
       await callApi({ action: 'removeDatasourceUpload', key: uploadedKey, cleanupToken });
-      trackUpload('file_removed', file, uploadFormat, Date.now() - uploadStartedAt.current);
+      trackUpload(
+        callApi,
+        'file_removed',
+        file,
+        uploadFormat,
+        Date.now() - uploadStartedAt.current,
+      );
       setFile(undefined);
       if (fileInput.current) fileInput.current.value = '';
       setUploadedKey(undefined);
@@ -255,46 +262,48 @@ export function DatasourceRegisterForm({
   return (
     <form className="max-w-xl" onSubmit={submit}>
       <FieldGroup>
-        <Field>
-          <FieldLabel id="source-backend-label">Analytics backend</FieldLabel>
-          <ToggleGroup
-            aria-labelledby="source-backend-label"
-            value={[backend]}
-            disabled={busy || Boolean(uploadedKey)}
-            onValueChange={([selected]) => {
-              if (selected) setBackend(selected);
-            }}
-            className="grid grid-cols-2 gap-3"
-          >
-            {analyticsBackends.map((option) => (
-              <Toggle
-                key={option.id}
-                value={option.id}
-                aria-label={option.name}
-                className="group relative flex min-h-40 flex-col items-start gap-3 rounded-lg border border-input bg-background p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-pressed:border-primary data-pressed:ring-1 data-pressed:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <img src={`/analytics-backends/${option.id}.svg`} alt="" className="size-10" />
-                <CheckIcon
-                  aria-hidden="true"
-                  className="absolute top-3 right-3 size-4 text-primary opacity-0 group-data-pressed:opacity-100"
-                />
-                <span className="flex flex-col gap-1">
-                  <span className="font-medium">{option.name}</span>
-                  <span className="text-sm text-muted-foreground">{option.description}</span>
-                </span>
-              </Toggle>
-            ))}
-          </ToggleGroup>
-        </Field>
-        <Field orientation="horizontal">
-          <FieldLabel htmlFor="use-existing-data">Use existing workspace data</FieldLabel>
-          <Switch
-            id="use-existing-data"
-            checked={useExistingData}
-            onCheckedChange={setUseExistingData}
-            disabled={busy || Boolean(uploadedKey)}
-          />
-        </Field>
+        {provider.connectionFields.length ? (
+          <FieldSet>
+            <FieldLegend>Connection</FieldLegend>
+            <p className="text-sm text-muted-foreground">
+              Use read-only credentials. Your connection is encrypted and stays on the server.
+            </p>
+            <FieldGroup className="grid grid-cols-1 sm:grid-cols-2">
+              {provider.connectionFields.map((field) => (
+                <Field key={field.name}>
+                  <FieldLabel htmlFor={`connection-${field.name}`}>
+                    {field.label}
+                    {field.optional ? ' (optional)' : ''}
+                  </FieldLabel>
+                  <Input
+                    id={`connection-${field.name}`}
+                    type={field.type ?? 'text'}
+                    value={connection[field.name] ?? ''}
+                    placeholder={field.placeholder}
+                    required={!field.optional}
+                    disabled={busy}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onChange={(event) =>
+                      setConnection((current) => ({ ...current, [field.name]: event.target.value }))
+                    }
+                  />
+                </Field>
+              ))}
+            </FieldGroup>
+          </FieldSet>
+        ) : null}
+        {provider.supportsWorkspaceFiles ? (
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="use-existing-data">Use existing workspace data</FieldLabel>
+            <Switch
+              id="use-existing-data"
+              checked={useExistingData}
+              onCheckedChange={setUseExistingData}
+              disabled={busy || Boolean(uploadedKey)}
+            />
+          </Field>
+        ) : null}
         {!useExistingData ? (
           <Field data-invalid={Boolean(fileError)}>
             <FieldLabel htmlFor="source-file">File</FieldLabel>
@@ -321,7 +330,7 @@ export function DatasourceRegisterForm({
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        {useExistingData && backend === 'clickhouse' ? (
+        {useExistingData && provider.source === 'table' ? (
           <>
             <Field>
               <FieldLabel htmlFor="source-database">Database</FieldLabel>
@@ -342,15 +351,15 @@ export function DatasourceRegisterForm({
                 disabled={busy}
                 onChange={(event) => setTable(event.target.value)}
               />
-              <FieldDescription>
-                External tables must be authorized for this workspace.
-              </FieldDescription>
+              <FieldDescription>Choose the table to use for reporting.</FieldDescription>
             </Field>
           </>
         ) : useExistingData ? (
           <>
             <Field>
-              <FieldLabel htmlFor="source-key">R2 key or prefix</FieldLabel>
+              <FieldLabel htmlFor="source-key">
+                {provider.supportsWorkspaceFiles ? 'R2 key or prefix' : 'Object key or prefix'}
+              </FieldLabel>
               <Input
                 id="source-key"
                 list="workspace-objects"
@@ -404,7 +413,7 @@ export function DatasourceRegisterForm({
           policy={cachePolicy}
           onChange={setCachePolicy}
           disabled={busy}
-          defaultTtlSeconds={useExistingData && backend === 'clickhouse' ? 300 : 86_400}
+          defaultTtlSeconds={provider.defaultCacheTtlSeconds}
         />
         {phase === 'uploading' ? (
           <Progress value={progress} aria-label="Upload progress">
@@ -420,14 +429,12 @@ export function DatasourceRegisterForm({
         ) : null}
         {phase === 'inspecting' ? (
           <p className="text-sm text-muted-foreground">
-            {backend === 'clickhouse'
-              ? 'Importing into ClickHouse...'
-              : 'Inspecting file with DuckDB...'}
+            {`Preparing data with ${provider.name}...`}
           </p>
         ) : null}
         <div className="flex gap-2">
           <Button type="submit" disabled={busy || Boolean(uploadedKey)}>
-            {useExistingData ? 'Register datasource' : 'Upload and register'}
+            {busy ? 'Connecting...' : useExistingData ? 'Connect datasource' : 'Upload and connect'}
           </Button>
           {phase === 'uploading' ? (
             <Button type="button" variant="outline" onClick={() => uploadRequest.current?.abort()}>
@@ -435,7 +442,7 @@ export function DatasourceRegisterForm({
             </Button>
           ) : null}
         </div>
-        {formError ? (
+        {formError || objectsQuery.error ? (
           <Alert variant="destructive">
             <AlertTitle>
               {uploadedKey
@@ -444,7 +451,7 @@ export function DatasourceRegisterForm({
                   : 'File uploaded, registration failed'
                 : 'Could not continue'}
             </AlertTitle>
-            <AlertDescription>{formError}</AlertDescription>
+            <AlertDescription>{formError ?? objectsQuery.error?.message}</AlertDescription>
           </Alert>
         ) : null}
         {uploadedKey ? (
@@ -495,6 +502,7 @@ function uploadDatasourceFile(
 class UploadCancelledError extends Error {}
 
 function trackUpload(
+  callApi: import('#/api/query').ApiExecutor,
   event: DatasourceUploadEvent['event'],
   file: File,
   format: DatasourceUploadFormat,

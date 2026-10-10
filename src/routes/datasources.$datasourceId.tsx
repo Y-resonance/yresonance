@@ -1,8 +1,8 @@
 import { createColumnHelper, useTable } from '@tanstack/react-table';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { ArrowLeftIcon, PlusIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useCallback, useMemo, useState, type FormEvent } from 'react';
+import { useApi, useApiQuery } from '#/api/query';
 import { DatasourceCacheSettings } from '#/components/datasource-cache-settings';
 import { AppShell } from '#/components/app-shell';
 import { CalculatedFieldDialog } from '#/components/calculated-field-dialog';
@@ -61,6 +61,7 @@ export const Route = createFileRoute('/datasources/$datasourceId')({
 interface Description extends DatasourceDescription {
   location: DataSourceLocation;
   cachePolicy?: DatasourceCachePolicy;
+  defaultCacheTtlSeconds: number;
 }
 
 // Emerald dimensions and blue metrics match the builder's field colour coding.
@@ -127,15 +128,14 @@ function DatasourcePage() {
 
 function DatasourceContent() {
   const { datasourceId } = Route.useParams();
-  // The loaded payload carries the datasource it describes, so a response that
-  // arrives after the route moved on is never rendered and never reaches the
-  // edit dialog, whichever load or in-flight save produced it.
-  const [loaded, setLoaded] = useState<{
-    datasourceId: string;
-    description: Description;
-    isAdmin: boolean;
-  }>();
-  const [error, setError] = useState<string>();
+  const sourceQuery = useApiQuery<Description>({
+    action: 'describeDatasource',
+    dataSourceId: datasourceId,
+  });
+  const bootstrapQuery = useApiQuery<{ isAdmin: boolean }>({ action: 'bootstrap' });
+  const description = sourceQuery.data;
+  const isAdmin = bootstrapQuery.data?.isAdmin ?? false;
+  const error = (sourceQuery.error ?? bootstrapQuery.error)?.message;
   const [search, setSearch] = useState('');
   // The session counter remounts the dialog per opening without swapping its
   // contents while the close animation is still running.
@@ -147,27 +147,11 @@ function DatasourceContent() {
     setDialog((current) => ({ session: current.session + 1, field }));
     setDialogOpen(true);
   }, []);
-  // Two loads for the same datasource can still settle out of order, so only
-  // the newest one writes.
-  const load = useRef(0);
+  const { refetch: refetchSource } = sourceQuery;
+  const { refetch: refetchBootstrap } = bootstrapQuery;
   const refresh = useCallback(async () => {
-    const current = ++load.current;
-    try {
-      const [source, bootstrap] = await Promise.all([
-        callApi<Description>({ action: 'describeDatasource', dataSourceId: datasourceId }),
-        callApi<{ isAdmin: boolean }>({ action: 'bootstrap' }),
-      ]);
-      if (load.current !== current) return;
-      setLoaded({ datasourceId, description: source, isAdmin: bootstrap.isAdmin });
-      setError(undefined);
-    } catch (caught) {
-      if (load.current !== current) return;
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
-  }, [datasourceId]);
-  useEffect(() => void refresh(), [refresh]);
-  const description = loaded?.datasourceId === datasourceId ? loaded.description : undefined;
-  const isAdmin = loaded?.datasourceId === datasourceId ? loaded.isAdmin : false;
+    await Promise.all([refetchSource(), refetchBootstrap()]);
+  }, [refetchSource, refetchBootstrap]);
   usePageTitle(description?.name ?? 'Datasource');
   useWebMcpTools({
     canManageDataSources: Boolean(description),
@@ -230,12 +214,7 @@ function DatasourceContent() {
             <DatasourceCacheSettings
               key={`${datasourceId}:${JSON.stringify(description.cachePolicy)}`}
               dataSourceId={datasourceId}
-              defaultTtlSeconds={
-                description.location.kind === 'clickhouse' &&
-                description.location.ownership === 'external'
-                  ? description.location.cacheTtlSeconds
-                  : 86_400
-              }
+              defaultTtlSeconds={description.defaultCacheTtlSeconds}
               initialPolicy={description.cachePolicy ?? { mode: 'default' }}
               onSaved={refresh}
             />
@@ -327,6 +306,7 @@ function RawFieldDialog({
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
 }) {
+  const callApi = useApi();
   const [label, setLabel] = useState(field.label);
   const [role, setRole] = useState<FieldRole>(field.role);
   const [semanticType, setSemanticType] = useState<SemanticType>(field.semanticType);

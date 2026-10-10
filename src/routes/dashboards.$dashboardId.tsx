@@ -9,7 +9,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { CloudAlertIcon, CloudCheckIcon, LoaderCircleIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
-import { callApi } from '#/api/client';
+import { useApi, useApiQuery } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
 import {
   DashboardBuilder,
@@ -24,7 +24,6 @@ import {
 } from '#/components/dashboard-view';
 import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { ErrorState, LoadingState } from '#/components/request-state';
-import { Badge } from '#/components/ui/badge';
 import { Label } from '#/components/ui/label';
 import { Switch } from '#/components/ui/switch';
 import {
@@ -78,10 +77,16 @@ function DashboardPage() {
 }
 
 function DashboardContent() {
+  const callApi = useApi();
   const { dashboardId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [payload, setPayload] = useState<DashboardPayload>();
+  const dashboardQuery = useApiQuery<DashboardPayload>({
+    action: 'getDashboard',
+    dashboardId,
+    includeSharing: true,
+  });
+  const payload = dashboardQuery.data;
   const [builderControlState, setBuilderControlState] = useState<ControlState>({});
   const controlDashboardIdRef = useRef<string>(undefined);
   const [error, setError] = useState<string>();
@@ -100,7 +105,7 @@ function DashboardContent() {
           controlDashboardIdRef.current = loaded.dashboard.id;
           setBuilderControlState(initialControlState(loaded.dashboard));
         }
-        setPayload((current) => ({
+        dashboardQuery.setData((current) => ({
           ...loaded,
           sharing:
             loaded.sharing ??
@@ -112,11 +117,16 @@ function DashboardContent() {
         throw caught;
       }
     },
-    [dashboardId],
+    [dashboardId, callApi, dashboardQuery.setData],
   );
   const refresh = useCallback(() => loadDashboard(false), [loadDashboard]);
   const refreshSharing = useCallback(() => loadDashboard(true), [loadDashboard]);
-  useEffect(() => void refreshSharing().catch(() => undefined), [refreshSharing]);
+  useEffect(() => {
+    if (payload && controlDashboardIdRef.current !== payload.dashboard.id) {
+      controlDashboardIdRef.current = payload.dashboard.id;
+      setBuilderControlState(initialControlState(payload.dashboard));
+    }
+  }, [payload]);
   // Agent tools can change inputs that widget definitions do not carry (timezone, default date
   // range, fields, metrics), so their mutations re-run the widget queries.
   const refreshAfterTool = useCallback(async () => {
@@ -147,27 +157,22 @@ function DashboardContent() {
   return (
     <DashboardQueryRefresh key={dashboardId} inputsRevision={queryInputsRevision}>
       <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
-        {error ? (
-          <ErrorState error={error} />
+        {error || dashboardQuery.error ? (
+          <ErrorState
+            error={error ?? dashboardQuery.error?.message ?? 'Failed to load dashboard.'}
+          />
         ) : !payload ? (
           <LoadingState />
         ) : (
           <div className="flex flex-col gap-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-3xl font-semibold tracking-tight">
-                    {payload.dashboard.name}
-                  </h1>
-                  <Badge variant="secondary">{previewingAsViewer ? 'viewer' : payload.role}</Badge>
-                </div>
-              </div>
+              <h1 className="text-3xl font-semibold tracking-tight">{payload.dashboard.name}</h1>
               {/* The editor controls stay put in both modes so the switch never moves under the
                 cursor, even though a real viewer sees neither of them. */}
-              <div className="flex items-center gap-3">
+              <div className="flex max-w-full items-start gap-3 sm:items-center">
                 <DashboardRefreshButton />
                 {canEdit ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-3">
                     {editing && webMcpAvailable ? (
                       <Label className="text-muted-foreground" htmlFor="agent-mode">
                         Agent mode

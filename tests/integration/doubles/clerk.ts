@@ -15,6 +15,7 @@ interface DirectoryUser {
   id: string;
   emailAddress: string;
   firstName?: string;
+  imageUrl?: string;
 }
 
 let activeSession: ActiveSession | null = null;
@@ -73,6 +74,7 @@ export function clerkClient() {
           .map((user) => ({
             id: user.id,
             firstName: user.firstName ?? null,
+            imageUrl: user.imageUrl,
             lastName: null,
             username: null,
             primaryEmailAddress: { emailAddress: user.emailAddress },

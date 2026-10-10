@@ -1,6 +1,7 @@
+import { useDebouncedValue } from '#/lib/use-debounced-value';
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useApi, useApiQuery } from '#/api/query';
 import {
   displayValue,
   errorRange,
@@ -50,6 +51,7 @@ export function CalculatedFieldDialog({
   field,
   onSaved,
 }: CalculatedFieldDialogProps) {
+  const callApi = useApi();
   const initial = useMemo(() => initialValues(field), [field]);
   const [name, setName] = useState(initial.name);
   const [expression, setExpression] = useState(initial.expression);
@@ -59,7 +61,6 @@ export function CalculatedFieldDialog({
   const [description, setDescription] = useState(initial.description);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
-  const [remoteValidation, setRemoteValidation] = useState<FormulaValidation>();
   const [previewValues, setPreviewValues] = useState<unknown[]>();
   const [previewing, setPreviewing] = useState(false);
   const editor = useRef<ReactCodeMirrorRef>(null);
@@ -79,7 +80,6 @@ export function CalculatedFieldDialog({
     setDescription(values.description);
     setSaving(false);
     setSaveError(undefined);
-    setRemoteValidation(undefined);
     setPreviewValues(undefined);
     typeWasChanged.current = false;
     roleWasChanged.current = false;
@@ -114,51 +114,34 @@ export function CalculatedFieldDialog({
     }
   }, [localValidation, semanticType]);
 
-  useEffect(() => {
-    if (!open || !localValidation.valid || !compatibleTypes.includes(semanticType)) {
-      setRemoteValidation(undefined);
-      return;
-    }
-    setRemoteValidation(undefined);
-    setPreviewValues(undefined);
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => {
-      void callApi<FormulaValidation>(
-        {
-          action: 'validateCalculatedField',
-          dashboardId,
-          dataSourceId: datasource.id,
-          id: field?.id,
-          name,
-          canonicalName: field?.canonicalName,
-          expression,
-          semanticType,
-        },
-        { signal: controller.signal },
-      )
-        .then(setRemoteValidation)
-        .catch((error: unknown) => {
-          if (controller.signal.aborted) return;
-          const message = error instanceof Error ? error.message : String(error);
-          setRemoteValidation({ valid: false, error: errorRange(message, expression) });
-        });
-    }, 250);
-    return () => {
-      window.clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [
-    open,
-    localValidation,
-    compatibleTypes,
-    semanticType,
-    dashboardId,
-    datasource.id,
-    field?.id,
-    field?.canonicalName,
-    name,
-    expression,
-  ]);
+  const validationRequest = useMemo(
+    () => ({
+      action: 'validateCalculatedField' as const,
+      dashboardId,
+      dataSourceId: datasource.id,
+      id: field?.id,
+      name,
+      canonicalName: field?.canonicalName,
+      expression,
+      semanticType,
+    }),
+    [dashboardId, datasource.id, field?.id, field?.canonicalName, name, expression, semanticType],
+  );
+  const debouncedRequest = useDebouncedValue(validationRequest);
+  const validationQuery = useApiQuery<FormulaValidation>(debouncedRequest, {
+    enabled:
+      open &&
+      localValidation.valid &&
+      compatibleTypes.includes(semanticType) &&
+      validationRequest === debouncedRequest,
+  });
+  const remoteValidation =
+    validationRequest !== debouncedRequest
+      ? undefined
+      : validationQuery.error
+        ? { valid: false as const, error: errorRange(validationQuery.error.message, expression) }
+        : validationQuery.data;
+  useEffect(() => setPreviewValues(undefined), [validationRequest]);
 
   const dirty =
     name !== initial.name ||

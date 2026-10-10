@@ -29,6 +29,7 @@ import {
 } from './widget-queries.server';
 import {
   listDataSources,
+  listDatasourceProviders,
   describeDatasource,
   listR2Objects,
   prepareDatasourceUpload,
@@ -140,6 +141,8 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
         request.search,
         request.shareToken,
       );
+    case 'listDatasourceProviders':
+      return listDatasourceProviders();
     case 'listDataSources':
       return listDataSources();
     case 'listLibraryMetrics':

@@ -1,3 +1,5 @@
+import { callApi as requestApi } from '#/api/client';
+import { useDebouncedValue } from '#/lib/use-debounced-value';
 import { stableStringify } from '#/domain/hash';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { dashboardControlWidgets } from '#/domain/schema';
@@ -38,7 +40,7 @@ import {
 } from '#/domain/schema';
 import { drillLevels } from '#/domain/drill-down';
 import type { QueryResultColumn } from '#/domain/query-result';
-import { callApi } from '#/api/client';
+import { useApiQuery } from '#/api/query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card';
 import { Button } from '#/components/ui/button';
 import {
@@ -337,36 +339,25 @@ function FilterControl({
   controlState: ControlState;
   setControlState: (state: ControlState) => void;
 }) {
-  const [values, setValues] = useState<unknown[]>([]);
   const [search, setSearch] = useState('');
-  const [retry, setRetry] = useState(0);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    let current = true;
-    setStatus('loading');
-    const timeout = setTimeout(() => {
-      void callApi<{ values: unknown[] }>({
-        action: 'getControlOptions',
-        dashboardId,
-        controlId: widgetId,
-        shareToken,
-        ...(search ? { search } : {}),
-      })
-        .then((result) => {
-          if (!current) return;
-          setValues(result.values);
-          setStatus('ready');
-        })
-        .catch(() => {
-          if (current) setStatus('error');
-        });
-    }, 250);
-    return () => {
-      current = false;
-      clearTimeout(timeout);
-    };
-  }, [dashboardId, definitionHash, retry, search, shareToken, widgetId]);
+  const debouncedSearch = useDebouncedValue(search);
+  const optionsQuery = useApiQuery<{ values: unknown[] }>(
+    {
+      action: 'getControlOptions',
+      dashboardId,
+      controlId: widgetId,
+      shareToken,
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    },
+    { revision: definitionHash },
+  );
+  const values = optionsQuery.data?.values ?? [];
+  const status = optionsQuery.isError
+    ? 'error'
+    : optionsQuery.isPending || search !== debouncedSearch
+      ? 'loading'
+      : 'ready';
   const selected = (controlState.values?.[widgetId] ?? []).map(String);
   const updateSelected = (next: string[]) =>
     setControlState({
@@ -421,7 +412,7 @@ function FilterControl({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setRetry((value) => value + 1)}
+                        onClick={() => void optionsQuery.refetch()}
                       >
                         Retry
                       </Button>
@@ -497,6 +488,15 @@ function handleFilterOptionKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
   options[(index + direction + options.length) % options.length]?.focus();
 }
 
+interface WidgetQueryResult {
+  rows: Record<string, unknown>[];
+  columns: QueryResultColumn[];
+  comparisonRows?: Record<string, unknown>[];
+  summaryRow?: Record<string, unknown>;
+  scaleBounds?: Record<string, ScaleBounds>;
+  hasMore?: boolean;
+}
+
 function QueryCard({
   widget,
   dashboardId,
@@ -523,15 +523,7 @@ function QueryCard({
   });
   const { revision, inputsRevision, changePending } = useDashboardQueryRefresh();
   const refreshed = useRef(revision);
-  const [rows, setRows] = useState<Record<string, unknown>[]>();
-  const [columns, setColumns] = useState<QueryResultColumn[]>();
-  const [comparisonRows, setComparisonRows] = useState<Record<string, unknown>[]>();
-  const [summaryRow, setSummaryRow] = useState<Record<string, unknown>>();
-  const [scaleBounds, setScaleBounds] = useState<Record<string, ScaleBounds>>();
-  const [error, setError] = useState<string>();
-  const [retry, setRetry] = useState(0);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
   // Clicked values per drilled level. Kept across control changes, dropped when the widget changes.
   const [drillPath, setDrillPath] = useState<DrillStep[]>([]);
   useEffect(() => setPage(0), [controlsKey, dashboardId, definitionKey, widget.id]);
@@ -540,90 +532,79 @@ function QueryCard({
     () => setDrillPath((path) => (path.length ? [] : path)),
     [dashboardId, definitionKey, widget.id],
   );
-  useEffect(() => {
-    let current = true;
-    changePending(1);
-    let pending = true;
-    const finish = () => {
-      if (pending) {
-        pending = false;
-        changePending(-1);
-      }
-    };
-    const refresh = revision !== refreshed.current;
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(new Error('The widget query did not respond within 45 seconds.')),
-      45_000,
-    );
-    // Keep the last result usable if loading a new page fails.
-    setError(undefined);
-    void callApi<{
-      rows: Record<string, unknown>[];
-      columns: QueryResultColumn[];
-      comparisonRows?: Record<string, unknown>[];
-      summaryRow?: Record<string, unknown>;
-      scaleBounds?: Record<string, ScaleBounds>;
-      hasMore?: boolean;
-    }>(
-      widgetQueryRequest({
-        dashboardId,
-        widget,
-        controlState,
-        drillPath: drillPath.length ? drillPath.map((step) => step.value) : undefined,
-        preview: preview ?? false,
-        shareToken,
-        page,
-        refresh,
-      }),
-      { signal: controller.signal },
-    )
-      .then((result) => {
-        if (!current) return;
-        refreshed.current = revision;
-        setRows(result.rows);
-        setColumns(result.columns);
-        setComparisonRows(result.comparisonRows);
-        setSummaryRow(result.summaryRow);
-        setScaleBounds(result.scaleBounds);
-        setHasMore(Boolean(result.hasMore));
-        setError(undefined);
-      })
-      .catch((caught: unknown) => {
-        if (current) setError(caught instanceof Error ? caught.message : String(caught));
-      })
-      .finally(() => {
-        clearTimeout(timeout);
-        finish();
-      });
-    return () => {
-      finish();
-      current = false;
-      clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [
-    revision,
-    inputsRevision,
-    changePending,
-    controlsKey,
+  const request = widgetQueryRequest({
     dashboardId,
-    drillPath,
+    widget,
+    controlState,
+    drillPath: drillPath.length ? drillPath.map((step) => step.value) : undefined,
+    preview: preview ?? false,
+    shareToken,
     page,
-    preview,
-    retry,
+    refresh: false,
+  });
+  const resultQuery = useApiQuery<WidgetQueryResult>(request, {
+    revision: [
+      revision,
+      inputsRevision,
+      definitionKey,
+      controlsKey,
+      widget.definitionHash,
+      widget.layout.width,
+    ],
+    queryFn: async (signal) => {
+      const result = await requestApi<WidgetQueryResult>(
+        widgetQueryRequest({
+          dashboardId,
+          widget,
+          controlState,
+          drillPath: drillPath.length ? drillPath.map((step) => step.value) : undefined,
+          preview: preview ?? false,
+          shareToken,
+          page,
+          refresh: revision !== refreshed.current,
+        }),
+        {
+          signal: AbortSignal.any([signal, AbortSignal.timeout(45_000)]),
+        },
+      );
+      refreshed.current = revision;
+      return result;
+    },
+  });
+  // Keep the previous page or refresh usable on failure, but never reuse rows for
+  // a different filter, definition, or drill level.
+  const resultContext = stableStringify([
+    dashboardId,
     shareToken,
     definitionKey,
-    widget.definitionHash,
-    widget.id,
-    widget.layout.width,
+    controlsKey,
+    drillPath,
+    preview,
   ]);
+  const previousResult = useRef<{ context: string; data: WidgetQueryResult }>(undefined);
+  if (resultQuery.data) previousResult.current = { context: resultContext, data: resultQuery.data };
+  const displayed =
+    resultQuery.data ??
+    (previousResult.current?.context === resultContext ? previousResult.current.data : undefined);
+  const {
+    rows,
+    columns,
+    comparisonRows,
+    summaryRow,
+    scaleBounds,
+    hasMore = false,
+  } = displayed ?? {};
+  const error = resultQuery.error?.message;
+  useEffect(() => {
+    if (!resultQuery.isFetching) return;
+    changePending(1);
+    return () => changePending(-1);
+  }, [resultQuery.isFetching, changePending]);
   if (!('title' in definition)) return null;
   const canDrill = drillPath.length < drillLevels(definition).length - 1;
   // Dropping the old level's rows shows a skeleton and keeps a second click from drilling into a
   // value of the level that is being left.
   const changeDrillPath = (next: DrillStep[]) => {
-    setRows(undefined);
     setDrillPath(next);
   };
   return (
@@ -640,7 +621,7 @@ function QueryCard({
           error ? (
             <div className="flex flex-col items-start gap-3">
               <p className="text-sm text-destructive">{error}</p>
-              <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>
+              <Button variant="outline" size="sm" onClick={() => void resultQuery.refetch()}>
                 Retry
               </Button>
             </div>
@@ -662,7 +643,7 @@ function QueryCard({
               onDrill={canDrill ? (step) => changeDrillPath([...drillPath, step]) : undefined}
             />
             {error ? (
-              <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>
+              <Button variant="outline" size="sm" onClick={() => void resultQuery.refetch()}>
                 Retry
               </Button>
             ) : null}

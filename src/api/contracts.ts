@@ -151,6 +151,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     search: z.string().optional(),
   }),
   z.object({ action: z.literal('listDataSources') }),
+  z.object({ action: z.literal('listDatasourceProviders') }),
   z.object({ action: z.literal('listLibraryMetrics') }),
   z.object({
     action: z.literal('describeDatasource'),
@@ -174,6 +175,8 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     action: z.literal('registerDatasource'),
     cachePolicy: datasourceCachePolicySchema.optional(),
     backend: z.enum(['duckdb', 'clickhouse']).optional(),
+    provider: z.string().min(1).optional(),
+    connection: z.record(z.string(), z.string()).optional(),
     name: z.string().trim().min(1),
     location: dataSourceLocationSchema,
     cleanupToken: z.string().min(1).optional(),

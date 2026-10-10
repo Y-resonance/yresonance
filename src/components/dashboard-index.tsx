@@ -1,8 +1,10 @@
 import { Link } from '@tanstack/react-router';
 import { PlusIcon } from 'lucide-react';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { callApi } from '#/api/client';
+import { useCallback, useState, type FormEvent } from 'react';
+import { useApi, useApiQuery } from '#/api/query';
 import { DashboardOverviewActions } from '#/components/dashboard-overview-actions';
+import { DashboardCollaborators } from '#/components/dashboard-collaborators';
+import type { DashboardCollaborator } from '#/domain/sharing';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ interface Bootstrap {
     id: string;
     name: string;
     canEdit: boolean;
+    collaborators: DashboardCollaborator[];
     dataSourceIds: string[];
     updatedAt: string;
   }>;
@@ -47,24 +50,17 @@ interface Bootstrap {
 }
 
 export default function DashboardIndex() {
-  const [data, setData] = useState<Bootstrap>();
-  const [error, setError] = useState<string>();
+  const callApi = useApi();
+  const { data, error: queryError, refetch } = useApiQuery<Bootstrap>({ action: 'bootstrap' });
+  const error = queryError?.message;
   const [createError, setCreateError] = useState<string>();
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   usePageTitle('Dashboards');
   const refresh = useCallback(async () => {
-    try {
-      setData(await callApi<Bootstrap>({ action: 'bootstrap' }));
-      setError(undefined);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
-  }, []);
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    await refetch();
+  }, [refetch]);
   useWebMcpTools({ canCreate: Boolean(data), isAdmin: data?.isAdmin, onMutation: refresh });
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -177,13 +173,16 @@ export default function DashboardIndex() {
                       </TableCell>
                       <TableCell>{new Date(dashboard.updatedAt).toLocaleString()}</TableCell>
                       <TableCell>
-                        {dashboard.canEdit ? (
-                          <DashboardOverviewActions
-                            dashboard={dashboard}
-                            dataSources={data.dataSources}
-                            onMutation={refresh}
-                          />
-                        ) : null}
+                        <div className="flex items-center justify-end gap-3">
+                          <DashboardCollaborators users={dashboard.collaborators} size="sm" />
+                          {dashboard.canEdit ? (
+                            <DashboardOverviewActions
+                              dashboard={dashboard}
+                              dataSources={data.dataSources}
+                              onMutation={refresh}
+                            />
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

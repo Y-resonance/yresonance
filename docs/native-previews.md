@@ -53,8 +53,9 @@ The existing `env.preview` remains a manual shared staging deployment.
    existing Previews as well.
 5. Enable Cloudflare preview builds. Set the preview build command to
    `bun run build:branch-preview` and deploy command to
-   `bun run deploy:branch-preview`. Keep production on `main` with
-   `bun run build` and `bun run deploy:built`. Cloudflare supplies
+   `bun run deploy:branch-preview`. Keep the production branch on `main`, but exclude
+   all paths in its production build settings (`path_excludes: ["*"]`). GitHub Actions
+   builds and deploys production after all checks pass. Cloudflare supplies
    `WORKERS_CI_BRANCH`; the helper requires it rather than guessing a branch.
 6. Push two same-repository PR branches. Confirm Cloudflare publishes both URLs
    and their DB, QUERY_CACHE, and DATA bindings have different IDs/names.

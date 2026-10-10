@@ -54,8 +54,9 @@ explain. Update it when a decision changes, not when an implementation detail do
   cached results. Workspace access mappings are checked before reading cached external results.
 - Managed CSV uploads are converted to Parquet before registration. ClickHouse imports stream
   the inspected Parquet into one database per environment, with workspace-scoped tables. Production
-  and previews use separate SQL users. Preview databases follow branch lifecycles. External tables require
-  explicit server-side workspace mappings and SQL grants. Existing DuckDB sources are not migrated.
+  and previews use separate SQL users. Preview databases follow branch lifecycles. External tables on the managed ClickHouse host require
+  explicit server-side workspace mappings and SQL grants. Bring your own connections use the customer
+  account's SQL grants. Existing DuckDB sources are not migrated.
   The optional backend `managedUploads` capability owns import and cleanup; the application
   coordinates upload claims and commits registration without calling either engine directly.
 
@@ -98,3 +99,23 @@ explain. Update it when a decision changes, not when an implementation detail do
 Data catalog beyond the field lookup table. Ingestion and transformation pipelines. Blends and
 cross-source fields. Nested filter groups. Percent-of-total comparison modes. Stacked bars and
 breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.
+
+## Datasource providers
+
+- Datasource creation first selects a provider, then opens a dedicated setup screen. Providers are
+  grouped as Managed and Bring your own. Managed DuckDB and ClickHouse use deployment credentials;
+  Bring your own DuckDB reads S3-compatible CSV/Parquet files, and Bring your own ClickHouse reads
+  a customer table over HTTPS.
+- `DatasourceProvider` owns registration validation and preparation. `AnalyticsDataBackend` owns
+  inspection, query execution, validation, cache identity, cache defaults, and optional managed
+  uploads. Registration and dashboard services call these interfaces. Provider definitions supply
+  setup fields and capabilities to the UI and WebMCP discovery.
+- Customer connections are encrypted in a separate D1 table, bound to the workspace and datasource.
+  They never enter datasource records, API responses, or telemetry. AES-GCM uses a purpose-separated
+  HKDF key derived from `UPLOAD_SIGNING_SECRET`; preserve that secret across deployments. Changing
+  it requires re-encrypting existing connections before switching keys.
+- Customer connections are read-only. Use public HTTPS endpoints and read-only storage/database
+  accounts. S3 credentials remain in the Worker. DuckDB reads exact objects through encrypted,
+  five-minute capabilities, with the same scanned-byte budget as managed data. The query container
+  still has no internet or storage credentials. Bring your own sources default to five-minute
+  query caching; S3 object ETags also contribute to the cache identity.

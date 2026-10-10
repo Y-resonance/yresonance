@@ -32,6 +32,62 @@ interface OpenedDashboard {
 }
 
 describe('dashboard grants', () => {
+  test('collaborator profiles follow visible dashboards and revoked grants', async () => {
+    const workspace = await signInToNewWorkspace();
+    const dashboard = await createDashboard('Shared report');
+    const colleagueId = newUserId();
+    setClerkDirectory([
+      { id: workspace.userId, emailAddress: 'owner@example.com', firstName: 'Owner' },
+      {
+        id: colleagueId,
+        emailAddress: 'colleague@example.com',
+        firstName: 'Colleague',
+        imageUrl: 'https://example.com/avatar.png',
+      },
+    ]);
+    await callService({
+      action: 'shareDashboard',
+      dashboardId: dashboard.id,
+      operation: { kind: 'grant', userEmail: 'colleague@example.com', role: 'editor' },
+    });
+    const collaborator = {
+      clerkUserId: colleagueId,
+      displayName: 'Colleague',
+      userEmail: 'colleague@example.com',
+      imageUrl: 'https://example.com/avatar.png',
+      role: 'editor',
+    };
+    expect(await callService({ action: 'bootstrap' })).toMatchObject({
+      dashboards: [
+        {
+          id: dashboard.id,
+          collaborators: expect.arrayContaining([expect.objectContaining(collaborator)]),
+        },
+      ],
+    });
+    expect(await callService({ action: 'getDashboard', dashboardId: dashboard.id })).toMatchObject({
+      sharing: { grants: expect.arrayContaining([expect.objectContaining(collaborator)]) },
+    });
+    signInAsUser(workspace, colleagueId);
+    expect(await callService({ action: 'listDashboards' })).toMatchObject([
+      {
+        id: dashboard.id,
+        collaborators: expect.arrayContaining([expect.objectContaining(collaborator)]),
+      },
+    ]);
+    signInAsOwner(workspace);
+    await callService({
+      action: 'shareDashboard',
+      dashboardId: dashboard.id,
+      operation: { kind: 'revoke', userId: colleagueId },
+    });
+    expect(await callService({ action: 'bootstrap' })).toMatchObject({
+      dashboards: [{ collaborators: [{ clerkUserId: workspace.userId }] }],
+    });
+    signInAsUser(workspace, colleagueId);
+    expect(await callService({ action: 'bootstrap' })).toMatchObject({ dashboards: [] });
+  });
+
   test('the creator keeps an editor grant and admins open every dashboard', async () => {
     const workspace = await signInToNewWorkspace();
     const dashboard = await createDashboard('Board review');

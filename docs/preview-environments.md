@@ -39,13 +39,20 @@ new Previews; update existing Previews explicitly when rotating credentials.
 
 ## Cloudflare deployment
 
-Cloudflare deploys every push to `main`. The Worker deployment also builds and uploads the query
-container image.
+GitHub Actions deploys pushes to `main` after all jobs in the Check workflow pass. The deployment
+job builds that commit, applies production D1 migrations, and deploys the Worker and query container.
+Deployments run one at a time and skip commits that are no longer the head of `main`.
 
 Query containers are constrained to Western Europe (`WEUR`) in production and previews.
 
-Workers Builds handles production and branch-preview deployment. GitHub Actions
-runs checks and deletes closed PR resources; it does not deploy previews.
+Workers Builds handles automatic branch-preview deployment. Its production build settings exclude
+all paths (`path_excludes: ["*"]`) to prevent independent production deployments on push.
+GitHub Actions runs checks, deploys production, and deletes closed PR resources; it does not deploy previews.
+
+The production job uses the repository secret `CLOUDFLARE_API_TOKEN`, which must permit Worker,
+container, and D1 deployment operations. It builds with `VITE_CLERK_PUBLISHABLE_KEY_PRODUCTION`
+from repository variables and `POSTHOG_PROJECT_TOKEN_PRODUCTION` from repository secrets.
+The existing development Clerk variable remains reserved for browser tests.
 
 
 For an explicit production deployment from a local authenticated shell:

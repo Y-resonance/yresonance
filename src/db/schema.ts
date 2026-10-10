@@ -46,6 +46,17 @@ export const dataSources = sqliteTable(
   ],
 );
 
+// Kept outside datasource records so API responses cannot include encrypted credentials.
+export const datasourceConnections = sqliteTable('datasource_connections', {
+  datasourceId: text('datasource_id')
+    .primaryKey()
+    .references(() => dataSources.id, { onDelete: 'cascade' }),
+  workspaceId: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  encryptedConfig: text('encrypted_config').notNull(),
+});
+
 export const datasourceUploads = sqliteTable(
   'datasource_uploads',
   {

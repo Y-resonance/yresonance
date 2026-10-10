@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import { apiRequestSchema, type ApiRequest } from '#/api/contracts';
 
 interface ToolDefinition {
@@ -43,6 +43,7 @@ const duplicateDashboardDescription =
   'Copy a dashboard under a new name. dataSourceMapping ({ sourceId: targetId }) points widgets at another datasource, matching fields by canonical name. Fails without storing anything and lists the unmatched canonical fields per widget when the target lacks them. Share links and grants are not copied. Returns the new dashboard.';
 
 export function useWebMcpTools(options: WebMcpOptions) {
+  const callApi = useApi();
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'listDashboards',
               description:
-                'List dashboards the signed-in user can see. Returns ids, names, widget counts, and update times.',
+                'List dashboards the signed-in user can see. Returns ids, names, widget counts, update times, and collaborators with names, emails, profile images, and roles.',
               readOnly: true,
             },
             {
@@ -289,6 +290,12 @@ export function useWebMcpTools(options: WebMcpOptions) {
     const dataSourceTools: ToolSpec[] = options.canManageDataSources
       ? [
           {
+            action: 'listDatasourceProviders',
+            description:
+              'List managed and bring your own datasource providers with their setup fields and capabilities. No credentials are returned.',
+            readOnly: true,
+          },
+          {
             action: 'listR2Objects',
             description: 'List R2 objects only under the active workspace prefix.',
             readOnly: true,
@@ -302,7 +309,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
           {
             action: 'registerDatasource',
             description:
-              'Register DuckDB files or an authorized external ClickHouse table. Choose backend for managed uploads. Inspects the source and returns datasource and field metadata.',
+              'Register a datasource using a provider from listDatasourceProviders. Bring your own providers require connection fields. Credentials are encrypted server-side and never returned. Inspects the source and returns datasource and field metadata.',
             readOnly: false,
           },
         ]
@@ -373,9 +380,10 @@ export function useWebMcpTools(options: WebMcpOptions) {
         },
         { signal: controller.signal },
       );
-      void registration.catch((error: unknown) =>
-        console.warn('WebMCP tool registration failed', spec.action, error),
-      );
+      void registration.catch((error: unknown) => {
+        if (controller.signal.aborted && error === controller.signal.reason) return;
+        console.warn('WebMCP tool registration failed', spec.action, error);
+      });
     }
     return () => controller.abort();
   }, [
@@ -387,6 +395,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
     options.isAdmin,
     options.onToolUse,
     options.onMutation,
+    callApi,
   ]);
 
   return { available };

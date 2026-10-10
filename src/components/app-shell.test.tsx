@@ -3,6 +3,9 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from './app-shell';
 
+// Search behavior has browser coverage; shell tests own navigation and responsive layout.
+vi.mock('./global-search', () => ({ GlobalSearch: () => null }));
+
 const clerk = vi.hoisted(() => ({
   state: 'signed-in' as 'signed-in' | 'signed-out',
   mode: 'public' as 'public' | 'restricted' | 'waitlist' | undefined,

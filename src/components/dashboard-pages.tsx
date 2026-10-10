@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { DashboardDocument } from '#/domain/schema';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
-import { callApi } from '#/api/client';
+import { useApi } from '#/api/query';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -42,6 +42,7 @@ export function DashboardPages({
   shareToken?: string;
   refresh?: () => Promise<void>;
 }) {
+  const callApi = useApi();
   const page = activeDashboardPage(dashboard, pageId);
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -59,7 +60,7 @@ export function DashboardPages({
       pageId: page.id,
       shareToken,
     }).catch(() => undefined);
-  }, [dashboard.id, page?.id, shareToken]);
+  }, [dashboard.id, page?.id, shareToken, callApi]);
 
   async function mutate(operation: () => Promise<DashboardDocument>, selectNew = false) {
     setSaving(true);

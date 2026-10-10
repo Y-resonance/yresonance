@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from '#/components/ui/sheet';
 import { WorkspaceGate } from '#/components/workspace-gate';
+import { GlobalSearch } from '#/components/global-search';
 
 // Dashboards live at the root, so only an exact match may mark it active. The
 // others stay active on their detail routes, such as /datasources/:datasourceId.
@@ -71,6 +72,7 @@ export function AppShell({
             </Show>
           </nav>
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <GlobalSearch />
             <ThemeToggle />
             <Show when="signed-out">
               <SignInAction>
