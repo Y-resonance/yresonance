@@ -6,6 +6,7 @@ import { datasourceAuthorizations } from '#/db/schema';
 import { completeGoogleConnection } from '#/data/google-oauth.server';
 import { executeBigquery } from '#/data/bigquery.server';
 import { signOut } from './doubles/clerk';
+import type { DatasourceCatalogPage } from '#/api/contracts';
 import type { DataSourceRecord } from '#/query/types';
 import {
   addWidget,
@@ -55,6 +56,22 @@ function googleNetwork({ domain = 'esome.test', failedRefresh = false, tooManyRo
     }
     if (url.hostname === 'openidconnect.googleapis.com')
       return Response.json({ email: `owner@${domain}`, email_verified: true, hd: domain });
+    if (url.pathname === '/bigquery/v2/projects')
+      return Response.json(
+        url.searchParams.has('pageToken')
+          ? {
+              projects: [
+                { projectReference: { projectId: 'customer-project' }, friendlyName: 'Customer' },
+              ],
+            }
+          : { nextPageToken: 'projects page/2', projects: [] },
+      );
+    if (url.pathname.endsWith('/datasets'))
+      return Response.json({
+        datasets: [{ datasetReference: { datasetId: 'reporting' }, location: 'US' }],
+      });
+    if (url.pathname.endsWith('/datasets/reporting/tables'))
+      return Response.json({ tables: [{ tableReference: { tableId: 'sales' }, type: 'VIEW' }] });
     if (url.pathname.endsWith('/tables/sales'))
       return Response.json({
         type: 'VIEW',
@@ -287,4 +304,50 @@ test('oversized BigQuery results fail without partial rows and cancel the known 
   const cancelled = requests.find((entry) => entry.url.pathname.endsWith('/cancel'))!;
   expect(cancelled.url.pathname).toContain(submission.jobReference.jobId);
   expect(cancelled.url.searchParams.get('location')).toBe('EU');
+});
+
+test('catalog browsing follows pagination, reads source metadata without query jobs, and rejects another workspace grant', async () => {
+  const requests = googleNetwork();
+  const owner = await signInToNewWorkspace();
+  await completeGoogleConnection(await begin());
+  const grant = (await connections()).connections[0]!;
+  const browse = {
+    action: 'browseDatasource' as const,
+    provider: 'bigquery' as const,
+    connectionId: grant.id,
+  };
+  const first = (await callService(browse)) as DatasourceCatalogPage;
+  expect(first).toEqual({ entries: [], cursor: 'projects page/2' });
+  expect(await callService({ ...browse, cursor: first.cursor })).toEqual({
+    entries: [{ id: 'customer-project', label: 'Customer' }],
+  });
+  expect(
+    requests
+      .find(
+        (entry) =>
+          entry.url.pathname === '/bigquery/v2/projects' && entry.url.searchParams.has('pageToken'),
+      )
+      ?.url.searchParams.get('pageToken'),
+  ).toBe('projects page/2');
+  expect(await callService({ ...browse, project: 'customer-project' })).toEqual({
+    entries: [{ id: 'reporting', label: 'reporting', location: 'US' }],
+  });
+  expect(
+    await callService({ ...browse, project: 'customer-project', dataset: 'reporting' }),
+  ).toEqual({
+    entries: [{ id: 'sales', label: 'sales', type: 'VIEW' }],
+  });
+  expect(
+    requests
+      .filter((entry) => entry.url.hostname === 'bigquery.googleapis.com')
+      .every((entry) => !entry.url.pathname.includes('/jobs')),
+  ).toBe(true);
+  const before = requests.length;
+  await signInToNewWorkspace();
+  await expectApiError(callService(browse), { status: 403, code: 'datasource_access_denied' });
+  expect(requests).toHaveLength(before);
+  signInAsOwner(owner);
+  await callService({ action: 'disconnectDatasourceConnection', connectionId: grant.id });
+  await expectApiError(callService(browse), { status: 403, code: 'datasource_access_denied' });
+  expect(requests).toHaveLength(before);
 });

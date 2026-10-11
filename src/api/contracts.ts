@@ -152,6 +152,20 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('listDataSources') }),
   z.object({ action: z.literal('listDatasourceProviders') }),
+  z.object({
+    action: z.literal('browseDatasource'),
+    provider: z.literal('bigquery'),
+    connectionId: z.string().min(1),
+    project: z
+      .string()
+      .regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/u)
+      .optional(),
+    dataset: z
+      .string()
+      .regex(/^[A-Za-z0-9_]{1,1024}$/u)
+      .optional(),
+    cursor: z.string().max(4096).optional(),
+  }),
   z.object({ action: z.literal('listLibraryMetrics') }),
   z.object({
     action: z.literal('describeDatasource'),
@@ -295,3 +309,8 @@ export const apiResponseSchema = z.discriminatedUnion('ok', [
     error: z.object({ code: z.string(), message: z.string(), issues: z.unknown().optional() }),
   }),
 ]);
+
+export interface DatasourceCatalogPage {
+  entries: Array<{ id: string; label: string; location?: string; type?: string }>;
+  cursor?: string;
+}

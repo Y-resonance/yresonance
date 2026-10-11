@@ -296,6 +296,12 @@ export function useWebMcpTools(options: WebMcpOptions) {
             readOnly: true,
           },
           {
+            action: 'browseDatasource',
+            description:
+              'Browse connected datasource metadata. For BigQuery, omit project and dataset to list projects, supply project to list datasets, and both to list tables and views. Returns entries and a pagination cursor. Dataset entries include location. No queries are run.',
+            readOnly: true,
+          },
+          {
             action: 'listDatasourceConnections',
             description:
               'List workspace OAuth connections and their status. Tokens are never returned. Optional dataSourceId identifies its current connection.',

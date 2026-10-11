@@ -43,7 +43,7 @@ export function DatasourceConnectionFields({
     query.data?.connections[0]?.id;
   const selected = query.data?.connections.find((entry) => entry.id === selectedId);
   useEffect(() => {
-    if (onChange && selectedId) onChange(selected?.status === 'connected' ? selectedId : '');
+    if (onChange) onChange(selected?.status === 'connected' ? (selectedId ?? '') : '');
   }, [onChange, selectedId, selected?.status]);
 
   async function connect(connectionId?: string) {

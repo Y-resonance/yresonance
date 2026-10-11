@@ -34,8 +34,12 @@ Having access in the BigQuery console does not by itself prove permission to cre
 
 ## Usage and limits
 
-Choose Google BigQuery, connect the account, and enter project, dataset, table/view, and dataset
-location. Registration reads schema metadata and does not run a billable query. Scalar text,
+Choose Google BigQuery and connect the account. Browse searchable project, dataset and table/view
+columns, then select a source. Dataset location is filled automatically. Each column loads more
+items on demand. Searching automatically loads the remaining pages and filters the full list.
+Enter a project ID if dataset-level access does not make the project appear in the list, or choose
+manual entry for the full source. Registration reads schema metadata and does not run a billable
+query. Scalar text,
 numeric, boolean, date, datetime, and timestamp fields are supported. Expose nested or repeated
 fields through a scalar view. Required partition filters must be satisfied by generated queries;
 filter-option queries currently do not carry a date range, so these sources may require a view

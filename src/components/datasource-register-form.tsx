@@ -1,10 +1,11 @@
+import { BigQueryExplorer } from './bigquery-explorer';
 import { useMutation } from '@tanstack/react-query';
 import { DatasourceCacheFields } from './datasource-cache-fields';
 import { DatasourceConnectionFields } from './datasource-connection-fields';
 import { dataSourceLocationSchema } from '#/domain/schema';
 import type { DatasourceCachePolicy } from '#/domain/schema';
 import type { DatasourceProviderDefinition } from '#/data/providers/catalog';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiClientError } from '#/api/client';
 import { useApi, useR2Objects } from '#/api/query';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
@@ -54,6 +55,21 @@ export function DatasourceRegisterForm({
     ),
   );
   const [authorizationId, setAuthorizationId] = useState('');
+  const [manualBigQuery, setManualBigQuery] = useState(false);
+  const changeAuthorization = useCallback(
+    (id: string) => {
+      setAuthorizationId(id);
+      if (id !== authorizationId)
+        setSourceFields((current) => ({
+          ...current,
+          project: '',
+          dataset: '',
+          table: '',
+          location: '',
+        }));
+    },
+    [authorizationId],
+  );
   const [cachePolicy, setCachePolicy] = useState<DatasourceCachePolicy>({ mode: 'default' });
   const [useExistingData, setUseExistingData] = useState(!provider.supportsUploads);
   const objectsQuery = useR2Objects(useExistingData && provider.supportsWorkspaceFiles);
@@ -271,7 +287,7 @@ export function DatasourceRegisterForm({
 
   const busy = phase !== 'idle';
   return (
-    <form className="max-w-xl" onSubmit={submit}>
+    <form className={provider.id === 'bigquery' ? 'w-full' : 'max-w-xl'} onSubmit={submit}>
       <FieldGroup>
         {provider.connectionFields.length ? (
           <FieldSet>
@@ -308,7 +324,7 @@ export function DatasourceRegisterForm({
           <DatasourceConnectionFields
             provider={provider.id}
             value={authorizationId || undefined}
-            onChange={setAuthorizationId}
+            onChange={changeAuthorization}
           />
         ) : null}
         {provider.supportsWorkspaceFiles ? (
@@ -350,21 +366,63 @@ export function DatasourceRegisterForm({
         </Field>
         {useExistingData && provider.source === 'table' ? (
           <>
-            {provider.sourceFields?.map((field) => (
-              <Field key={field.name}>
-                <FieldLabel htmlFor={`source-${field.name}`}>{field.label}</FieldLabel>
-                <Input
-                  id={`source-${field.name}`}
-                  type={field.type ?? 'text'}
-                  value={sourceFields[field.name] ?? ''}
-                  required={!field.optional}
+            {provider.id === 'bigquery' ? (
+              <>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-fit"
                   disabled={busy}
-                  onChange={(event) =>
-                    setSourceFields((current) => ({ ...current, [field.name]: event.target.value }))
-                  }
-                />
-              </Field>
-            ))}
+                  onClick={() => setManualBigQuery((current) => !current)}
+                >
+                  {manualBigQuery
+                    ? 'Browse projects, datasets and tables'
+                    : 'Enter source manually'}
+                </Button>
+                {!manualBigQuery ? (
+                  <>
+                    <BigQueryExplorer
+                      key={authorizationId}
+                      connectionId={authorizationId}
+                      value={sourceFields}
+                      onChange={setSourceFields}
+                      disabled={busy}
+                    />
+                    {sourceFields.table ? (
+                      <p className="break-all text-sm">
+                        {sourceFields.project}.{sourceFields.dataset}.{sourceFields.table} ·{' '}
+                        {sourceFields.location}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+              </>
+            ) : null}
+            {provider.sourceFields
+              ?.filter(
+                (field) =>
+                  provider.id !== 'bigquery' ||
+                  manualBigQuery ||
+                  field.name === 'maximumBytesBilled',
+              )
+              .map((field) => (
+                <Field key={field.name}>
+                  <FieldLabel htmlFor={`source-${field.name}`}>{field.label}</FieldLabel>
+                  <Input
+                    id={`source-${field.name}`}
+                    type={field.type ?? 'text'}
+                    value={sourceFields[field.name] ?? ''}
+                    required={!field.optional}
+                    disabled={busy}
+                    onChange={(event) =>
+                      setSourceFields((current) => ({
+                        ...current,
+                        [field.name]: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+              ))}
           </>
         ) : useExistingData ? (
           <>
@@ -450,7 +508,8 @@ export function DatasourceRegisterForm({
             disabled={
               busy ||
               Boolean(uploadedKey) ||
-              (provider.connectionMethod === 'oauth' && !authorizationId)
+              (provider.connectionMethod === 'oauth' && !authorizationId) ||
+              (provider.id === 'bigquery' && !manualBigQuery && !sourceFields.table)
             }
           >
             {busy ? 'Connecting...' : useExistingData ? 'Connect datasource' : 'Upload and connect'}

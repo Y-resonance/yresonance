@@ -60,3 +60,8 @@ Beginning returns an `authorizationUrl` for a human to open and consent; tools d
 sign-in. Registration references a completed grant with `connection: { authorizationId }`.
 Reconnect optionally takes `connectionId` and `dataSourceId` to return to the existing datasource.
 Disconnect stops queries for every source using that workspace grant, including shared dashboards.
+
+`browseDatasource` reads connected provider metadata without running queries. For BigQuery, pass
+`provider: "bigquery"` and `connectionId`. Omit project and dataset to list projects, supply project
+to list datasets, or both to list tables/views. Responses contain `entries` and an optional
+`cursor` for the next page. Dataset entries include `location` for registration.

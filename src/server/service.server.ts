@@ -1,3 +1,4 @@
+import { browseDatasource } from './datasource-catalog.server';
 import { type ApiRequest } from '#/api/contracts';
 import { ApiError } from './errors';
 import { recordProductMetric } from '#/observability';
@@ -82,6 +83,8 @@ export async function executeRequest(request: ApiRequest): Promise<unknown> {
 
 async function dispatchRequest(request: ApiRequest): Promise<unknown> {
   switch (request.action) {
+    case 'browseDatasource':
+      return browseDatasource(request);
     case 'listDatasourceConnections':
       return listDatasourceConnections(request.provider, request.dataSourceId);
     case 'beginDatasourceConnection':

@@ -32,6 +32,48 @@ test('Google consent enables a BigQuery table connection without exposing creden
         },
       });
     }
+    if (request.action === 'browseDatasource')
+      return route.fulfill({
+        json: {
+          ok: true,
+          data: request.dataset
+            ? {
+                entries: [
+                  {
+                    id: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol',
+                    label: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol',
+                    type: 'VIEW',
+                  },
+                ],
+              }
+            : request.project
+              ? request.cursor === 'datasets-final'
+                ? { entries: [{ id: 'local_testing', label: 'local_testing', location: 'US' }] }
+                : request.cursor === 'datasets-matching'
+                  ? {
+                      entries: [
+                        {
+                          id: 'local_testing_archive',
+                          label: 'local_testing_archive',
+                          location: 'US',
+                        },
+                      ],
+                      cursor: 'datasets-final',
+                    }
+                  : request.cursor === 'datasets-empty'
+                    ? { entries: [], cursor: 'datasets-matching' }
+                    : {
+                        entries: [{ id: 'reporting', label: 'reporting', location: 'EU' }],
+                        cursor: 'datasets-empty',
+                      }
+              : request.cursor
+                ? { entries: [{ id: 'vespa-more-dragon', label: 'Vespa' }] }
+                : {
+                    entries: [{ id: 'other-project', label: 'Other project' }],
+                    cursor: 'next-projects',
+                  },
+        },
+      });
     if (request.action === 'registerDatasource')
       return route.fulfill({ json: { ok: true, data: { id: 'src_reporting' } } });
     return route.fallback();
@@ -50,13 +92,44 @@ test('Google consent enables a BigQuery table connection without exposing creden
   await expect(page.getByLabel('Google account', { exact: true })).toContainText(
     'editor@esome.test',
   );
-  await expect(page.getByRole('button', { name: 'Connect datasource', exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Connect datasource', exact: true }),
+  ).toBeDisabled();
   await page.getByLabel('Name', { exact: true }).fill('Allianz campaigns');
-  await page.getByLabel('Project ID', { exact: true }).fill('vespa-more-dragon');
-  await page.getByLabel('Dataset', { exact: true }).fill('local_testing');
+  await page.getByRole('button', { name: 'Show more items' }).click();
+  await page.getByLabel('Search projects', { exact: true }).fill('vespa');
+  await page.getByRole('button', { name: /Vespa vespa-more-dragon/ }).click();
+  await page.getByLabel('Search datasets', { exact: true }).fill('local_testing');
+  await expect(
+    page.getByRole('button', { name: 'local_testing_archive US', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'local_testing US', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'local_testing US', exact: true }).click();
   await page
-    .getByLabel('Table or view', { exact: true })
-    .fill('local_vespa_allianz_all_camapaigns_2025_ms_and_sol');
+    .getByRole('button', {
+      name: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol VIEW',
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole('button', { name: 'Connect datasource', exact: true })).toBeEnabled();
+  // Changing a parent selection must not register the previously chosen table.
+  await page.getByLabel('Search projects', { exact: true }).fill('');
+  await page.getByRole('button', { name: 'Other project other-project', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Connect datasource', exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByRole('region', { name: 'Tables and views' })).toContainText(
+    'Choose a dataset.',
+  );
+  await page.getByLabel('Project ID', { exact: true }).fill('vespa-more-dragon');
+  await page.getByRole('button', { name: 'Use project ID' }).click();
+  await page.getByRole('button', { name: 'local_testing US', exact: true }).click();
+  await page
+    .getByRole('button', {
+      name: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol VIEW',
+      exact: true,
+    })
+    .click();
   const registered = page.waitForRequest(
     (request) =>
       request.url().includes('/api/yresonance') &&
@@ -74,7 +147,7 @@ test('Google consent enables a BigQuery table connection without exposing creden
       project: 'vespa-more-dragon',
       dataset: 'local_testing',
       table: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol',
-      location: 'EU',
+      location: 'US',
       maximumBytesBilled: '1000000000',
     },
   });

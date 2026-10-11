@@ -47,7 +47,12 @@ function NewDatasourceContent() {
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
-      <div className={cn('flex flex-col gap-6', provider ? 'max-w-2xl' : 'max-w-4xl')}>
+      <div
+        className={cn(
+          'flex flex-col gap-6',
+          provider?.id === 'bigquery' ? 'max-w-5xl' : provider ? 'max-w-2xl' : 'max-w-4xl',
+        )}
+      >
         <Link className="flex w-fit items-center gap-2 text-sm hover:underline" to="/datasources">
           <ArrowLeftIcon className="size-4" />
           Datasources
