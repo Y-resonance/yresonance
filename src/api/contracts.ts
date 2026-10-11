@@ -174,12 +174,27 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('registerDatasource'),
     cachePolicy: datasourceCachePolicySchema.optional(),
-    backend: z.enum(['duckdb', 'clickhouse']).optional(),
+    backend: z.enum(['duckdb', 'clickhouse', 'bigquery']).optional(),
     provider: z.string().min(1).optional(),
     connection: z.record(z.string(), z.string()).optional(),
     name: z.string().trim().min(1),
     location: dataSourceLocationSchema,
     cleanupToken: z.string().min(1).optional(),
+  }),
+  z.object({
+    action: z.literal('listDatasourceConnections'),
+    provider: z.string().min(1),
+    dataSourceId: z.string().min(1).optional(),
+  }),
+  z.object({
+    action: z.literal('beginDatasourceConnection'),
+    provider: z.string().min(1),
+    connectionId: z.string().min(1).optional(),
+    dataSourceId: z.string().min(1).optional(),
+  }),
+  z.object({
+    action: z.literal('disconnectDatasourceConnection'),
+    connectionId: z.string().min(1),
   }),
   z.object({
     action: z.literal('updateDatasource'),

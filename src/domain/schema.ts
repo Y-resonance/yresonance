@@ -447,6 +447,21 @@ export const clickhouseLocationSchema = z.object({
 export const dataSourceLocationSchema = z.union([
   fileDataSourceLocationSchema,
   clickhouseLocationSchema,
+  z.object({
+    kind: z.literal('bigquery'),
+    project: z.string().regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/u),
+    dataset: z.string().regex(/^[A-Za-z0-9_]{1,1024}$/u),
+    table: z.string().regex(/^[A-Za-z0-9_][A-Za-z0-9_-]{0,1023}$/u),
+    location: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9-]{2,64}$/u)
+      .default('EU'),
+    maximumBytesBilled: z
+      .string()
+      .regex(/^[1-9][0-9]{0,12}$/u)
+      .default('1000000000'),
+  }),
 ]);
 
 export type DashboardDocument = z.infer<typeof dashboardDocumentSchema>;

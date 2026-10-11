@@ -21,6 +21,7 @@ const sourceTypeLabels: Record<DataSourceLocation['kind'], string> = {
   object: 'Single object',
   prefix: 'Partition prefix',
   clickhouse: 'ClickHouse',
+  bigquery: 'Google BigQuery',
 };
 
 const formatLabels: Record<'csv' | 'parquet', string> = {
@@ -34,11 +35,13 @@ export function datasourceOverviewRows(entries: DatasourceListEntry[]): Datasour
     name: entry.name,
     sourceType: sourceTypeLabels[entry.location.kind] ?? entry.location.kind,
     format:
-      entry.location.kind === 'clickhouse'
-        ? entry.location.ownership === 'managed'
-          ? 'Managed table'
-          : 'External table'
-        : formatLabels[entry.location.format],
+      entry.location.kind === 'bigquery'
+        ? 'Table or view'
+        : entry.location.kind === 'clickhouse'
+          ? entry.location.ownership === 'managed'
+            ? 'Managed table'
+            : 'External table'
+          : formatLabels[entry.location.format],
     fieldCount: entry.fieldCount,
     updatedAt: entry.updatedAt,
   }));

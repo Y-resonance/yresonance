@@ -29,7 +29,7 @@ export const duckdbFileConnector: AnalyticsDataBackend = {
   async inspect(dataSource, options) {
     try {
       const { location } = dataSource;
-      if (location.kind === 'clickhouse')
+      if (location.kind !== 'object' && location.kind !== 'prefix')
         throw new DatasourceError('invalid_query', 'DuckDB requires a file source.');
       const objects =
         location.kind === 'object'

@@ -8,15 +8,19 @@ export function controlOptionsQuery(
 ) {
   const parameters: unknown[] = [];
   const text =
-    dialect === 'clickhouse' ? `toString(${expression})` : `CAST(${expression} AS VARCHAR)`;
+    dialect === 'clickhouse'
+      ? `toString(${expression})`
+      : `CAST(${expression} AS ${dialect === 'bigquery' ? 'STRING' : 'VARCHAR'})`;
   const where = search
-    ? dialect === 'clickhouse'
-      ? ` WHERE positionCaseInsensitiveUTF8(${text}, ?) > 0`
-      : ` WHERE ${text} ILIKE ? ESCAPE '!'`
+    ? dialect === 'bigquery'
+      ? ` WHERE STRPOS(LOWER(${text}), LOWER(?)) > 0`
+      : dialect === 'clickhouse'
+        ? ` WHERE positionCaseInsensitiveUTF8(${text}, ?) > 0`
+        : ` WHERE ${text} ILIKE ? ESCAPE '!'`
     : ` WHERE ${expression} IS NOT NULL`;
   if (search)
     parameters.push(
-      dialect === 'clickhouse'
+      dialect === 'clickhouse' || dialect === 'bigquery'
         ? search
         : `%${search.replace(/[!%_]/g, (character) => `!${character}`)}%`,
     );

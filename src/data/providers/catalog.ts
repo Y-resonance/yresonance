@@ -10,7 +10,7 @@ export interface ConnectionField {
 export interface DatasourceProviderDefinition {
   id: string;
   name: string;
-  engine: 'duckdb' | 'clickhouse';
+  engine: 'duckdb' | 'clickhouse' | 'bigquery';
   group: 'managed' | 'bring-your-own';
   description: string;
   supportsUploads: boolean;
@@ -18,6 +18,9 @@ export interface DatasourceProviderDefinition {
   source: 'files' | 'table';
   defaultCacheTtlSeconds: number;
   connectionFields: readonly ConnectionField[];
+  connectionMethod?: 'oauth';
+  sourceFields?: readonly ConnectionField[];
+  sourceDefaults?: Record<string, string>;
 }
 
 // Shared by provider discovery and the setup form. Secrets never belong in this catalog.
@@ -45,6 +48,11 @@ export const datasourceProviders: readonly DatasourceProviderDefinition[] = [
     source: 'table',
     defaultCacheTtlSeconds: 86400,
     connectionFields: [],
+    sourceFields: [
+      { name: 'database', label: 'Database' },
+      { name: 'table', label: 'Table' },
+    ],
+    sourceDefaults: { kind: 'clickhouse', ownership: 'external' },
   },
   {
     id: 'duckdb-s3',
@@ -80,11 +88,42 @@ export const datasourceProviders: readonly DatasourceProviderDefinition[] = [
     supportsWorkspaceFiles: false,
     source: 'table',
     defaultCacheTtlSeconds: 300,
+    sourceFields: [
+      { name: 'database', label: 'Database' },
+      { name: 'table', label: 'Table' },
+    ],
+    sourceDefaults: { kind: 'clickhouse', ownership: 'external' },
     connectionFields: [
       { name: 'host', label: 'Host', placeholder: 'analytics.example.com' },
       { name: 'port', label: 'HTTPS port', type: 'number', defaultValue: '8443' },
       { name: 'user', label: 'Username', defaultValue: 'default' },
       { name: 'password', label: 'Password', type: 'password', optional: true },
+    ],
+  },
+  {
+    id: 'bigquery',
+    name: 'Google BigQuery',
+    engine: 'bigquery',
+    group: 'bring-your-own',
+    description: 'Query a table or view in your Google Cloud project.',
+    supportsUploads: false,
+    supportsWorkspaceFiles: false,
+    source: 'table',
+    defaultCacheTtlSeconds: 300,
+    connectionMethod: 'oauth',
+    connectionFields: [],
+    sourceDefaults: { kind: 'bigquery' },
+    sourceFields: [
+      { name: 'project', label: 'Project ID' },
+      { name: 'dataset', label: 'Dataset' },
+      { name: 'table', label: 'Table or view' },
+      { name: 'location', label: 'Dataset location', defaultValue: 'EU' },
+      {
+        name: 'maximumBytesBilled',
+        label: 'Maximum bytes billed per query',
+        type: 'number',
+        defaultValue: '1000000000',
+      },
     ],
   },
 ];
