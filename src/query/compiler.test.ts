@@ -644,3 +644,47 @@ describe('query compiler', () => {
     ).toThrow(/Unknown formula/u);
   });
 });
+
+it('compiles BigQuery grouped dates, filters and aliases using GoogleSQL and bound values', () => {
+  const query = compileWidgetQuery({
+    dashboard: {
+      ...dashboard,
+      defaultDateRange: { startDate: { fixed: '2025-01-01' }, endDate: { fixed: '2025-12-31' } },
+    },
+    definition: {
+      type: 'table',
+      title: 'Weekly costs',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      dimensions: [{ fieldId: 'date', dateGranularity: 'week' }, { fieldId: 'campaign' }],
+      metrics: [
+        { source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' }, dataType: 'currency' },
+      ],
+      showSummaryRow: true,
+      showSubtotals: true,
+      resultLimit: { mode: 'top', amount: 10 },
+      filter: {
+        connector: 'and',
+        conditions: [{ fieldId: 'campaign', operator: 'contains', value: "O'Reilly" }],
+      },
+    },
+    dataSource,
+    fields,
+    calculatedFields: [],
+    libraryMetrics: [],
+    controlState: {},
+    bucketName: '',
+    sourceSql: '`customer-project.reporting.sales`',
+    dialect: 'bigquery',
+  });
+  expect(query.sql).toContain(
+    'DATE_TRUNC(CAST(`DateStart` AS DATE), WEEK(MONDAY)) AS `dimension_1`',
+  );
+  expect(query.sql).toContain('SUM(`MediaCost`) AS `metric_1`');
+  expect(query.sql).toContain(
+    'GROUP BY GROUPING SETS ((`dimension_1`, `dimension_2`), (`dimension_1`), ())',
+  );
+  expect(query.sql).toContain('LOWER(CAST(`Campaign` AS STRING)) LIKE LOWER(?)');
+  expect(query.sql).not.toContain("O'Reilly");
+  expect(query.parameters).toEqual(['2025-01-01', '2025-12-31', "%O'Reilly%"]);
+});

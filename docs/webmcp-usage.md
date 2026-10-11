@@ -53,3 +53,10 @@ source shape, and upload capabilities. `registerDatasource` accepts a `provider`
 your own providers, a `connection` object containing the named setup fields. A successful response
 contains datasource and field metadata, never credentials. Existing `backend` requests remain
 supported for managed files and authorized managed-host ClickHouse tables.
+
+OAuth providers additionally expose `listDatasourceConnections`, `beginDatasourceConnection`, and
+`disconnectDatasourceConnection`. Listing returns workspace account/status metadata, never tokens.
+Beginning returns an `authorizationUrl` for a human to open and consent; tools do not perform Google
+sign-in. Registration references a completed grant with `connection: { authorizationId }`.
+Reconnect optionally takes `connectionId` and `dataSourceId` to return to the existing datasource.
+Disconnect stops queries for every source using that workspace grant, including shared dashboards.

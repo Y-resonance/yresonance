@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { dataSourceLocationSchema } from '#/domain/schema';
 import { hashJson } from '#/domain/hash';
 import { quoteSqlIdentifier } from '#/query/dialect';
@@ -40,28 +39,20 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
     defaultCacheTtlSeconds: () => 300,
     async cacheIdentity(source) {
       // Revoked/disconnected grants must fail before even an application cache hit.
-      await token(source);
-      return { source: source.location };
+      const authorization = await token(source);
+      return { source: source.location, revision: authorization.revision };
     },
     async inspect(source) {
       const config = location(source);
-      const accessToken = await token(source);
-      const dataset = z
-        .object({ location: z.string() })
-        .parse(
-          await bigqueryRequest(
-            accessToken,
-            `projects/${config.project}/datasets/${config.dataset}`,
-          ),
-        );
-      if (dataset.location.toLowerCase() !== config.location.toLowerCase())
-        throw new DatasourceError(
-          'invalid_query',
-          `This dataset is in ${dataset.location}. Use that location.`,
-        );
+      const { accessToken } = await token(source);
       const metadata = tableSchema.parse(
         await bigqueryRequest(accessToken, bigqueryTablePath(config)),
       );
+      if (metadata.location.toLowerCase() !== config.location.toLowerCase())
+        throw new DatasourceError(
+          'invalid_query',
+          `This dataset is in ${metadata.location}. Use that location.`,
+        );
       if (!['TABLE', 'VIEW', 'MATERIALIZED_VIEW'].includes(metadata.type))
         throw new DatasourceError('invalid_query', 'Choose a BigQuery table or view.');
       const supported = new Set([
@@ -107,7 +98,7 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
       const config = location(source);
       const compiled = compileDatasourceQuery(source, query, table(source), 'bigquery');
       return (await executeBigquery(
-        await token(source),
+        (await token(source)).accessToken,
         config,
         compiled,
         source.workspaceId,

@@ -85,7 +85,7 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
   const conditions: string[] = [];
   conditions.push(
     context.dialect === 'bigquery'
-      ? `DATE(${fieldExpression(definition.dateRangeFieldId, context)}) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)`
+      ? `CAST(${fieldExpression(definition.dateRangeFieldId, context)} AS DATE) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)`
       : `${fieldExpression(definition.dateRangeFieldId, context)} BETWEEN ? AND ?`,
   );
   parameters.push(resolved.start, resolved.end);
@@ -198,8 +198,8 @@ function dimensionExpression(
   );
   if (context.dialect === 'bigquery')
     return granularity === 'raw'
-      ? `DATE(${expression})`
-      : `DATE_TRUNC(DATE(${expression}), ${granularity === 'week' ? 'WEEK(MONDAY)' : granularity.toUpperCase()})`;
+      ? `CAST(${expression} AS DATE)`
+      : `DATE_TRUNC(CAST(${expression} AS DATE), ${granularity === 'week' ? 'WEEK(MONDAY)' : granularity.toUpperCase()})`;
   return granularity === 'raw' ? expression : `DATE_TRUNC('${granularity}', ${expression})`;
 }
 

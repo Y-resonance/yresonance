@@ -6,6 +6,7 @@ import { recordProductMetric } from '#/observability';
 const columnSchema = z.object({ name: z.string(), type: z.string(), mode: z.string().optional() });
 export const tableSchema = z.object({
   type: z.string(),
+  location: z.string(),
   schema: z.object({ fields: z.array(columnSchema) }),
   requirePartitionFilter: z.boolean().optional(),
 });
@@ -38,7 +39,7 @@ export async function bigqueryRequest(
       ...init.headers,
       Authorization: `Bearer ${token}`,
     },
-    redirect: 'error',
+    redirect: 'manual',
     signal,
   });
   const body: unknown = JSON.parse(await readResponseText(response, MAX_RESULT_BYTES));
@@ -155,18 +156,47 @@ export async function executeBigquery(
       }
       pageToken = result.pageToken;
       if (!pageToken) {
+        const job = z
+          .object({
+            statistics: z
+              .object({
+                query: z
+                  .object({
+                    totalBytesBilled: z.string().optional(),
+                    totalSlotMs: z.string().optional(),
+                  })
+                  .optional(),
+              })
+              .optional(),
+          })
+          .safeParse(
+            await bigqueryRequest(
+              token,
+              `${jobPath}?location=${encodeURIComponent(source.location)}`,
+              {},
+              signal,
+            ).catch(() => undefined),
+          );
+        const statistics = job.success ? job.data.statistics?.query : undefined;
         console.info('yresonance.bigquery_query', {
           workspaceId,
           jobId,
           durationMs: Date.now() - startedAt,
           bytesProcessed: result.totalBytesProcessed,
+          bytesBilled: statistics?.totalBytesBilled,
+          slotMs: statistics?.totalSlotMs,
           cacheHit: result.cacheHit,
           rowCount: rows.length,
         });
         recordProductMetric('bigquery_query', {
           index: workspaceId,
           labels: [result.cacheHit ? 'cached' : 'executed'],
-          numbers: [Date.now() - startedAt, Number(result.totalBytesProcessed ?? 0), rows.length],
+          numbers: [
+            Date.now() - startedAt,
+            Number(result.totalBytesProcessed ?? 0),
+            Number(statistics?.totalBytesBilled ?? 0),
+            rows.length,
+          ],
         });
         return rows;
       }

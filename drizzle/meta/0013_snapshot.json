@@ -88,17 +88,12 @@
       "indexes": {
         "calculated_fields_data_source_id_idx": {
           "name": "calculated_fields_data_source_id_idx",
-          "columns": [
-            "data_source_id"
-          ],
+          "columns": ["data_source_id"],
           "isUnique": false
         },
         "calculated_fields_data_source_canonical_unique": {
           "name": "calculated_fields_data_source_canonical_unique",
-          "columns": [
-            "data_source_id",
-            "canonical_name"
-          ],
+          "columns": ["data_source_id", "canonical_name"],
           "isUnique": true
         }
       },
@@ -107,12 +102,8 @@
           "name": "calculated_fields_workspace_id_workspaces_id_fk",
           "tableFrom": "calculated_fields",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -120,12 +111,8 @@
           "name": "calculated_fields_data_source_id_data_sources_id_fk",
           "tableFrom": "calculated_fields",
           "tableTo": "data_sources",
-          "columnsFrom": [
-            "data_source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["data_source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -176,9 +163,7 @@
       "indexes": {
         "dashboard_grants_user_id_idx": {
           "name": "dashboard_grants_user_id_idx",
-          "columns": [
-            "clerk_user_id"
-          ],
+          "columns": ["clerk_user_id"],
           "isUnique": false
         }
       },
@@ -187,22 +172,15 @@
           "name": "dashboard_grants_dashboard_id_dashboards_id_fk",
           "tableFrom": "dashboard_grants",
           "tableTo": "dashboards",
-          "columnsFrom": [
-            "dashboard_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dashboard_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "dashboard_grants_dashboard_id_clerk_user_id_pk": {
-          "columns": [
-            "dashboard_id",
-            "clerk_user_id"
-          ],
+          "columns": ["dashboard_id", "clerk_user_id"],
           "name": "dashboard_grants_dashboard_id_clerk_user_id_pk"
         }
       },
@@ -265,9 +243,7 @@
       "indexes": {
         "dashboards_workspace_id_idx": {
           "name": "dashboards_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         }
       },
@@ -276,12 +252,8 @@
           "name": "dashboards_workspace_id_workspaces_id_fk",
           "tableFrom": "dashboards",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -361,17 +333,12 @@
       "indexes": {
         "data_sources_workspace_id_idx": {
           "name": "data_sources_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         },
         "data_sources_workspace_name_unique": {
           "name": "data_sources_workspace_name_unique",
-          "columns": [
-            "workspace_id",
-            "name"
-          ],
+          "columns": ["workspace_id", "name"],
           "isUnique": true
         }
       },
@@ -380,12 +347,8 @@
           "name": "data_sources_workspace_id_workspaces_id_fk",
           "tableFrom": "data_sources",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -464,9 +427,7 @@
       "indexes": {
         "datasource_authorizations_workspace_idx": {
           "name": "datasource_authorizations_workspace_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         }
       },
@@ -475,12 +436,8 @@
           "name": "datasource_authorizations_workspace_id_workspaces_id_fk",
           "tableFrom": "datasource_authorizations",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -520,12 +477,8 @@
           "name": "datasource_connections_datasource_id_data_sources_id_fk",
           "tableFrom": "datasource_connections",
           "tableTo": "data_sources",
-          "columnsFrom": [
-            "datasource_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["datasource_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -533,12 +486,8 @@
           "name": "datasource_connections_workspace_id_workspaces_id_fk",
           "tableFrom": "datasource_connections",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -603,9 +552,7 @@
       "indexes": {
         "datasource_uploads_workspace_id_idx": {
           "name": "datasource_uploads_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         }
       },
@@ -614,12 +561,8 @@
           "name": "datasource_uploads_workspace_id_workspaces_id_fk",
           "tableFrom": "datasource_uploads",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -734,25 +677,17 @@
       "indexes": {
         "fields_data_source_id_idx": {
           "name": "fields_data_source_id_idx",
-          "columns": [
-            "data_source_id"
-          ],
+          "columns": ["data_source_id"],
           "isUnique": false
         },
         "fields_data_source_column_unique": {
           "name": "fields_data_source_column_unique",
-          "columns": [
-            "data_source_id",
-            "column_name"
-          ],
+          "columns": ["data_source_id", "column_name"],
           "isUnique": true
         },
         "fields_data_source_canonical_unique": {
           "name": "fields_data_source_canonical_unique",
-          "columns": [
-            "data_source_id",
-            "canonical_name"
-          ],
+          "columns": ["data_source_id", "canonical_name"],
           "isUnique": true
         }
       },
@@ -761,12 +696,8 @@
           "name": "fields_workspace_id_workspaces_id_fk",
           "tableFrom": "fields",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -774,12 +705,8 @@
           "name": "fields_data_source_id_data_sources_id_fk",
           "tableFrom": "fields",
           "tableTo": "data_sources",
-          "columnsFrom": [
-            "data_source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["data_source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -844,9 +771,7 @@
       "indexes": {
         "ingestion_tokens_workspace_id_idx": {
           "name": "ingestion_tokens_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         }
       },
@@ -855,12 +780,8 @@
           "name": "ingestion_tokens_workspace_id_workspaces_id_fk",
           "tableFrom": "ingestion_tokens",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -932,10 +853,7 @@
       "indexes": {
         "library_metrics_workspace_canonical_unique": {
           "name": "library_metrics_workspace_canonical_unique",
-          "columns": [
-            "workspace_id",
-            "canonical_name"
-          ],
+          "columns": ["workspace_id", "canonical_name"],
           "isUnique": true
         }
       },
@@ -944,12 +862,8 @@
           "name": "library_metrics_workspace_id_workspaces_id_fk",
           "tableFrom": "library_metrics",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1008,9 +922,7 @@
       "indexes": {
         "query_read_budgets_workspace_id_idx": {
           "name": "query_read_budgets_workspace_id_idx",
-          "columns": [
-            "workspace_id"
-          ],
+          "columns": ["workspace_id"],
           "isUnique": false
         }
       },
@@ -1019,12 +931,8 @@
           "name": "query_read_budgets_workspace_id_workspaces_id_fk",
           "tableFrom": "query_read_budgets",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1075,9 +983,7 @@
       "indexes": {
         "share_links_dashboard_id_idx": {
           "name": "share_links_dashboard_id_idx",
-          "columns": [
-            "dashboard_id"
-          ],
+          "columns": ["dashboard_id"],
           "isUnique": false
         }
       },
@@ -1086,12 +992,8 @@
           "name": "share_links_dashboard_id_dashboards_id_fk",
           "tableFrom": "share_links",
           "tableTo": "dashboards",
-          "columnsFrom": [
-            "dashboard_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dashboard_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1156,16 +1058,12 @@
       "indexes": {
         "workspaces_clerk_organization_id_unique": {
           "name": "workspaces_clerk_organization_id_unique",
-          "columns": [
-            "clerk_organization_id"
-          ],
+          "columns": ["clerk_organization_id"],
           "isUnique": true
         },
         "workspaces_r2_prefix_unique": {
           "name": "workspaces_r2_prefix_unique",
-          "columns": [
-            "r2_prefix"
-          ],
+          "columns": ["r2_prefix"],
           "isUnique": true
         }
       },

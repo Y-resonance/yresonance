@@ -241,6 +241,7 @@ export async function completeGoogleConnection(request: Request) {
       'Google authorization expired. Start connecting again.',
     );
   const targetId = state.targetId ?? state.id;
+  let phase = 'exchange';
   try {
     const code = new URL(request.url).searchParams.get('code');
     if (!code) throw new Error('Consent declined.');
@@ -272,6 +273,7 @@ export async function completeGoogleConnection(request: Request) {
       !tokens.scope?.split(' ').includes('https://www.googleapis.com/auth/bigquery')
     )
       throw new Error('Missing authorization.');
+    phase = 'account';
     const account = z
       .object({ email: z.email(), email_verified: z.literal(true), hd: z.string() })
       .parse(
@@ -281,6 +283,7 @@ export async function completeGoogleConnection(request: Request) {
       );
     if (account.hd.toLowerCase() !== config.hostedDomain.toLowerCase())
       throw new Error('Workspace domain mismatch.');
+    phase = 'save';
     const encryptedConfig = await sealConnection(
       {
         refreshToken: tokens.refresh_token,
@@ -325,6 +328,7 @@ export async function completeGoogleConnection(request: Request) {
       workspaceId: state.workspaceId,
       provider: 'bigquery',
       result: 'failed',
+      phase,
     });
     const url = new URL(state.returnTo, config.redirectUri);
     url.searchParams.set('connectionError', 'google_authorization_failed');
@@ -371,7 +375,8 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
       'oauth',
     ),
   );
-  if (grant.expiresAt > Date.now() + 60_000) return grant.accessToken;
+  if (grant.expiresAt > Date.now() + 60_000)
+    return { accessToken: grant.accessToken, revision: row.updatedAt };
   const config = configuration();
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -382,7 +387,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
       grant_type: 'refresh_token',
     }),
     signal: AbortSignal.timeout(10_000),
-    redirect: 'error',
+    redirect: 'manual',
   });
   if (!response.ok) {
     const error = z
@@ -429,7 +434,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
     )
     .returning({ id: datasourceAuthorizations.id });
   if (!updated.length) return googleAccessToken(workspaceId, authorizationId);
-  return tokens.access_token;
+  return { accessToken: tokens.access_token, revision: row.updatedAt };
 }
 
 function reconnectError() {
@@ -442,7 +447,7 @@ async function googleJson(url: string, init: RequestInit = {}) {
   const response = await fetch(url, {
     ...init,
     signal: AbortSignal.timeout(10_000),
-    redirect: 'error',
+    redirect: 'manual',
   });
   if (!response.ok) throw new Error('Google authorization failed.');
   return JSON.parse(await readResponseText(response, 16_384)) as unknown;

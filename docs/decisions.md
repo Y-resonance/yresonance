@@ -119,3 +119,18 @@ breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.
   five-minute capabilities, with the same scanned-byte budget as managed data. The query container
   still has no internet or storage credentials. Bring your own sources default to five-minute
   query caching; S3 object ETags also contribute to the cache identity.
+
+## BigQuery connections
+
+- Bring your own BigQuery uses one table or view and bills query jobs to that table's project.
+  Editors authorize an esome Google Workspace account through an Internal OAuth app. The grant is
+  workspace-scoped and powers every permitted dashboard viewer, including unlisted links.
+  Google authorization is separate from Clerk login. The application only generates read queries.
+- Reusable OAuth grants live separately from datasource metadata. Access and refresh tokens are
+  encrypted with workspace/authorization binding. Callbacks use expiring, single-use state bound to
+  the initiating Clerk user and workspace, plus PKCE. Google verifies the account's hosted domain.
+  Disconnecting blocks cached results; reconnecting keeps datasource IDs and changes cache identity.
+- Registration inspects metadata without scanning data. Nested/repeated fields require a scalar
+  view. Query jobs have a configurable billed-byte ceiling, default 1 GB, a 30-second job timeout,
+  and result limits of 20,000 rows / 10 MiB. Failed requests attempt cancellation; Google cancellation
+  and job timeout are best effort, while the billed-byte ceiling bounds each query.
