@@ -144,3 +144,28 @@ test('an existing datasource reconnects its workspace account while keeping its 
   );
   await expect(page).toHaveURL(/\/datasources\/src_reporting$/);
 });
+
+test('BigQuery setup shows sign-in errors and hydrates in dark mode', async ({ page }) => {
+  await mockYresonanceApi(page);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  const hydrationErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /hydrat|didn't match/iu.test(message.text()))
+      hydrationErrors.push(message.text());
+  });
+  await page.route('**/api/yresonance', (route) => {
+    if (route.request().postDataJSON().action === 'listDatasourceConnections')
+      return route.fulfill({
+        status: 401,
+        json: { ok: false, error: { code: 'unauthenticated', message: 'Sign in to continue.' } },
+      });
+    return route.fallback();
+  });
+  await page.goto('/datasources/new?provider=bigquery');
+  await expect.soft(page.getByRole('alert')).toHaveText('Sign in to continue.');
+  await expect(
+    page.getByRole('button', { name: 'Connect Google account', exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator('html')).toHaveClass('dark');
+  expect(hydrationErrors).toEqual([]);
+});

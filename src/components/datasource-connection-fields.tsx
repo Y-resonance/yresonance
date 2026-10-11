@@ -32,7 +32,7 @@ export function DatasourceConnectionFields({
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).has('connectionError')
       ? 'Google authorization failed or was declined. Connect again using your esome account.'
-      : '',
+      : undefined,
   );
   const [chosenId, setChosenId] = useState<string>();
   const selectedId =
