@@ -6,7 +6,7 @@ import { ApiError } from './errors';
 
 export function seedField(
   dataSourceId: string,
-  column: { column_name: string; column_type: string },
+  column: { column_name: string; column_type: string; cast_to?: string },
   samples: Record<string, unknown>[],
 ) {
   const values = [
@@ -19,13 +19,15 @@ export function seedField(
   ]
     .slice(0, 5)
     .map((value) => JSON.parse(value) as unknown);
+  const semantics = detectFieldSemantics(column.column_name, column.column_type);
   return {
     id: `field_${crypto.randomUUID()}`,
     dataSourceId,
     columnName: column.column_name,
     canonicalName: slug(column.column_name),
     label: humanize(column.column_name),
-    ...detectFieldSemantics(column.column_name, column.column_type),
+    ...semantics,
+    castTo: semantics.castTo ?? column.cast_to ?? null,
     description: null,
     hidden: false,
     sampleValues: values,

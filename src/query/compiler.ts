@@ -94,7 +94,9 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
     if (!control.values.length) continue;
     const field = fieldExpression(control.fieldId, context);
     parameters.push(...control.values);
-    conditions.push(`${field} IN (${control.values.map(() => '?').join(', ')})`);
+    conditions.push(
+      `${field} IN (${control.values.map(() => comparisonParameter(control.fieldId, context)).join(', ')})`,
+    );
   }
   const source = context.sourceSql
     ? context.sourceSql
@@ -374,7 +376,7 @@ function compileFilter(
     } as const;
     if (condition.operator in operators) {
       parameters.push(condition.value);
-      return `${field} ${operators[condition.operator as keyof typeof operators]} ?`;
+      return `${field} ${operators[condition.operator as keyof typeof operators]} ${comparisonParameter(condition.fieldId, context)}`;
     }
     if (condition.operator === 'contains' || condition.operator === 'notContains') {
       parameters.push(`%${String(condition.value ?? '')}%`);
@@ -385,9 +387,22 @@ function compileFilter(
     const values = Array.isArray(condition.value) ? condition.value : [condition.value];
     if (!values.length) return condition.operator === 'in' ? 'FALSE' : 'TRUE';
     parameters.push(...values);
-    return `${field} ${condition.operator === 'notIn' ? 'NOT ' : ''}IN (${values.map(() => '?').join(', ')})`;
+    return `${field} ${condition.operator === 'notIn' ? 'NOT ' : ''}IN (${values.map(() => comparisonParameter(condition.fieldId, context)).join(', ')})`;
   });
   return `(${conditions.join(filter.connector === 'or' ? ' OR ' : ' AND ') || 'TRUE'})`;
+}
+
+function comparisonParameter(fieldId: string, context: QueryContext) {
+  if (context.dialect !== 'bigquery') return '?';
+  const raw = context.fields.find((field) => field.id === fieldId);
+  const field = raw ?? context.calculatedFields.find((field) => field.id === fieldId);
+  // Control and drill selections are strings. GoogleSQL does not coerce them to numbers.
+  const type = raw?.castTo
+    ? safeCast(raw.castTo, 'bigquery')
+    : field && formulaTypeForSemanticType(field.semanticType) === 'number'
+      ? 'BIGNUMERIC'
+      : undefined;
+  return type ? `CAST(? AS ${type})` : '?';
 }
 
 function compileSort(

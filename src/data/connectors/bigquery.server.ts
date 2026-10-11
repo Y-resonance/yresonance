@@ -75,8 +75,20 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
           'datasource_inspection_failed',
           'Use a BigQuery view exposing scalar text, numeric, boolean, and date fields. Nested and repeated fields are not supported.',
         );
+      const comparisonTypes: Record<string, string> = {
+        INTEGER: 'INT64',
+        INT64: 'INT64',
+        FLOAT: 'FLOAT64',
+        FLOAT64: 'FLOAT64',
+        NUMERIC: 'NUMERIC',
+        BIGNUMERIC: 'BIGNUMERIC',
+        BOOLEAN: 'STRING',
+        BOOL: 'STRING',
+      };
       const description = columns.map((field) => ({
         column_name: field.name,
+        // Persist numeric comparison types. Booleans use the app's text dimension model.
+        cast_to: comparisonTypes[field.type],
         column_type:
           field.type === 'NUMERIC'
             ? 'DECIMAL(38,9)'

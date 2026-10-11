@@ -63,6 +63,9 @@ function googleNetwork({ domain = 'esome.test', failedRefresh = false, tooManyRo
           fields: [
             { name: 'day', type: 'DATE' },
             { name: 'revenue', type: 'NUMERIC' },
+            { name: 'year', type: 'INTEGER' },
+            { name: 'enabled', type: 'BOOLEAN' },
+            { name: 'accountId', type: 'INTEGER' },
           ],
         },
       });
@@ -139,8 +142,19 @@ test('Google consent is workspace-bound and single-use; queries refresh privatel
     name: 'Customer sales',
     location,
     connection: { authorizationId: grant.id },
-  })) as DataSourceRecord & { fields: Array<{ id: string; columnName: string; role: string }> };
-  expect(source.fields.find((field) => field.columnName === 'revenue')?.role).toBe('metric');
+  })) as DataSourceRecord & {
+    fields: Array<{ id: string; columnName: string; role: string; castTo: string | null }>;
+  };
+  expect(source.fields.find((field) => field.columnName === 'revenue')).toMatchObject({
+    role: 'metric',
+    castTo: 'NUMERIC',
+  });
+  expect(source.fields.find((field) => field.columnName === 'year')?.castTo).toBe('INT64');
+  expect(source.fields.find((field) => field.columnName === 'enabled')).toMatchObject({
+    role: 'dimension',
+    castTo: 'STRING',
+  });
+  expect(source.fields.find((field) => field.columnName === 'accountId')?.castTo).toBe('VARCHAR');
   expect(requests.filter((entry) => entry.url.pathname.endsWith('/jobs'))).toHaveLength(0);
   const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
     where: eq(datasourceAuthorizations.id, grant.id),
