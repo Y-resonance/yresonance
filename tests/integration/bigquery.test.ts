@@ -27,7 +27,11 @@ const location = {
 };
 const googleScope = 'openid email https://www.googleapis.com/auth/bigquery';
 
-function googleNetwork({ domain = 'esome.test', failedRefresh = false, tooManyRows = false } = {}) {
+function googleNetwork({
+  domain = 'example.test',
+  failedRefresh = false,
+  tooManyRows = false,
+} = {}) {
   const original = globalThis.fetch;
   const requests: Array<{ url: URL; body: string; headers: Headers }> = [];
   let queryPage = 0;
@@ -125,7 +129,7 @@ async function begin(connectionId?: string) {
   const url = new URL(response.authorizationUrl);
   expect(url.searchParams.get('access_type')).toBe('offline');
   expect(url.searchParams.get('code_challenge_method')).toBe('S256');
-  expect(url.searchParams.get('hd')).toBe('esome.test');
+  expect(url.searchParams.get('hd')).toBe('example.test');
   return new Request(
     `https://yresonance.test/api/oauth/google/callback?${new URLSearchParams({ state: url.searchParams.get('state')!, code: 'one-use-code' })}`,
   );
@@ -252,7 +256,7 @@ test('Google consent is workspace-bound and single-use; queries refresh privatel
   );
 });
 
-test('non-esome consent leaves no usable connection', async () => {
+test('consent from outside the configured Google Workspace domain leaves no usable connection', async () => {
   googleNetwork({ domain: 'external.test' });
   await signInToNewWorkspace();
   const response = await completeGoogleConnection(await begin());

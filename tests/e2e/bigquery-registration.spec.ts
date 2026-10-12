@@ -16,7 +16,7 @@ test('Google consent enables a BigQuery table connection without exposing creden
           data: {
             configured: true,
             connections: connected
-              ? [{ id: 'auth_google', account: 'editor@esome.test', status: 'connected' }]
+              ? [{ id: 'auth_google', account: 'editor@example.test', status: 'connected' }]
               : [],
           },
         },
@@ -40,8 +40,8 @@ test('Google consent enables a BigQuery table connection without exposing creden
             ? {
                 entries: [
                   {
-                    id: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol',
-                    label: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol',
+                    id: 'campaigns',
+                    label: 'campaigns',
                     type: 'VIEW',
                   },
                 ],
@@ -67,7 +67,7 @@ test('Google consent enables a BigQuery table connection without exposing creden
                         cursor: 'datasets-empty',
                       }
               : request.cursor
-                ? { entries: [{ id: 'vespa-more-dragon', label: 'Vespa' }] }
+                ? { entries: [{ id: 'customer-project', label: 'Customer' }] }
                 : {
                     entries: [{ id: 'other-project', label: 'Other project' }],
                     cursor: 'next-projects',
@@ -90,15 +90,15 @@ test('Google consent enables a BigQuery table connection without exposing creden
   ).toBeVisible();
   await page.getByRole('button', { name: 'Connect Google account', exact: true }).click();
   await expect(page.getByLabel('Google account', { exact: true })).toContainText(
-    'editor@esome.test',
+    'editor@example.test',
   );
   await expect(
     page.getByRole('button', { name: 'Connect datasource', exact: true }),
   ).toBeDisabled();
-  await page.getByLabel('Name', { exact: true }).fill('Allianz campaigns');
+  await page.getByLabel('Name', { exact: true }).fill('Customer campaigns');
   await page.getByRole('button', { name: 'Show more items' }).click();
-  await page.getByLabel('Search projects', { exact: true }).fill('vespa');
-  await page.getByRole('button', { name: /Vespa vespa-more-dragon/ }).click();
+  await page.getByLabel('Search projects', { exact: true }).fill('customer');
+  await page.getByRole('button', { name: /Customer customer-project/ }).click();
   await page.getByLabel('Search datasets', { exact: true }).fill('local_testing');
   await expect(
     page.getByRole('button', { name: 'local_testing_archive US', exact: true }),
@@ -107,7 +107,7 @@ test('Google consent enables a BigQuery table connection without exposing creden
   await page.getByRole('button', { name: 'local_testing US', exact: true }).click();
   await page
     .getByRole('button', {
-      name: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol VIEW',
+      name: 'campaigns VIEW',
       exact: true,
     })
     .click();
@@ -121,12 +121,12 @@ test('Google consent enables a BigQuery table connection without exposing creden
   await expect(page.getByRole('region', { name: 'Tables and views' })).toContainText(
     'Choose a dataset.',
   );
-  await page.getByLabel('Project ID', { exact: true }).fill('vespa-more-dragon');
+  await page.getByLabel('Project ID', { exact: true }).fill('customer-project');
   await page.getByRole('button', { name: 'Use project ID' }).click();
   await page.getByRole('button', { name: 'local_testing US', exact: true }).click();
   await page
     .getByRole('button', {
-      name: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol VIEW',
+      name: 'campaigns VIEW',
       exact: true,
     })
     .click();
@@ -139,14 +139,14 @@ test('Google consent enables a BigQuery table connection without exposing creden
   expect((await registered).postDataJSON()).toEqual({
     action: 'registerDatasource',
     provider: 'bigquery',
-    name: 'Allianz campaigns',
+    name: 'Customer campaigns',
     cachePolicy: { mode: 'default' },
     connection: { authorizationId: 'auth_google' },
     location: {
       kind: 'bigquery',
-      project: 'vespa-more-dragon',
+      project: 'customer-project',
       dataset: 'local_testing',
-      table: 'local_vespa_allianz_all_camapaigns_2025_ms_and_sol',
+      table: 'campaigns',
       location: 'US',
       maximumBytesBilled: '1000000000',
     },
@@ -186,7 +186,7 @@ test('an existing datasource reconnects its workspace account while keeping its 
           data: {
             configured: true,
             currentConnectionId: 'auth_google',
-            connections: [{ id: 'auth_google', account: 'editor@esome.test', status }],
+            connections: [{ id: 'auth_google', account: 'editor@example.test', status }],
           },
         },
       });

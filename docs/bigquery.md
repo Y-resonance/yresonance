@@ -7,7 +7,7 @@ Queries run and are billed in the project containing the selected source.
 
 ## Google configuration
 
-Create a Google OAuth web client in a Google Cloud project owned by the esome Workspace/Cloud
+Create a Google OAuth web client in a Google Cloud project owned by your Google Workspace/Cloud
 Identity organization. Configure the audience as Internal and enable the BigQuery API in the data
 project. The consent request uses `openid`, `email`, and
 `https://www.googleapis.com/auth/bigquery`. The app only generates SELECT queries; Google account
@@ -18,7 +18,7 @@ Configure these Worker secrets separately for each environment:
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
 - `GOOGLE_OAUTH_REDIRECT_URI`, the exact environment URL ending in `/api/oauth/google/callback`
-- `GOOGLE_OAUTH_HOSTED_DOMAIN`, the actual esome Google Workspace domain
+- `GOOGLE_OAUTH_HOSTED_DOMAIN`, your Google Workspace domain
 
 Register the exact redirect URI with Google. Use distinct development/preview and production
 clients. For local development, export these values in an ignored `.envrc` before starting Vite.
@@ -61,7 +61,6 @@ WebMCP exposes generic `listDatasourceConnections`, `beginDatasourceConnection`,
 consent. `registerDatasource` uses provider `bigquery` and connection `{ authorizationId }`.
 Tokens never enter tool responses.
 
-The selected example is
-`vespa-more-dragon.local_testing.local_vespa_allianz_all_camapaigns_2025_ms_and_sol`.
-Its live location, schema, partition requirements and query permissions still need verification
-through user consent. Vespa's service-account key is not used by this integration.
+For example, connect `customer-project.reporting.campaigns` after verifying its location, schema,
+partition requirements and query permissions through Google consent. This integration uses the
+connected Google account, not a service-account key.

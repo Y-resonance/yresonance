@@ -41,7 +41,7 @@ export default defineConfig({
           GOOGLE_OAUTH_CLIENT_ID: 'test-google-client',
           GOOGLE_OAUTH_CLIENT_SECRET: 'test-google-secret',
           GOOGLE_OAUTH_REDIRECT_URI: 'https://yresonance.test/api/oauth/google/callback',
-          GOOGLE_OAUTH_HOSTED_DOMAIN: 'esome.test',
+          GOOGLE_OAUTH_HOSTED_DOMAIN: 'example.test',
         },
       },
     }),

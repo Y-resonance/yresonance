@@ -123,7 +123,7 @@ breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.
 ## BigQuery connections
 
 - Bring your own BigQuery uses one table or view and bills query jobs to that table's project.
-  Editors authorize an esome Google Workspace account through an Internal OAuth app. The grant is
+  Editors authorize a Google Workspace account through an Internal OAuth app. The grant is
   workspace-scoped and powers every permitted dashboard viewer, including unlisted links.
   Google authorization is separate from Clerk login. The application only generates read queries.
 - Reusable OAuth grants live separately from datasource metadata. Access and refresh tokens are
