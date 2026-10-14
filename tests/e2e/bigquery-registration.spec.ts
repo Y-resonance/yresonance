@@ -80,62 +80,68 @@ test('Google consent enables a BigQuery table connection without exposing creden
   });
   await page.goto('/datasources/new');
   await page.getByRole('link', { name: /Google BigQuery/ }).click();
-  await expect(
-    page.getByRole('button', { name: 'Connect datasource', exact: true }),
-  ).toBeDisabled();
+  const connect = page.getByRole('button', { name: 'Connect datasource', exact: true });
+  // Nothing can be named or chosen until an account is connected.
+  await expect(page.getByLabel('Name', { exact: true })).toBeDisabled();
+  await expect(connect).toBeDisabled();
   await expect(
     page.getByText(
       'All permitted dashboard viewers query through this account, including shared links.',
     ),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Connect Google account', exact: true }).click();
-  await expect(page.getByLabel('Google account', { exact: true })).toContainText(
-    'editor@example.test',
-  );
-  await expect(
-    page.getByRole('button', { name: 'Connect datasource', exact: true }),
-  ).toBeDisabled();
-  await page.getByLabel('Name', { exact: true }).fill('Customer campaigns');
+  await expect(page.getByText('editor@example.test')).toBeVisible();
+  await expect(page.getByLabel('Name', { exact: true })).toBeEnabled();
+  // Account management lives in a menu instead of a row of buttons.
+  await page.getByRole('button', { name: 'Google account actions' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Connect another account' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Disconnect account' })).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Show more items' }).click();
   await page.getByLabel('Search projects', { exact: true }).fill('customer');
-  await page.getByRole('button', { name: /Customer customer-project/ }).click();
+  await page.getByRole('option', { name: /Customer customer-project/ }).click();
   await page.getByLabel('Search datasets', { exact: true }).fill('local_testing');
   await expect(
-    page.getByRole('button', { name: 'local_testing_archive US', exact: true }),
+    page.getByRole('option', { name: 'local_testing_archive', exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'local_testing US', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'local_testing US', exact: true }).click();
-  await page
-    .getByRole('button', {
-      name: 'campaigns VIEW',
-      exact: true,
-    })
-    .click();
-  await expect(page.getByRole('button', { name: 'Connect datasource', exact: true })).toBeEnabled();
+  await expect(page.getByRole('option', { name: 'local_testing', exact: true })).toBeVisible();
+  await page.getByRole('option', { name: 'local_testing', exact: true }).click();
+  await page.getByRole('option', { name: 'campaigns VIEW', exact: true }).click();
+  // Settings unlock with the table name proposed as the datasource name.
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('campaigns');
+  await expect(connect).toBeEnabled();
   // Changing a parent selection must not register the previously chosen table.
   await page.getByLabel('Search projects', { exact: true }).fill('');
-  await page.getByRole('button', { name: 'Other project other-project', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'Connect datasource', exact: true }),
-  ).toBeDisabled();
+  await page.getByRole('option', { name: 'Other project other-project', exact: true }).click();
+  await expect(connect).toBeDisabled();
   await expect(page.getByRole('region', { name: 'Tables and views' })).toContainText(
     'Choose a dataset.',
   );
-  await page.getByLabel('Project ID', { exact: true }).fill('customer-project');
-  await page.getByRole('button', { name: 'Use project ID' }).click();
-  await page.getByRole('button', { name: 'local_testing US', exact: true }).click();
-  await page
-    .getByRole('button', {
-      name: 'campaigns VIEW',
-      exact: true,
-    })
-    .click();
+  // Projects the account cannot list are reachable by typing their ID into the search. From
+  // there the whole path works on the keyboard: Enter chooses and focuses the next column.
+  await page.getByLabel('Search projects', { exact: true }).fill('manual-project');
+  await expect(
+    page.getByRole('option', { name: 'Use project ID manual-project', exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Search datasets', { exact: true })).toBeFocused();
+  await page.keyboard.type('local_testing');
+  await expect(page.getByRole('option', { name: 'local_testing', exact: true })).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Search tables and views', { exact: true })).toBeFocused();
+  await expect(page.getByRole('option', { name: 'campaigns VIEW', exact: true })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(connect).toBeEnabled();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByLabel('Search datasets', { exact: true })).toBeFocused();
+  await page.getByLabel('Name', { exact: true }).fill('Customer campaigns');
   const registered = page.waitForRequest(
     (request) =>
       request.url().includes('/api/yresonance') &&
       request.postDataJSON()?.action === 'registerDatasource',
   );
-  await page.getByRole('button', { name: 'Connect datasource', exact: true }).click();
+  await connect.click();
   expect((await registered).postDataJSON()).toEqual({
     action: 'registerDatasource',
     provider: 'bigquery',
@@ -144,7 +150,7 @@ test('Google consent enables a BigQuery table connection without exposing creden
     connection: { authorizationId: 'auth_google' },
     location: {
       kind: 'bigquery',
-      project: 'customer-project',
+      project: 'manual-project',
       dataset: 'local_testing',
       table: 'campaigns',
       location: 'US',
@@ -208,13 +214,11 @@ test('an existing datasource reconnects its workspace account while keeping its 
     return route.fallback();
   });
   await page.goto('/datasources/src_reporting');
-  await expect(page.getByLabel('Google account', { exact: true })).toContainText(
-    'reconnect required',
-  );
+  await expect(page.getByText('editor@example.test')).toBeVisible();
+  await expect(page.getByText('reconnect required')).toBeVisible();
   await page.getByRole('button', { name: 'Reconnect Google account', exact: true }).click();
-  await expect(page.getByLabel('Google account', { exact: true })).not.toContainText(
-    'reconnect required',
-  );
+  await expect(page.getByText('editor@example.test')).toBeVisible();
+  await expect(page.getByText('reconnect required')).toBeHidden();
   await expect(page).toHaveURL(/\/datasources\/src_reporting$/);
 });
 

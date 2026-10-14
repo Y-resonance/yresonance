@@ -1,11 +1,9 @@
-import { BigQueryExplorer } from './bigquery-explorer';
 import { useMutation } from '@tanstack/react-query';
 import { DatasourceCacheFields } from './datasource-cache-fields';
-import { DatasourceConnectionFields } from './datasource-connection-fields';
 import { dataSourceLocationSchema } from '#/domain/schema';
 import type { DatasourceCachePolicy } from '#/domain/schema';
 import type { DatasourceProviderDefinition } from '#/data/providers/catalog';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiClientError } from '#/api/client';
 import { useApi, useR2Objects } from '#/api/query';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
@@ -53,22 +51,6 @@ export function DatasourceRegisterForm({
     Object.fromEntries(
       (provider.sourceFields ?? []).map((field) => [field.name, field.defaultValue ?? '']),
     ),
-  );
-  const [authorizationId, setAuthorizationId] = useState('');
-  const [manualBigQuery, setManualBigQuery] = useState(false);
-  const changeAuthorization = useCallback(
-    (id: string) => {
-      setAuthorizationId(id);
-      if (id !== authorizationId)
-        setSourceFields((current) => ({
-          ...current,
-          project: '',
-          dataset: '',
-          table: '',
-          location: '',
-        }));
-    },
-    [authorizationId],
   );
   const [cachePolicy, setCachePolicy] = useState<DatasourceCachePolicy>({ mode: 'default' });
   const [useExistingData, setUseExistingData] = useState(!provider.supportsUploads);
@@ -123,12 +105,7 @@ export function DatasourceRegisterForm({
           cachePolicy,
           name,
           provider: provider.id,
-          connection:
-            provider.connectionMethod === 'oauth'
-              ? { authorizationId }
-              : provider.connectionFields.length
-                ? connection
-                : undefined,
+          connection: provider.connectionFields.length ? connection : undefined,
           location:
             provider.source === 'table'
               ? dataSourceLocationSchema.parse({ ...provider.sourceDefaults, ...sourceFields })
@@ -287,7 +264,7 @@ export function DatasourceRegisterForm({
 
   const busy = phase !== 'idle';
   return (
-    <form className={provider.id === 'bigquery' ? 'w-full' : 'max-w-xl'} onSubmit={submit}>
+    <form className="max-w-xl" onSubmit={submit}>
       <FieldGroup>
         {provider.connectionFields.length ? (
           <FieldSet>
@@ -319,13 +296,6 @@ export function DatasourceRegisterForm({
               ))}
             </FieldGroup>
           </FieldSet>
-        ) : null}
-        {provider.connectionMethod === 'oauth' ? (
-          <DatasourceConnectionFields
-            provider={provider.id}
-            value={authorizationId || undefined}
-            onChange={changeAuthorization}
-          />
         ) : null}
         {provider.supportsWorkspaceFiles ? (
           <Field orientation="horizontal">
@@ -366,63 +336,24 @@ export function DatasourceRegisterForm({
         </Field>
         {useExistingData && provider.source === 'table' ? (
           <>
-            {provider.id === 'bigquery' ? (
-              <>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-fit"
+            {provider.sourceFields?.map((field) => (
+              <Field key={field.name}>
+                <FieldLabel htmlFor={`source-${field.name}`}>{field.label}</FieldLabel>
+                <Input
+                  id={`source-${field.name}`}
+                  type={field.type ?? 'text'}
+                  value={sourceFields[field.name] ?? ''}
+                  required={!field.optional}
                   disabled={busy}
-                  onClick={() => setManualBigQuery((current) => !current)}
-                >
-                  {manualBigQuery
-                    ? 'Browse projects, datasets and tables'
-                    : 'Enter source manually'}
-                </Button>
-                {!manualBigQuery ? (
-                  <>
-                    <BigQueryExplorer
-                      key={authorizationId}
-                      connectionId={authorizationId}
-                      value={sourceFields}
-                      onChange={setSourceFields}
-                      disabled={busy}
-                    />
-                    {sourceFields.table ? (
-                      <p className="break-all text-sm">
-                        {sourceFields.project}.{sourceFields.dataset}.{sourceFields.table} ·{' '}
-                        {sourceFields.location}
-                      </p>
-                    ) : null}
-                  </>
-                ) : null}
-              </>
-            ) : null}
-            {provider.sourceFields
-              ?.filter(
-                (field) =>
-                  provider.id !== 'bigquery' ||
-                  manualBigQuery ||
-                  field.name === 'maximumBytesBilled',
-              )
-              .map((field) => (
-                <Field key={field.name}>
-                  <FieldLabel htmlFor={`source-${field.name}`}>{field.label}</FieldLabel>
-                  <Input
-                    id={`source-${field.name}`}
-                    type={field.type ?? 'text'}
-                    value={sourceFields[field.name] ?? ''}
-                    required={!field.optional}
-                    disabled={busy}
-                    onChange={(event) =>
-                      setSourceFields((current) => ({
-                        ...current,
-                        [field.name]: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
-              ))}
+                  onChange={(event) =>
+                    setSourceFields((current) => ({
+                      ...current,
+                      [field.name]: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+            ))}
           </>
         ) : useExistingData ? (
           <>
@@ -503,15 +434,7 @@ export function DatasourceRegisterForm({
           </p>
         ) : null}
         <div className="flex gap-2">
-          <Button
-            type="submit"
-            disabled={
-              busy ||
-              Boolean(uploadedKey) ||
-              (provider.connectionMethod === 'oauth' && !authorizationId) ||
-              (provider.id === 'bigquery' && !manualBigQuery && !sourceFields.table)
-            }
-          >
+          <Button type="submit" disabled={busy || Boolean(uploadedKey)}>
             {busy ? 'Connecting...' : useExistingData ? 'Connect datasource' : 'Upload and connect'}
           </Button>
           {phase === 'uploading' ? (

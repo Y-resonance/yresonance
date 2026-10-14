@@ -1,9 +1,9 @@
 import { ClientOnly, createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { datasourceProviders } from '#/data/providers/catalog';
-import { buttonVariants } from '#/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card';
 import { ArrowRightIcon, ArrowLeftIcon, CloudIcon, KeyRoundIcon } from 'lucide-react';
 import { AppShell } from '#/components/app-shell';
+import { BigQueryRegisterForm } from '#/components/bigquery-register-form';
 import { DatasourceRegisterForm } from '#/components/datasource-register-form';
 import { LoadingState } from '#/components/request-state';
 import { pageTitle } from '#/lib/page-title';
@@ -44,23 +44,34 @@ function NewDatasourceContent() {
   const search = Route.useSearch();
   const provider = datasourceProviders.find((candidate) => candidate.id === search.provider);
   useWebMcpTools({ canManageDataSources: true });
+  function openDatasource(dataSource: { id: string }) {
+    void navigate({ to: '/datasources/$datasourceId', params: { datasourceId: dataSource.id } });
+  }
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
       <div
         className={cn(
           'flex flex-col gap-6',
-          provider?.id === 'bigquery' ? 'max-w-5xl' : provider ? 'max-w-2xl' : 'max-w-4xl',
+          provider?.id === 'bigquery' ? 'max-w-4xl' : provider ? 'max-w-2xl' : 'max-w-4xl',
         )}
       >
-        <Link className="flex w-fit items-center gap-2 text-sm hover:underline" to="/datasources">
-          <ArrowLeftIcon className="size-4" />
-          Datasources
-        </Link>
+        {provider ? (
+          <Link
+            className="flex w-fit items-center gap-2 text-sm hover:underline"
+            to="/datasources/new"
+            search={{}}
+          >
+            <ArrowLeftIcon className="size-4" />
+            Change provider
+          </Link>
+        ) : (
+          <Link className="flex w-fit items-center gap-2 text-sm hover:underline" to="/datasources">
+            <ArrowLeftIcon className="size-4" />
+            Datasources
+          </Link>
+        )}
         <div>
-          {provider && (
-            <p className="mb-2 text-sm text-muted-foreground">2. Configure datasource</p>
-          )}
           <h1 className="text-3xl font-semibold tracking-tight">
             {provider ? `Connect ${provider.name}` : 'New datasource'}
           </h1>
@@ -68,24 +79,16 @@ function NewDatasourceContent() {
         </div>
         {provider ? (
           <>
-            <Link
-              to="/datasources/new"
-              search={{}}
-              className={buttonVariants({ variant: 'ghost', className: 'self-start' })}
-            >
-              <ArrowLeftIcon data-icon="inline-start" /> Change provider
-            </Link>
             <ClientOnly fallback={<LoadingState />}>
-              <DatasourceRegisterForm
-                key={provider.id}
-                provider={provider}
-                onRegistered={(dataSource) => {
-                  void navigate({
-                    to: '/datasources/$datasourceId',
-                    params: { datasourceId: dataSource.id },
-                  });
-                }}
-              />
+              {provider.id === 'bigquery' ? (
+                <BigQueryRegisterForm provider={provider} onRegistered={openDatasource} />
+              ) : (
+                <DatasourceRegisterForm
+                  key={provider.id}
+                  provider={provider}
+                  onRegistered={openDatasource}
+                />
+              )}
             </ClientOnly>
           </>
         ) : (
