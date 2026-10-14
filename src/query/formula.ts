@@ -124,7 +124,9 @@ export function compileFormula(
         if (options.dialect === 'bigquery' && current.operator === '/')
           return { sql: `SAFE_DIVIDE(${left.sql}, ${right.sql})`, type: 'number' };
         if (options.dialect === 'bigquery' && current.operator === '%')
-          return { sql: `MOD(${left.sql}, ${right.sql})`, type: 'number' };
+          // Formula types do not distinguish FLOAT64 from exact numbers. GoogleSQL MOD rejects
+          // floats, and coercing every operand to a decimal would change range and precision.
+          throw new Error('BigQuery does not support remainder (%) formulas.');
         if (current.operator === '/' && options.dialect === 'clickhouse')
           // DuckDB division returns floating-point ratios, including decimal operands.
           return { sql: `divide(toFloat64(${left.sql}), toFloat64(${right.sql}))`, type: 'number' };

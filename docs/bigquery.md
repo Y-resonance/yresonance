@@ -45,11 +45,14 @@ fields through a scalar view. Required partition filters must be satisfied by ge
 filter-option queries currently do not carry a date range, so these sources may require a view
 with a suitable bounded partition predicate.
 
-Query caching defaults to five minutes. The datasource has a billed-byte ceiling, default
-1,000,000,000 bytes per query. This is a per-query limit, not a workspace spending budget.
+Query caching defaults to five minutes. Set the billed-byte ceiling during datasource setup,
+default 1,000,000,000 bytes per query. This is a per-query limit, not a workspace spending budget.
 BigQuery job timeout is 30 seconds, with a 35-second application deadline. Results are limited to
 20,000 rows and 10 MiB. Cancellation and Google's timeout are best effort. Exact median aggregates
 sort values into an array, so large groups can hit Google's resource limits.
+
+BigQuery formulas do not support the remainder operator `%`. Formula validation rejects it before
+saving because GoogleSQL's `MOD` does not accept floating-point operands.
 
 Reconnect or disconnect from the datasource page. Disconnect affects every source using that
 workspace authorization. Reconnect preserves source IDs and makes old cached results unreachable.

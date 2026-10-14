@@ -187,6 +187,33 @@ test('Google consent is workspace-bound and single-use; queries refresh privatel
   ).not.toContain('private-');
 
   const dashboard = await createDashboard();
+  const remainderField = {
+    dataSourceId: source.id,
+    name: 'Remainder',
+    expression: 'revenue % 2',
+    role: 'metric',
+    semanticType: 'count',
+  };
+  expect(await callService({ action: 'validateCalculatedField', ...remainderField })).toMatchObject(
+    {
+      valid: false,
+      error: { message: 'BigQuery does not support remainder (%) formulas.' },
+    },
+  );
+  await expectApiError(callService({ action: 'upsertCalculatedField', ...remainderField }), {
+    status: 400,
+    code: 'invalid_query',
+  });
+  expect(
+    await callService({
+      action: 'validateMetricExpression',
+      dataSourceId: source.id,
+      expression: 'sum(revenue) % 2',
+    }),
+  ).toMatchObject({
+    valid: false,
+    error: { message: 'BigQuery does not support remainder (%) formulas.' },
+  });
   const widget = await addWidget(dashboard.id, {
     type: 'scorecard',
     title: 'Revenue',

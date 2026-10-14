@@ -2,6 +2,58 @@ import { expect } from '@playwright/test';
 import { test } from './support/ui-test';
 import { mockYresonanceApi } from './support/yresonance-api';
 
+test('BigQuery manual entry registers an unlisted source with a custom query byte limit', async ({
+  page,
+}) => {
+  await mockYresonanceApi(page);
+  await page.route('**/api/yresonance', async (route) => {
+    const request = route.request().postDataJSON();
+    if (request.action === 'listDatasourceConnections')
+      return route.fulfill({
+        json: {
+          ok: true,
+          data: {
+            configured: true,
+            connections: [
+              { id: 'auth_google', account: 'editor@example.test', status: 'connected' },
+            ],
+          },
+        },
+      });
+    if (request.action === 'browseDatasource')
+      return route.fulfill({ json: { ok: true, data: { entries: [] } } });
+    if (request.action === 'registerDatasource')
+      return route.fulfill({ json: { ok: true, data: { id: 'src_reporting' } } });
+    return route.fallback();
+  });
+  await page.goto('/datasources/new?provider=bigquery');
+  await page.getByRole('switch', { name: 'Enter source manually' }).check();
+  await page.getByLabel('Project ID', { exact: true }).fill('customer-project');
+  await page.getByLabel('Dataset', { exact: true }).fill('reporting');
+  await page.getByLabel('Table or view', { exact: true }).fill('sales');
+  await page.getByLabel('Dataset location', { exact: true }).fill('US');
+  await page.getByLabel('Maximum bytes billed per query', { exact: true }).fill('2000000000');
+  const registered = page.waitForRequest(
+    (request) =>
+      request.url().includes('/api/yresonance') &&
+      request.postDataJSON()?.action === 'registerDatasource',
+  );
+  await page.getByRole('button', { name: 'Connect datasource', exact: true }).click();
+  expect((await registered).postDataJSON()).toMatchObject({
+    name: 'sales',
+    connection: { authorizationId: 'auth_google' },
+    location: {
+      kind: 'bigquery',
+      project: 'customer-project',
+      dataset: 'reporting',
+      table: 'sales',
+      location: 'US',
+      maximumBytesBilled: '2000000000',
+    },
+  });
+  await expect(page).toHaveURL(/\/datasources\/src_reporting$/);
+});
+
 test('Google consent enables a BigQuery table connection without exposing credentials', async ({
   page,
 }) => {

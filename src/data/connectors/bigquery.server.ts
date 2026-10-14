@@ -117,7 +117,14 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
       )) as T[];
     },
     async validateQuery(source, query) {
-      compileDatasourceWidget(source, query, table(source), 'bigquery');
+      try {
+        compileDatasourceWidget(source, query, table(source), 'bigquery');
+      } catch (error) {
+        throw new DatasourceError(
+          'invalid_query',
+          error instanceof Error ? error.message : 'Invalid query.',
+        );
+      }
     },
     explainQuery(source, query) {
       const compiled = compileDatasourceWidget(source, query, table(source), 'bigquery');
@@ -125,7 +132,14 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
     },
     async validateExpression(source, expression) {
       location(source);
-      datasourceExpressionSql(expression, 'bigquery');
+      try {
+        datasourceExpressionSql(expression, 'bigquery');
+      } catch (error) {
+        throw new DatasourceError(
+          'invalid_query',
+          error instanceof Error ? error.message : 'Invalid formula.',
+        );
+      }
     },
   };
 }

@@ -8,6 +8,16 @@ const fields: FormulaField[] = [
 ];
 
 describe('formula compiler', () => {
+  it.each([
+    { mode: 'row' as const, formula: 'media_cost % 2' },
+    { mode: 'row' as const, formula: '(media_cost / impressions) % 2' },
+    { mode: 'aggregate' as const, formula: 'sum(media_cost) % 2' },
+  ])('rejects unsupported BigQuery remainder formulas: $formula', ({ mode, formula }) => {
+    expect(() => compileFormula(formula, { mode, fields, dialect: 'bigquery' })).toThrow(
+      'BigQuery does not support remainder (%) formulas.',
+    );
+  });
+
   it('compiles aggregate formulas from allowlisted syntax and trusted fields', () => {
     expect(
       compileFormula('sum(media_cost) / sum(impressions) * 1000', {
