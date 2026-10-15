@@ -84,7 +84,7 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
   const parameters: unknown[] = [];
   const conditions: string[] = [];
   conditions.push(
-    `${comparisonField(definition.dateRangeFieldId, context)} BETWEEN ${comparisonParameter(definition.dateRangeFieldId, context)} AND ${comparisonParameter(definition.dateRangeFieldId, context)}`,
+    `${comparisonField(definition.dateRangeFieldId, context, true)} BETWEEN ${comparisonParameter(definition.dateRangeFieldId, context, true)} AND ${comparisonParameter(definition.dateRangeFieldId, context, true)}`,
   );
   parameters.push(resolved.start, resolved.end);
   if (definition.filter) conditions.push(compileFilter(definition.filter, context, parameters));
@@ -391,27 +391,33 @@ function compileFilter(
 }
 
 // Field side of a filter, control, drill or date range predicate. BigQuery date dimensions are
-// emitted as DATE, so date fields are compared at day precision regardless of column type.
-function comparisonField(fieldId: string, context: QueryContext) {
+// emitted as DATE, so date fields are compared at day precision regardless of column type. The
+// date range field is always a date predicate, whatever semantic type the editor assigned it.
+function comparisonField(
+  fieldId: string,
+  context: QueryContext,
+  asDate = isDateField(fieldId, context),
+) {
   const expression = fieldExpression(fieldId, context);
-  return context.dialect === 'bigquery' && isDateField(fieldId, context)
-    ? `CAST(${expression} AS DATE)`
-    : expression;
+  return context.dialect === 'bigquery' && asDate ? `CAST(${expression} AS DATE)` : expression;
 }
 
 // Parameter side of the same predicates. Control, drill and filter values arrive as strings and
 // GoogleSQL does not coerce string parameters to numbers or dates, unlike string literals.
-function comparisonParameter(fieldId: string, context: QueryContext) {
+function comparisonParameter(
+  fieldId: string,
+  context: QueryContext,
+  asDate = isDateField(fieldId, context),
+) {
   if (context.dialect !== 'bigquery') return '?';
+  if (asDate) return 'CAST(? AS DATE)';
   const raw = context.fields.find((field) => field.id === fieldId);
   const field = raw ?? context.calculatedFields.find((field) => field.id === fieldId);
   const type = raw?.castTo
     ? safeCast(raw.castTo, 'bigquery')
-    : isDateField(fieldId, context)
-      ? 'DATE'
-      : field && formulaTypeForSemanticType(field.semanticType) === 'number'
-        ? 'BIGNUMERIC'
-        : undefined;
+    : field && formulaTypeForSemanticType(field.semanticType) === 'number'
+      ? 'BIGNUMERIC'
+      : undefined;
   return type ? `CAST(? AS ${type})` : '?';
 }
 

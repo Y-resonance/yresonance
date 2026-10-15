@@ -777,3 +777,32 @@ it('compares BigQuery date fields at day precision with typed date parameters', 
   expect(query.sql).toContain('CAST(`DateStart` AS DATE) IN (CAST(? AS DATE), CAST(? AS DATE))');
   expect(query.parameters.slice(2)).toEqual(['2025-01-06', '2025-01-06', '2025-01-07']);
 });
+
+it('keeps the BigQuery date range typed when the editor changed the field semantics', () => {
+  const query = compileWidgetQuery({
+    dashboard,
+    definition: {
+      type: 'scorecard',
+      title: 'Cost',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      metric: {
+        source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+        dataType: 'currency',
+      },
+    },
+    dataSource,
+    fields: fields.map((field) =>
+      field.id === 'date' ? { ...field, semanticType: 'text', castTo: 'STRING' } : field,
+    ),
+    calculatedFields: [],
+    libraryMetrics: [],
+    controlState: {},
+    bucketName: '',
+    sourceSql: '`customer-project.reporting.sales`',
+    dialect: 'bigquery',
+  });
+  expect(query.sql).toContain(
+    'CAST(CAST(`DateStart` AS STRING) AS DATE) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)',
+  );
+});
