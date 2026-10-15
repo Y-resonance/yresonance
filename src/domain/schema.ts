@@ -444,13 +444,16 @@ export const clickhouseLocationSchema = z.object({
   cacheTtlSeconds: z.number().int().min(0).max(86_400).default(300),
 });
 
+export const bigqueryProjectIdSchema = z.string().regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/u);
+export const bigqueryDatasetIdSchema = z.string().regex(/^[A-Za-z0-9_]{1,1024}$/u);
+
 export const dataSourceLocationSchema = z.union([
   fileDataSourceLocationSchema,
   clickhouseLocationSchema,
   z.object({
     kind: z.literal('bigquery'),
-    project: z.string().regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/u),
-    dataset: z.string().regex(/^[A-Za-z0-9_]{1,1024}$/u),
+    project: bigqueryProjectIdSchema,
+    dataset: bigqueryDatasetIdSchema,
     table: z.string().regex(/^[A-Za-z0-9_][A-Za-z0-9_-]{0,1023}$/u),
     location: z
       .string()

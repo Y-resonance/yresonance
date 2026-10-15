@@ -26,6 +26,20 @@ export function bigqueryTablePath(source: { project: string; dataset: string; ta
   return `projects/${encodeURIComponent(source.project)}/datasets/${encodeURIComponent(source.dataset)}/tables/${encodeURIComponent(source.table)}`;
 }
 
+// Google answers outages and proxy errors with HTML pages. Those must surface as a connector
+// failure, not as a JSON parse exception that the API maps to an internal error.
+export async function readJsonResponse(response: Response, maximumBytes: number): Promise<unknown> {
+  const text = await readResponseText(response, maximumBytes);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new DatasourceError(
+      'datasource_connector_failed',
+      `Google returned an unreadable response (status ${response.status}).`,
+    );
+  }
+}
+
 export async function bigqueryRequest(
   token: string,
   path: string,
@@ -42,7 +56,7 @@ export async function bigqueryRequest(
     redirect: 'manual',
     signal,
   });
-  const body: unknown = JSON.parse(await readResponseText(response, MAX_RESULT_BYTES));
+  const body = await readJsonResponse(response, MAX_RESULT_BYTES);
   if (!response.ok) {
     const error = z
       .object({ error: z.object({ errors: z.array(z.object({ reason: z.string() })).optional() }) })

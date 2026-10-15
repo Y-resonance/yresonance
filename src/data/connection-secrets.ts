@@ -32,7 +32,7 @@ export async function sealConnection(
     await encryptionKey(secret, purpose),
     encoder.encode(JSON.stringify(value)),
   );
-  return `${encode(iv)}.${encode(new Uint8Array(ciphertext))}`;
+  return `${encodeBase64Url(iv)}.${encodeBase64Url(new Uint8Array(ciphertext))}`;
 }
 
 export async function openConnection(
@@ -50,7 +50,7 @@ export async function openConnection(
   );
   return JSON.parse(new TextDecoder().decode(plaintext));
 }
-function encode(bytes: Uint8Array) {
+export function encodeBase64Url(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes))
     .replaceAll('+', '-')
     .replaceAll('/', '_')

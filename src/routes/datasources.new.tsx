@@ -53,7 +53,7 @@ function NewDatasourceContent() {
       <div
         className={cn(
           'flex flex-col gap-6',
-          provider?.id === 'bigquery' ? 'max-w-4xl' : provider ? 'max-w-2xl' : 'max-w-4xl',
+          provider?.connectionMethod === 'oauth' || !provider ? 'max-w-4xl' : 'max-w-2xl',
         )}
       >
         {provider ? (
@@ -80,7 +80,7 @@ function NewDatasourceContent() {
         {provider ? (
           <>
             <ClientOnly fallback={<LoadingState />}>
-              {provider.id === 'bigquery' ? (
+              {provider.connectionMethod === 'oauth' ? (
                 <BigQueryRegisterForm provider={provider} onRegistered={openDatasource} />
               ) : (
                 <DatasourceRegisterForm

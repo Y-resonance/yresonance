@@ -6,10 +6,12 @@ import { database } from '#/server/database.server';
 import { requireSession } from '#/server/auth.server';
 import { loadDataSource } from '#/server/records.server';
 import { ApiError } from '#/server/errors';
-import { sealConnection, openConnection } from './connection-secrets';
+import { datasourceOperation } from '#/server/datasource-operations.server';
+import { sealConnection, openConnection, encodeBase64Url } from './connection-secrets';
 import { loadConnection } from './connection-store.server';
 import { DatasourceError } from './connectors/contract';
 import { readResponseText } from './http-response';
+import { readJsonResponse } from './bigquery.server';
 import type { ApiRequest } from '#/api/contracts';
 
 const scope = 'openid email https://www.googleapis.com/auth/bigquery';
@@ -56,6 +58,26 @@ function configuration() {
   return config.data;
 }
 
+// Same validation as configuration(), so the UI only offers "Connect" when beginning would succeed.
+function configured() {
+  try {
+    configuration();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Reads the grant a datasource points at. Connection store failures are DatasourceErrors and
+// need the same HTTP mapping as every other datasource operation.
+function currentAuthorizationReference(dataSourceId: string, workspaceId: string) {
+  return datasourceOperation(async () =>
+    authorizationReferenceSchema.parse(
+      await loadConnection(await loadDataSource(dataSourceId, workspaceId)),
+    ),
+  );
+}
+
 function oauthProvider(provider: string) {
   if (provider !== 'bigquery')
     throw new ApiError(
@@ -69,9 +91,7 @@ export async function listDatasourceConnections(provider: string, dataSourceId?:
   oauthProvider(provider);
   const session = await requireSession();
   const currentConnectionId = dataSourceId
-    ? authorizationReferenceSchema.parse(
-        await loadConnection(await loadDataSource(dataSourceId, session.workspace.id)),
-      ).authorizationId
+    ? (await currentAuthorizationReference(dataSourceId, session.workspace.id)).authorizationId
     : undefined;
   const rows = await database()
     .select({
@@ -92,12 +112,7 @@ export async function listDatasourceConnections(provider: string, dataSourceId?:
       ),
     );
   return {
-    configured: Boolean(
-      env.GOOGLE_OAUTH_CLIENT_ID &&
-      env.GOOGLE_OAUTH_CLIENT_SECRET &&
-      env.GOOGLE_OAUTH_REDIRECT_URI &&
-      env.GOOGLE_OAUTH_HOSTED_DOMAIN,
-    ),
+    configured: configured(),
     connections: rows,
     currentConnectionId,
   };
@@ -126,14 +141,16 @@ export async function beginDatasourceConnection(
     if (!existing) throw new ApiError(404, 'connection_not_found', 'Connection not found.');
   }
   if (request.dataSourceId) {
-    const source = await loadDataSource(request.dataSourceId, session.workspace.id);
-    const reference = authorizationReferenceSchema.parse(await loadConnection(source));
+    const reference = await currentAuthorizationReference(
+      request.dataSourceId,
+      session.workspace.id,
+    );
     if (reference.authorizationId !== request.connectionId)
       throw new ApiError(400, 'invalid_connection', 'Reconnect the datasource connection.');
   }
   const id = `auth_${crypto.randomUUID()}`;
   const verifier = `${crypto.randomUUID()}${crypto.randomUUID()}`.replaceAll('-', '');
-  const challenge = encode(
+  const challenge = encodeBase64Url(
     new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))),
   );
   const now = new Date().toISOString();
@@ -392,7 +409,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
   if (!response.ok) {
     const error = z
       .object({ error: z.string() })
-      .safeParse(JSON.parse(await readResponseText(response, 16_384)));
+      .safeParse(await readJsonResponse(response, 16_384));
     if (error.success && error.data.error === 'invalid_grant') {
       await db
         .update(datasourceAuthorizations)
@@ -410,7 +427,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
       'Google authorization is unavailable.',
     );
   }
-  const tokens = tokenSchema.parse(JSON.parse(await readResponseText(response, 16_384)));
+  const tokens = tokenSchema.parse(await readJsonResponse(response, 16_384));
   const encryptedConfig = await sealConnection(
     {
       ...grant,
@@ -457,10 +474,4 @@ function oauthRedirect(path: string) {
     status: 303,
     headers: { Location: path, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' },
   });
-}
-function encode(bytes: Uint8Array) {
-  return btoa(String.fromCharCode(...bytes))
-    .replaceAll('+', '-')
-    .replaceAll('/', '_')
-    .replace(/=+$/u, '');
 }

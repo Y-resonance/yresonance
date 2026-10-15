@@ -259,7 +259,11 @@ test('Google consent is workspace-bound and single-use; queries refresh privatel
     operation: { kind: 'createLink' },
   })) as { token: string };
   signOut();
-  expect(await callService({ ...query, shareToken: link.token })).toMatchObject({ cache: 'hit' });
+  // A fresh result forces the anonymous viewer through token lookup and BigQuery execution,
+  // which must not depend on a Clerk session.
+  expect(await callService({ ...query, shareToken: link.token, refresh: true })).toMatchObject({
+    cache: 'miss',
+  });
   signInAsOwner(owner);
   await callService({ action: 'disconnectDatasourceConnection', connectionId: grant.id });
   await expectApiError(callService(query), { code: 'datasource_access_denied', status: 403 });

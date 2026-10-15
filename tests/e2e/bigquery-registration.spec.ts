@@ -54,9 +54,7 @@ test('BigQuery manual entry registers an unlisted source with a custom query byt
   await expect(page).toHaveURL(/\/datasources\/src_reporting$/);
 });
 
-test('Google consent enables a BigQuery table connection without exposing credentials', async ({
-  page,
-}) => {
+test('Google consent enables browsing and registering a BigQuery table', async ({ page }) => {
   await mockYresonanceApi(page);
   let connected = false;
   await page.route('**/api/yresonance', async (route) => {

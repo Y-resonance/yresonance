@@ -742,3 +742,38 @@ it('casts BigQuery string selections to source types without losing integer or d
     'true',
   ]);
 });
+
+it('compares BigQuery date fields at day precision with typed date parameters', () => {
+  const query = compileWidgetQuery({
+    dashboard,
+    definition: {
+      type: 'scorecard',
+      title: 'Cost on selected days',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      metric: {
+        source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+        dataType: 'currency',
+      },
+      filter: {
+        connector: 'and',
+        conditions: [{ fieldId: 'date', operator: 'greaterThanOrEqual', value: '2025-01-06' }],
+      },
+    },
+    dataSource,
+    fields,
+    calculatedFields: [],
+    libraryMetrics: [],
+    controlState: {},
+    bucketName: '',
+    sourceSql: '`customer-project.reporting.sales`',
+    dialect: 'bigquery',
+    resolvedControls: [{ fieldId: 'date', values: ['2025-01-06', '2025-01-07'] }],
+  });
+  expect(query.sql).toContain(
+    'CAST(`DateStart` AS DATE) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)',
+  );
+  expect(query.sql).toContain('CAST(`DateStart` AS DATE) >= CAST(? AS DATE)');
+  expect(query.sql).toContain('CAST(`DateStart` AS DATE) IN (CAST(? AS DATE), CAST(? AS DATE))');
+  expect(query.parameters.slice(2)).toEqual(['2025-01-06', '2025-01-06', '2025-01-07']);
+});

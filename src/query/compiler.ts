@@ -84,15 +84,13 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
   const parameters: unknown[] = [];
   const conditions: string[] = [];
   conditions.push(
-    context.dialect === 'bigquery'
-      ? `CAST(${fieldExpression(definition.dateRangeFieldId, context)} AS DATE) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)`
-      : `${fieldExpression(definition.dateRangeFieldId, context)} BETWEEN ? AND ?`,
+    `${comparisonField(definition.dateRangeFieldId, context)} BETWEEN ${comparisonParameter(definition.dateRangeFieldId, context)} AND ${comparisonParameter(definition.dateRangeFieldId, context)}`,
   );
   parameters.push(resolved.start, resolved.end);
   if (definition.filter) conditions.push(compileFilter(definition.filter, context, parameters));
   for (const control of context.resolvedControls ?? []) {
     if (!control.values.length) continue;
-    const field = fieldExpression(control.fieldId, context);
+    const field = comparisonField(control.fieldId, context);
     parameters.push(...control.values);
     conditions.push(
       `${field} IN (${control.values.map(() => comparisonParameter(control.fieldId, context)).join(', ')})`,
@@ -361,7 +359,7 @@ function compileFilter(
   parameters: unknown[],
 ) {
   const conditions = filter.conditions.map((condition) => {
-    const field = fieldExpression(condition.fieldId, context);
+    const field = comparisonField(condition.fieldId, context);
     if (condition.operator === 'isEmpty')
       return `(${field} IS NULL OR ${context.dialect === 'clickhouse' ? `toString(${field})` : context.dialect === 'bigquery' ? `CAST(${field} AS STRING)` : field} = '')`;
     if (condition.operator === 'isNotEmpty')
@@ -392,17 +390,36 @@ function compileFilter(
   return `(${conditions.join(filter.connector === 'or' ? ' OR ' : ' AND ') || 'TRUE'})`;
 }
 
+// Field side of a filter, control, drill or date range predicate. BigQuery date dimensions are
+// emitted as DATE, so date fields are compared at day precision regardless of column type.
+function comparisonField(fieldId: string, context: QueryContext) {
+  const expression = fieldExpression(fieldId, context);
+  return context.dialect === 'bigquery' && isDateField(fieldId, context)
+    ? `CAST(${expression} AS DATE)`
+    : expression;
+}
+
+// Parameter side of the same predicates. Control, drill and filter values arrive as strings and
+// GoogleSQL does not coerce string parameters to numbers or dates, unlike string literals.
 function comparisonParameter(fieldId: string, context: QueryContext) {
   if (context.dialect !== 'bigquery') return '?';
   const raw = context.fields.find((field) => field.id === fieldId);
   const field = raw ?? context.calculatedFields.find((field) => field.id === fieldId);
-  // Control and drill selections are strings. GoogleSQL does not coerce them to numbers.
   const type = raw?.castTo
     ? safeCast(raw.castTo, 'bigquery')
-    : field && formulaTypeForSemanticType(field.semanticType) === 'number'
-      ? 'BIGNUMERIC'
-      : undefined;
+    : isDateField(fieldId, context)
+      ? 'DATE'
+      : field && formulaTypeForSemanticType(field.semanticType) === 'number'
+        ? 'BIGNUMERIC'
+        : undefined;
   return type ? `CAST(? AS ${type})` : '?';
+}
+
+function isDateField(fieldId: string, context: QueryContext) {
+  const field =
+    context.fields.find((field) => field.id === fieldId) ??
+    context.calculatedFields.find((field) => field.id === fieldId);
+  return field !== undefined && formulaTypeForSemanticType(field.semanticType) === 'date';
 }
 
 function compileSort(

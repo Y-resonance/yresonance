@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   aggregationSchema,
+  bigqueryDatasetIdSchema,
+  bigqueryProjectIdSchema,
   controlStateSchema,
   dataSourceLocationSchema,
   datasourceCachePolicySchema,
@@ -156,14 +158,8 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     action: z.literal('browseDatasource'),
     provider: z.literal('bigquery'),
     connectionId: z.string().min(1),
-    project: z
-      .string()
-      .regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/u)
-      .optional(),
-    dataset: z
-      .string()
-      .regex(/^[A-Za-z0-9_]{1,1024}$/u)
-      .optional(),
+    project: bigqueryProjectIdSchema.optional(),
+    dataset: bigqueryDatasetIdSchema.optional(),
     cursor: z.string().max(4096).optional(),
   }),
   z.object({ action: z.literal('listLibraryMetrics') }),
