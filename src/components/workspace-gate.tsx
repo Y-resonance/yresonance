@@ -233,7 +233,7 @@ function WorkspaceSetup() {
                         value={name}
                         disabled={actionDisabled}
                         onChange={(event) => setName(event.target.value)}
-                        placeholder="esome"
+                        placeholder="My workspace"
                       />
                       <FieldDescription>You can invite colleagues after setup.</FieldDescription>
                     </Field>

@@ -16,7 +16,7 @@ import {
   type ReactNode,
 } from 'react';
 import { callApi } from './client';
-import type { ApiRequest } from './contracts';
+import type { ApiRequest, DatasourceCatalogPage } from './contracts';
 
 // HTTP verbs do not distinguish reads: the application API uses POST for every action.
 const reads = new Set<ApiRequest['action']>([
@@ -30,6 +30,8 @@ const reads = new Set<ApiRequest['action']>([
   'getControlOptions',
   'listDataSources',
   'listDatasourceProviders',
+  'browseDatasource',
+  'listDatasourceConnections',
   'listLibraryMetrics',
   'describeDatasource',
   'listR2Objects',
@@ -181,6 +183,21 @@ export function useR2Objects(enabled: boolean) {
         { action: 'listR2Objects', cursor: pageParam },
         { signal },
       ),
+    getNextPageParam: (page) => page.cursor,
+    enabled: typeof window !== 'undefined' && ready && enabled,
+  });
+}
+
+export function useDatasourceCatalog(
+  request: Omit<Extract<ApiRequest, { action: 'browseDatasource' }>, 'cursor'>,
+  enabled: boolean,
+) {
+  const { scope, ready } = useApiScope();
+  return useInfiniteQuery({
+    queryKey: ['api', scope, request, 'infinite'],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      callApi<DatasourceCatalogPage>({ ...request, cursor: pageParam }, { signal }),
     getNextPageParam: (page) => page.cursor,
     enabled: typeof window !== 'undefined' && ready && enabled,
   });

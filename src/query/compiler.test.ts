@@ -644,3 +644,165 @@ describe('query compiler', () => {
     ).toThrow(/Unknown formula/u);
   });
 });
+
+it('compiles BigQuery grouped dates, filters and aliases using GoogleSQL and bound values', () => {
+  const query = compileWidgetQuery({
+    dashboard: {
+      ...dashboard,
+      defaultDateRange: { startDate: { fixed: '2025-01-01' }, endDate: { fixed: '2025-12-31' } },
+    },
+    definition: {
+      type: 'table',
+      title: 'Weekly costs',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      dimensions: [{ fieldId: 'date', dateGranularity: 'week' }, { fieldId: 'campaign' }],
+      metrics: [
+        { source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' }, dataType: 'currency' },
+      ],
+      showSummaryRow: true,
+      showSubtotals: true,
+      resultLimit: { mode: 'top', amount: 10 },
+      filter: {
+        connector: 'and',
+        conditions: [{ fieldId: 'campaign', operator: 'contains', value: "O'Reilly" }],
+      },
+    },
+    dataSource,
+    fields,
+    calculatedFields: [],
+    libraryMetrics: [],
+    controlState: {},
+    bucketName: '',
+    sourceSql: '`customer-project.reporting.sales`',
+    dialect: 'bigquery',
+  });
+  expect(query.sql).toContain(
+    'DATE_TRUNC(CAST(`DateStart` AS DATE), WEEK(MONDAY)) AS `dimension_1`',
+  );
+  expect(query.sql).toContain('SUM(`MediaCost`) AS `metric_1`');
+  expect(query.sql).toContain(
+    'GROUP BY GROUPING SETS ((`dimension_1`, `dimension_2`), (`dimension_1`), ())',
+  );
+  expect(query.sql).toContain('LOWER(CAST(`Campaign` AS STRING)) LIKE LOWER(?)');
+  expect(query.sql).not.toContain("O'Reilly");
+  expect(query.parameters).toEqual(['2025-01-01', '2025-12-31', "%O'Reilly%"]);
+});
+
+it('casts BigQuery string selections to source types without losing integer or decimal precision', () => {
+  const dimensions: FieldRecord[] = [
+    { ...fields[1], id: 'year', columnName: 'year', semanticType: 'count', castTo: 'INT64' },
+    {
+      ...fields[1],
+      id: 'amount',
+      columnName: 'amount',
+      semanticType: 'currency',
+      castTo: 'NUMERIC',
+    },
+    { ...fields[1], id: 'enabled', columnName: 'enabled', castTo: 'STRING' },
+  ];
+  const query = compileWidgetQuery({
+    dashboard,
+    definition: {
+      type: 'scorecard',
+      title: 'Selected cost',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      metric: {
+        source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+        dataType: 'currency',
+      },
+      filter: {
+        connector: 'and',
+        conditions: [{ fieldId: 'amount', operator: 'equals', value: '9007199254740993.125' }],
+      },
+    },
+    dataSource,
+    fields: [...fields, ...dimensions],
+    calculatedFields: [],
+    libraryMetrics: [],
+    controlState: {},
+    bucketName: '',
+    sourceSql: '`customer-project.reporting.sales`',
+    dialect: 'bigquery',
+    resolvedControls: [
+      { fieldId: 'year', values: ['9007199254740993'] },
+      { fieldId: 'amount', values: ['9007199254740993.125'] },
+      { fieldId: 'enabled', values: ['true'] },
+    ],
+  });
+  expect(query.sql).toContain('CAST(`year` AS INT64) IN (CAST(? AS INT64))');
+  expect(query.sql).toContain('CAST(`amount` AS NUMERIC) IN (CAST(? AS NUMERIC))');
+  expect(query.sql).toContain('CAST(`enabled` AS STRING) IN (CAST(? AS STRING))');
+  expect(query.sql).toContain('CAST(`amount` AS NUMERIC) = CAST(? AS NUMERIC)');
+  expect(query.parameters.slice(2)).toEqual([
+    '9007199254740993.125',
+    '9007199254740993',
+    '9007199254740993.125',
+    'true',
+  ]);
+});
+
+it('compares BigQuery date fields at day precision with typed date parameters', () => {
+  const query = compileWidgetQuery({
+    dashboard,
+    definition: {
+      type: 'scorecard',
+      title: 'Cost on selected days',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      metric: {
+        source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+        dataType: 'currency',
+      },
+      filter: {
+        connector: 'and',
+        conditions: [{ fieldId: 'date', operator: 'greaterThanOrEqual', value: '2025-01-06' }],
+      },
+    },
+    dataSource,
+    fields,
+    calculatedFields: [],
+    libraryMetrics: [],
+    controlState: {},
+    bucketName: '',
+    sourceSql: '`customer-project.reporting.sales`',
+    dialect: 'bigquery',
+    resolvedControls: [{ fieldId: 'date', values: ['2025-01-06', '2025-01-07'] }],
+  });
+  expect(query.sql).toContain(
+    'CAST(`DateStart` AS DATE) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)',
+  );
+  expect(query.sql).toContain('CAST(`DateStart` AS DATE) >= CAST(? AS DATE)');
+  expect(query.sql).toContain('CAST(`DateStart` AS DATE) IN (CAST(? AS DATE), CAST(? AS DATE))');
+  expect(query.parameters.slice(2)).toEqual(['2025-01-06', '2025-01-06', '2025-01-07']);
+});
+
+it('keeps the BigQuery date range typed when the editor changed the field semantics', () => {
+  const query = compileWidgetQuery({
+    dashboard,
+    definition: {
+      type: 'scorecard',
+      title: 'Cost',
+      dataSourceId: 'source',
+      dateRangeFieldId: 'date',
+      metric: {
+        source: { kind: 'field', fieldId: 'cost', aggregation: 'sum' },
+        dataType: 'currency',
+      },
+    },
+    dataSource,
+    fields: fields.map((field) =>
+      field.id === 'date' ? { ...field, semanticType: 'text', castTo: 'STRING' } : field,
+    ),
+    calculatedFields: [],
+    libraryMetrics: [],
+    controlState: {},
+    bucketName: '',
+    sourceSql: '`customer-project.reporting.sales`',
+    dialect: 'bigquery',
+  });
+  expect(query.sql).toContain(
+    'CAST(CAST(`DateStart` AS STRING) AS DATE) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)',
+  );
+});

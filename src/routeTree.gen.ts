@@ -24,6 +24,7 @@ import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiConnectorFileTokenRouteImport } from './routes/api.connector-file.$token'
 import { Route as ApiDatasourceUploadTokenRouteImport } from './routes/api.datasource-upload.$token'
+import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -101,6 +102,11 @@ const ApiDatasourceUploadTokenRoute =
     path: '/api/datasource-upload/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiOauthGoogleCallbackRoute = ApiOauthGoogleCallbackRouteImport.update({
+  id: '/api/oauth/google/callback',
+  path: '/api/oauth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/datasources': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/api/oauth/google/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/datasources'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/api/oauth/google/callback'
   id:
     | '__root__'
     | '/'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/api/oauth/google/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   DatasourcesIndexRoute: typeof DatasourcesIndexRoute
   ApiConnectorFileTokenRoute: typeof ApiConnectorFileTokenRoute
   ApiDatasourceUploadTokenRoute: typeof ApiDatasourceUploadTokenRoute
+  ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDatasourceUploadTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/oauth/google/callback': {
+      id: '/api/oauth/google/callback'
+      path: '/api/oauth/google/callback'
+      fullPath: '/api/oauth/google/callback'
+      preLoaderRoute: typeof ApiOauthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -352,6 +372,7 @@ const rootRouteChildren: RootRouteChildren = {
   DatasourcesIndexRoute: DatasourcesIndexRoute,
   ApiConnectorFileTokenRoute: ApiConnectorFileTokenRoute,
   ApiDatasourceUploadTokenRoute: ApiDatasourceUploadTokenRoute,
+  ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

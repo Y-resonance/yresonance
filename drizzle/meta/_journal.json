@@ -92,6 +92,13 @@
       "when": 1791664987609,
       "tag": "0012_tearful_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1791723258512,
+      "tag": "0013_rapid_jack_power",
+      "breakpoints": true
     }
   ]
 }

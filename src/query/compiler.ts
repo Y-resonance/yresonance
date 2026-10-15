@@ -47,6 +47,7 @@ export interface CompiledQuery {
 }
 
 export function compileWidgetQuery(context: QueryContext): CompiledQuery {
+  const quoteIdentifier = (value: string) => quoteSqlIdentifier(value, context.dialect);
   const definition = context.definition;
   if (!('dateRangeFieldId' in definition))
     throw new Error('This widget does not query a datasource.');
@@ -76,20 +77,24 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
             },
             context,
             definitions,
-          )} AS "upper_limit"`,
+          )} AS ${quoteIdentifier('upper_limit')}`,
         ]
       : []),
   ];
   const parameters: unknown[] = [];
   const conditions: string[] = [];
-  conditions.push(`${fieldExpression(definition.dateRangeFieldId, context)} BETWEEN ? AND ?`);
+  conditions.push(
+    `${comparisonField(definition.dateRangeFieldId, context, true)} BETWEEN ${comparisonParameter(definition.dateRangeFieldId, context, true)} AND ${comparisonParameter(definition.dateRangeFieldId, context, true)}`,
+  );
   parameters.push(resolved.start, resolved.end);
   if (definition.filter) conditions.push(compileFilter(definition.filter, context, parameters));
   for (const control of context.resolvedControls ?? []) {
     if (!control.values.length) continue;
-    const field = fieldExpression(control.fieldId, context);
+    const field = comparisonField(control.fieldId, context);
     parameters.push(...control.values);
-    conditions.push(`${field} IN (${control.values.map(() => '?').join(', ')})`);
+    conditions.push(
+      `${field} IN (${control.values.map(() => comparisonParameter(control.fieldId, context)).join(', ')})`,
+    );
   }
   const source = context.sourceSql
     ? context.sourceSql
@@ -103,11 +108,23 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
     (definition.showSummaryRow || (definition.showSubtotals && tableRowDimensions.length > 1));
   if (groupedTable) {
     select.push(
-      `GROUPING(${dimensionExpressions.slice(0, tableRowDimensions.length).join(', ')}) AS "__grouping"`,
+      context.dialect === 'bigquery'
+        ? `(${dimensionExpressions
+            .slice(0, tableRowDimensions.length)
+            .map(
+              (expression, index) =>
+                `GROUPING(${expression}) * ${2 ** (tableRowDimensions.length - index - 1)}`,
+            )
+            .join(' + ')}) AS ${quoteIdentifier('__grouping')}`
+        : `GROUPING(${dimensionExpressions.slice(0, tableRowDimensions.length).join(', ')}) AS ${quoteIdentifier('__grouping')}`,
     );
   }
   const dimensionPositions = dimensions.map((_, index) =>
-    context.dialect === 'clickhouse' ? dimensionExpressions[index] : index + 1,
+    context.dialect === 'bigquery'
+      ? quoteIdentifier(`dimension_${index + 1}`)
+      : context.dialect === 'clickhouse'
+        ? dimensionExpressions[index]
+        : index + 1,
   );
   const pivotPositions = pivotPosition === undefined ? [] : [dimensionPositions[pivotPosition - 1]];
   const groupingSets = groupedTable
@@ -134,7 +151,7 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
   const order = groupedTable
     ? [
         tableRowDimensions.length > 1 ? '1 ASC' : undefined,
-        '"__grouping" ASC',
+        `${quoteIdentifier('__grouping')} ASC`,
         explicitSort,
         stableDimensions,
       ]
@@ -151,7 +168,7 @@ export function compileWidgetQuery(context: QueryContext): CompiledQuery {
       ];
     });
     return {
-      sql: `SELECT ${bounds.join(', ')} FROM (SELECT ${select.join(', ')} FROM ${source} WHERE ${conditions.join(' AND ')}${groupBy}) AS scaled${groupedTable ? ' WHERE "__grouping" = 0' : ''}`,
+      sql: `SELECT ${bounds.join(', ')} FROM (SELECT ${select.join(', ')} FROM ${source} WHERE ${conditions.join(' AND ')}${groupBy}) AS scaled${groupedTable ? ` WHERE ${quoteIdentifier('__grouping')} = 0` : ''}`,
       parameters,
       definitions,
     };
@@ -179,6 +196,10 @@ function dimensionExpression(
     range,
     context.dateBucketTarget ?? 60,
   );
+  if (context.dialect === 'bigquery')
+    return granularity === 'raw'
+      ? `CAST(${expression} AS DATE)`
+      : `DATE_TRUNC(CAST(${expression} AS DATE), ${granularity === 'week' ? 'WEEK(MONDAY)' : granularity.toUpperCase()})`;
   return granularity === 'raw' ? expression : `DATE_TRUNC('${granularity}', ${expression})`;
 }
 
@@ -219,6 +240,10 @@ function metricExpression(
     if (metric.source.aggregation === 'median' && context.dialect === 'clickhouse') {
       // Widen integer operands before addition. Keep decimal scale and empty-result nulls.
       return `arrayReduce('sumOrNull', arrayMap(value -> CAST(value, replaceRegexpOne(toTypeName(value), 'U?Int[0-9]+', 'Float64')), [quantileExactLow(0.5)(${expression}), quantileExactHigh(0.5)(${expression})])) / 2`;
+    }
+    if (metric.source.aggregation === 'median' && context.dialect === 'bigquery') {
+      const values = `ARRAY_AGG(${expression} IGNORE NULLS ORDER BY ${expression})`;
+      return `(CAST(${values}[SAFE_OFFSET(DIV(COUNT(${expression}) - 1, 2))] AS BIGNUMERIC) / 2 + CAST(${values}[SAFE_OFFSET(DIV(COUNT(${expression}), 2))] AS BIGNUMERIC) / 2)`;
     }
     const aggregation = {
       sum: 'SUM',
@@ -270,7 +295,9 @@ function fieldExpression(fieldId: string, context: QueryContext) {
   const field = context.fields.find((item) => item.id === fieldId);
   if (field) {
     const identifier = quoteSqlIdentifier(field.columnName, context.dialect);
-    return field.castTo ? `CAST(${identifier} AS ${safeCast(field.castTo)})` : identifier;
+    return field.castTo
+      ? `CAST(${identifier} AS ${safeCast(field.castTo, context.dialect)})`
+      : identifier;
   }
   const calculated = context.calculatedFields.find((item) => item.id === fieldId);
   if (!calculated) throw new Error(`Unknown field ${fieldId}.`);
@@ -332,11 +359,11 @@ function compileFilter(
   parameters: unknown[],
 ) {
   const conditions = filter.conditions.map((condition) => {
-    const field = fieldExpression(condition.fieldId, context);
+    const field = comparisonField(condition.fieldId, context);
     if (condition.operator === 'isEmpty')
-      return `(${field} IS NULL OR ${context.dialect === 'clickhouse' ? `toString(${field})` : field} = '')`;
+      return `(${field} IS NULL OR ${context.dialect === 'clickhouse' ? `toString(${field})` : context.dialect === 'bigquery' ? `CAST(${field} AS STRING)` : field} = '')`;
     if (condition.operator === 'isNotEmpty')
-      return `(${field} IS NOT NULL AND ${context.dialect === 'clickhouse' ? `toString(${field})` : field} <> '')`;
+      return `(${field} IS NOT NULL AND ${context.dialect === 'clickhouse' ? `toString(${field})` : context.dialect === 'bigquery' ? `CAST(${field} AS STRING)` : field} <> '')`;
     const operators = {
       equals: '=',
       notEquals: '<>',
@@ -347,18 +374,58 @@ function compileFilter(
     } as const;
     if (condition.operator in operators) {
       parameters.push(condition.value);
-      return `${field} ${operators[condition.operator as keyof typeof operators]} ?`;
+      return `${field} ${operators[condition.operator as keyof typeof operators]} ${comparisonParameter(condition.fieldId, context)}`;
     }
     if (condition.operator === 'contains' || condition.operator === 'notContains') {
       parameters.push(`%${String(condition.value ?? '')}%`);
+      if (context.dialect === 'bigquery')
+        return `${condition.operator === 'notContains' ? 'NOT ' : ''}(LOWER(CAST(${field} AS STRING)) LIKE LOWER(?))`;
       return `${field} ${condition.operator === 'notContains' ? 'NOT ' : ''}ILIKE ?`;
     }
     const values = Array.isArray(condition.value) ? condition.value : [condition.value];
     if (!values.length) return condition.operator === 'in' ? 'FALSE' : 'TRUE';
     parameters.push(...values);
-    return `${field} ${condition.operator === 'notIn' ? 'NOT ' : ''}IN (${values.map(() => '?').join(', ')})`;
+    return `${field} ${condition.operator === 'notIn' ? 'NOT ' : ''}IN (${values.map(() => comparisonParameter(condition.fieldId, context)).join(', ')})`;
   });
   return `(${conditions.join(filter.connector === 'or' ? ' OR ' : ' AND ') || 'TRUE'})`;
+}
+
+// Field side of a filter, control, drill or date range predicate. BigQuery date dimensions are
+// emitted as DATE, so date fields are compared at day precision regardless of column type. The
+// date range field is always a date predicate, whatever semantic type the editor assigned it.
+function comparisonField(
+  fieldId: string,
+  context: QueryContext,
+  asDate = isDateField(fieldId, context),
+) {
+  const expression = fieldExpression(fieldId, context);
+  return context.dialect === 'bigquery' && asDate ? `CAST(${expression} AS DATE)` : expression;
+}
+
+// Parameter side of the same predicates. Control, drill and filter values arrive as strings and
+// GoogleSQL does not coerce string parameters to numbers or dates, unlike string literals.
+function comparisonParameter(
+  fieldId: string,
+  context: QueryContext,
+  asDate = isDateField(fieldId, context),
+) {
+  if (context.dialect !== 'bigquery') return '?';
+  if (asDate) return 'CAST(? AS DATE)';
+  const raw = context.fields.find((field) => field.id === fieldId);
+  const field = raw ?? context.calculatedFields.find((field) => field.id === fieldId);
+  const type = raw?.castTo
+    ? safeCast(raw.castTo, 'bigquery')
+    : field && formulaTypeForSemanticType(field.semanticType) === 'number'
+      ? 'BIGNUMERIC'
+      : undefined;
+  return type ? `CAST(? AS ${type})` : '?';
+}
+
+function isDateField(fieldId: string, context: QueryContext) {
+  const field =
+    context.fields.find((field) => field.id === fieldId) ??
+    context.calculatedFields.find((field) => field.id === fieldId);
+  return field !== undefined && formulaTypeForSemanticType(field.semanticType) === 'date';
 }
 
 function compileSort(
@@ -392,7 +459,8 @@ export function compileSourceSqlFromBaseUrl(
   baseUrl: string,
   objectKeys?: string[],
 ) {
-  if (dataSource.location.kind === 'clickhouse') throw new Error('File source required.');
+  if (dataSource.location.kind !== 'object' && dataSource.location.kind !== 'prefix')
+    throw new Error('File source required.');
   const key =
     dataSource.location.kind === 'prefix'
       ? `${dataSource.location.key}*.${dataSource.location.format}`
@@ -405,7 +473,8 @@ export function compileSourceSqlFromBaseUrl(
 }
 
 export function compileSourceSqlFromUrls(dataSource: DataSourceRecord, urls: string[]) {
-  if (dataSource.location.kind === 'clickhouse') throw new Error('File source required.');
+  if (dataSource.location.kind !== 'object' && dataSource.location.kind !== 'prefix')
+    throw new Error('File source required.');
   const uris = urls.map((url) => sqlString(url));
   const source = uris.length === 1 ? uris[0] : `[${uris.join(', ')}]`;
   return dataSource.location.format === 'csv'
@@ -419,13 +488,24 @@ function sourceUrl(baseUrl: string, key: string) {
   return `${base}/${key.split('/').map(encodeURIComponent).join('/')}`;
 }
 
-function quoteIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
-}
 function sqlString(value: string) {
   return `'${value.replaceAll("'", "''")}'`;
 }
-function safeCast(value: string) {
+function safeCast(value: string, dialect?: SqlDialect) {
+  if (dialect === 'bigquery') {
+    const types: Record<string, string> = {
+      VARCHAR: 'STRING',
+      TEXT: 'STRING',
+      BIGINT: 'INT64',
+      INTEGER: 'INT64',
+      DOUBLE: 'FLOAT64',
+      FLOAT: 'FLOAT64',
+      BOOLEAN: 'BOOL',
+      'TIMESTAMP WITH TIME ZONE': 'TIMESTAMP',
+    };
+    if (types[value.toUpperCase()]) return types[value.toUpperCase()];
+    if (/^DECIMAL\(/iu.test(value)) return 'BIGNUMERIC';
+  }
   if (!/^[A-Z][A-Z0-9_]*(?:\([0-9, ]+\))?$/iu.test(value))
     throw new Error(`Invalid cast type ${value}.`);
   return value;
@@ -435,7 +515,7 @@ function rawFormulaFields(fields: FieldRecord[], dialect?: SqlDialect): FormulaF
   return fields.map((field) => ({
     canonicalName: field.canonicalName,
     sql: field.castTo
-      ? `CAST(${quoteSqlIdentifier(field.columnName, dialect)} AS ${safeCast(field.castTo)})`
+      ? `CAST(${quoteSqlIdentifier(field.columnName, dialect)} AS ${safeCast(field.castTo, dialect)})`
       : quoteSqlIdentifier(field.columnName, dialect),
     type: formulaTypeForSemanticType(field.semanticType),
   }));

@@ -18,6 +18,7 @@ import {
   libraryMetricApplies,
 } from './datasource-operations.server';
 import { authorizeDashboard, dashboardUsesDataSource } from './dashboard-access.server';
+import type { SqlDialect } from '#/query/dialect';
 
 export async function listLibraryMetrics() {
   const session = await requireSession();
@@ -82,9 +83,14 @@ export async function upsertCalculatedField(
 export async function validateCalculatedField(
   request: Extract<ApiRequest, { action: 'validateCalculatedField' }>,
 ) {
-  const { metadata, canonicalName } = await calculatedFieldContext(request);
+  const { dataSource, metadata, canonicalName } = await calculatedFieldContext(request);
   try {
-    const compiled = validateCalculatedFieldExpression(request, metadata, canonicalName);
+    const compiled = validateCalculatedFieldExpression(
+      request,
+      metadata,
+      canonicalName,
+      dataSource.location.kind === 'bigquery' ? 'bigquery' : undefined,
+    );
     return { valid: true as const, type: compiled.type, identifiers: compiled.identifiers };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -126,10 +132,13 @@ export async function previewCalculatedFieldValues(
 export async function validateMetricExpression(
   request: Extract<ApiRequest, { action: 'validateMetricExpression' }>,
 ) {
-  const { metadata } = await datasourceFormulaContext(request);
+  const { dataSource, metadata } = await datasourceFormulaContext(request);
   try {
     if (!request.expression.trim()) throw new Error('A formula is required.');
-    const compiled = validateAggregateFormula(request.expression, metadata);
+    const compiled = validateAggregateFormula(request.expression, {
+      ...metadata,
+      dialect: dataSource.location.kind === 'bigquery' ? 'bigquery' : undefined,
+    });
     return { valid: true as const, type: compiled.type, identifiers: compiled.identifiers };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -191,6 +200,7 @@ function validateCalculatedFieldExpression(
   >,
   metadata: Awaited<ReturnType<typeof loadQueryMetadata>>,
   canonicalName: string,
+  dialect?: SqlDialect,
 ) {
   assertCalculatedFieldNameAvailable(canonicalName, metadata, request.id);
   const semanticType = request.semanticType;
@@ -209,7 +219,7 @@ function validateCalculatedFieldExpression(
   ];
   return validateRowFormula(
     request.expression,
-    { fields: metadata.fields, calculatedFields },
+    { fields: metadata.fields, calculatedFields, dialect },
     semanticType,
   );
 }

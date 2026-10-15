@@ -121,6 +121,12 @@ export function compileFormula(
       if (['+', '-', '*', '/', '%'].includes(current.operator)) {
         requireType(left.type, 'number', current.operator);
         requireType(right.type, 'number', current.operator);
+        if (options.dialect === 'bigquery' && current.operator === '/')
+          return { sql: `SAFE_DIVIDE(${left.sql}, ${right.sql})`, type: 'number' };
+        if (options.dialect === 'bigquery' && current.operator === '%')
+          // Formula types do not distinguish FLOAT64 from exact numbers. GoogleSQL MOD rejects
+          // floats, and coercing every operand to a decimal would change range and precision.
+          throw new Error('BigQuery does not support remainder (%) formulas.');
         if (current.operator === '/' && options.dialect === 'clickhouse')
           // DuckDB division returns floating-point ratios, including decimal operands.
           return { sql: `divide(toFloat64(${left.sql}), toFloat64(${right.sql}))`, type: 'number' };
@@ -210,6 +216,8 @@ function compileCall(
     if (args.length < 1 || args.length > 2) throw new Error('round expects one or two arguments.');
     requireType(args[0].type, 'number', name);
     if (args[1]) requireType(args[1].type, 'number', name);
+    if (dialect === 'bigquery' && args[1])
+      return { sql: `ROUND(${args[0].sql}, CAST(${args[1].sql} AS INT64))`, type: 'number' };
     if (dialect === 'clickhouse') {
       const precision = args[1] ? `ifNull(toInt32(round(${args[1].sql})), 0)` : '0';
       const precisionIsNull = args[1] ? `isNull(${args[1].sql})` : 'false';
@@ -251,6 +259,8 @@ function compileCall(
           : `${name === 'starts_with' ? 'startsWith' : 'endsWith'}(${args[0].sql}, ${args[1].sql})`;
       return { sql, type: 'boolean' };
     }
+    if (dialect === 'bigquery' && name === 'contains')
+      return { sql: `(STRPOS(${args[0].sql}, ${args[1].sql}) > 0)`, type: 'boolean' };
     const sqlName: Record<string, string> = {
       contains: 'CONTAINS',
       starts_with: 'STARTS_WITH',
@@ -276,6 +286,20 @@ function compileCall(
     requireArgumentCount(name, args, 2);
     requireType(args[0].type, 'text', name);
     requireType(args[1].type, 'date', name);
+    if (dialect === 'bigquery') {
+      const part = args[0].sql
+        .match(/^'(year|quarter|month|week|day|dow|doy|hour|minute|second)'$/iu)?.[1]
+        .toLowerCase();
+      if (!part)
+        throw new Error(
+          'BigQuery date_part requires a literal year, quarter, month, week, day, dow, doy, hour, minute, or second.',
+        );
+      const parts: Record<string, string> = { week: 'ISOWEEK', dow: 'DAYOFWEEK', doy: 'DAYOFYEAR' };
+      return {
+        sql: `(EXTRACT(${parts[part] ?? part.toUpperCase()} FROM ${args[1].sql})${part === 'dow' ? ' - 1' : ''})`,
+        type: 'number',
+      };
+    }
     return { sql: `DATE_PART(${args[0].sql}, ${args[1].sql})`, type: 'number' };
   }
   if (name === 'nullif') {

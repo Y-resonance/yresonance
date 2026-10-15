@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { DatasourceCacheFields } from './datasource-cache-fields';
+import { dataSourceLocationSchema } from '#/domain/schema';
 import type { DatasourceCachePolicy } from '#/domain/schema';
 import type { DatasourceProviderDefinition } from '#/data/providers/catalog';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -46,8 +47,11 @@ export function DatasourceRegisterForm({
       provider.connectionFields.map((field) => [field.name, field.defaultValue ?? '']),
     ),
   );
-  const [database, setDatabase] = useState('');
-  const [table, setTable] = useState('');
+  const [sourceFields, setSourceFields] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      (provider.sourceFields ?? []).map((field) => [field.name, field.defaultValue ?? '']),
+    ),
+  );
   const [cachePolicy, setCachePolicy] = useState<DatasourceCachePolicy>({ mode: 'default' });
   const [useExistingData, setUseExistingData] = useState(!provider.supportsUploads);
   const objectsQuery = useR2Objects(useExistingData && provider.supportsWorkspaceFiles);
@@ -104,7 +108,7 @@ export function DatasourceRegisterForm({
           connection: provider.connectionFields.length ? connection : undefined,
           location:
             provider.source === 'table'
-              ? { kind: 'clickhouse', database, table, ownership: 'external', cacheTtlSeconds: 300 }
+              ? dataSourceLocationSchema.parse({ ...provider.sourceDefaults, ...sourceFields })
               : { kind, key, format: inferredExistingFormat ?? format },
         });
         onRegistered(registered);
@@ -332,27 +336,24 @@ export function DatasourceRegisterForm({
         </Field>
         {useExistingData && provider.source === 'table' ? (
           <>
-            <Field>
-              <FieldLabel htmlFor="source-database">Database</FieldLabel>
-              <Input
-                id="source-database"
-                value={database}
-                required
-                disabled={busy}
-                onChange={(event) => setDatabase(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="source-table">Table</FieldLabel>
-              <Input
-                id="source-table"
-                value={table}
-                required
-                disabled={busy}
-                onChange={(event) => setTable(event.target.value)}
-              />
-              <FieldDescription>Choose the table to use for reporting.</FieldDescription>
-            </Field>
+            {provider.sourceFields?.map((field) => (
+              <Field key={field.name}>
+                <FieldLabel htmlFor={`source-${field.name}`}>{field.label}</FieldLabel>
+                <Input
+                  id={`source-${field.name}`}
+                  type={field.type ?? 'text'}
+                  value={sourceFields[field.name] ?? ''}
+                  required={!field.optional}
+                  disabled={busy}
+                  onChange={(event) =>
+                    setSourceFields((current) => ({
+                      ...current,
+                      [field.name]: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+            ))}
           </>
         ) : useExistingData ? (
           <>

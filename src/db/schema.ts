@@ -57,6 +57,25 @@ export const datasourceConnections = sqliteTable('datasource_connections', {
   encryptedConfig: text('encrypted_config').notNull(),
 });
 
+// OAuth grants are reusable within one workspace. Tokens stay outside datasource metadata.
+export const datasourceAuthorizations = sqliteTable(
+  'datasource_authorizations',
+  {
+    id: text().primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    provider: text().notNull(),
+    createdBy: text('created_by').notNull(),
+    account: text(),
+    status: text().notNull(),
+    encryptedConfig: text('encrypted_config'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('datasource_authorizations_workspace_idx').on(table.workspaceId)],
+);
+
 export const datasourceUploads = sqliteTable(
   'datasource_uploads',
   {

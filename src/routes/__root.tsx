@@ -54,7 +54,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootDocument({ children }: { children: ReactNode }) {
   const analytics = Route.useLoaderData();
   return (
-    <html lang="en">
+    // The pre-paint theme script owns this element's class before React hydrates.
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Applies the stored theme (or the OS preference) before first paint,
             so a dark-mode visitor never sees a light flash. Must stay inline

@@ -13,6 +13,8 @@ import {
 } from '#/domain/datasource-upload';
 import { ApiError } from '#/server/errors';
 import type { AnalyticsDataBackend } from '#/data/analytics-data-backend';
+import { bigqueryBackend } from '#/data/connectors/bigquery.server';
+import { authorizationReferenceSchema } from '#/data/google-oauth.server';
 
 function managedSource(
   request: Extract<ApiRequest, { action: 'registerDatasource' }>,
@@ -23,6 +25,12 @@ function managedSource(
     throw new ApiError(400, 'invalid_connection', 'Managed providers do not accept credentials.');
   const location = request.location;
   // Retain authorized tables from the original API. New managed setup offers uploads only.
+  if (location.kind === 'bigquery')
+    throw new ApiError(
+      400,
+      'invalid_datasource_location',
+      'Choose a file or ClickHouse table for this provider.',
+    );
   if (location.kind === 'clickhouse') {
     if (!requiresUpload || location.ownership !== 'external' || request.cleanupToken)
       throw new ApiError(
@@ -117,7 +125,7 @@ export const providers: readonly DatasourceProvider[] = [
   })),
   provider('duckdb-s3', s3DuckdbBackend(), (request) => {
     externalSource(request);
-    if (request.location.kind === 'clickhouse')
+    if (request.location.kind !== 'object' && request.location.kind !== 'prefix')
       throw new ApiError(400, 'invalid_datasource_location', 'Choose an S3 file or prefix.');
     if (request.location.key.split('/').some((segment) => segment === '.' || segment === '..'))
       throw new ApiError(
@@ -139,6 +147,13 @@ export const providers: readonly DatasourceProvider[] = [
     const connection = clickhouseConnectionSchema.parse(request.connection);
     return { connection, backend: externalClickhouseBackend(async () => connection) };
   }),
+  provider('bigquery', bigqueryBackend(), (request) => {
+    externalSource(request);
+    if (request.location.kind !== 'bigquery')
+      throw new ApiError(400, 'invalid_datasource_location', 'Choose a BigQuery table or view.');
+    const connection = authorizationReferenceSchema.parse(request.connection);
+    return { connection, backend: bigqueryBackend(async () => connection) };
+  }),
 ];
 
 export function datasourceProvider(id: string) {
@@ -157,8 +172,10 @@ export function registrationProvider(
 ) {
   return datasourceProvider(
     request.provider ??
-      (request.backend === 'clickhouse' || request.location.kind === 'clickhouse'
-        ? 'clickhouse'
-        : 'duckdb-file'),
+      (request.backend === 'bigquery' || request.location.kind === 'bigquery'
+        ? 'bigquery'
+        : request.backend === 'clickhouse' || request.location.kind === 'clickhouse'
+          ? 'clickhouse'
+          : 'duckdb-file'),
   );
 }

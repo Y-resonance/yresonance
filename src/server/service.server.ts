@@ -1,3 +1,4 @@
+import { browseDatasource } from './datasource-catalog.server';
 import { type ApiRequest } from '#/api/contracts';
 import { ApiError } from './errors';
 import { recordProductMetric } from '#/observability';
@@ -49,6 +50,11 @@ import {
 } from './formulas.server';
 import { authorizeDashboard } from './dashboard-access.server';
 import { shareDashboard } from './sharing.server';
+import {
+  listDatasourceConnections,
+  beginDatasourceConnection,
+  disconnectDatasourceConnection,
+} from '#/data/google-oauth.server';
 
 export async function executeRequest(request: ApiRequest): Promise<unknown> {
   const startedAt = Date.now();
@@ -77,6 +83,14 @@ export async function executeRequest(request: ApiRequest): Promise<unknown> {
 
 async function dispatchRequest(request: ApiRequest): Promise<unknown> {
   switch (request.action) {
+    case 'browseDatasource':
+      return browseDatasource(request);
+    case 'listDatasourceConnections':
+      return listDatasourceConnections(request.provider, request.dataSourceId);
+    case 'beginDatasourceConnection':
+      return beginDatasourceConnection(request);
+    case 'disconnectDatasourceConnection':
+      return disconnectDatasourceConnection(request.connectionId);
     case 'addPage':
       return addPage(request);
     case 'updatePage':

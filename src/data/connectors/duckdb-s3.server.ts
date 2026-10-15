@@ -19,7 +19,7 @@ export function s3DuckdbBackend(connection = loadConnection): AnalyticsDataBacke
     const config = s3ConnectionSchema.parse(await connection(source));
     const storage = s3Storage(config);
     const location = source.location;
-    if (location.kind === 'clickhouse')
+    if (location.kind !== 'object' && location.kind !== 'prefix')
       throw new DatasourceError('invalid_query', 'Choose a file source.');
     const files =
       location.kind === 'object'

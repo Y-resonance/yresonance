@@ -92,7 +92,8 @@ export async function deleteSourceObject(key: string) {
 
 export async function resolveDataSource(dataSource: DataSourceRecord, queryId: string) {
   const location = dataSource.location;
-  if (location.kind === 'clickhouse') throw new Error('File source required.');
+  if (location.kind !== 'object' && location.kind !== 'prefix')
+    throw new Error('File source required.');
   if (!usesR2()) {
     const keys =
       location.kind === 'object'

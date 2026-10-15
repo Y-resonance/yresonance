@@ -13,4 +13,5 @@ Use cf CLI for investiating deployment-relevant topics.
 - Read [architecture](docs/architecture.md) when changing query execution, storage, authentication, or preview example seeding.
 - Read [product and architecture decisions](docs/decisions.md) before changing product behavior or architecture.
 - Read [WebMCP usage](docs/webmcp-usage.md) when changing page tools, their contracts, or permissions.
+- Read [BigQuery setup](docs/bigquery.md) when changing the Google connection, BigQuery query limits, or their external configuration.
 - Read [preview environments and deployment](docs/preview-environments.md) when changing Cloudflare deployment or preview isolation. For build activation, cleanup, or recovery, also read [the native preview rollout](docs/native-previews.md).

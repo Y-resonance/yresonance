@@ -1,12 +1,14 @@
-export type SqlDialect = 'duckdb' | 'clickhouse';
+export type SqlDialect = 'duckdb' | 'clickhouse' | 'bigquery';
 
 export function quoteSqlIdentifier(value: string, dialect: SqlDialect = 'duckdb') {
-  const escaped = dialect === 'clickhouse' ? value.replaceAll('\\', '\\\\') : value;
+  if (dialect === 'bigquery') return `\`${value.replaceAll('\\', '\\\\').replaceAll('`', '\\`')}\``;
+  const escaped = dialect !== 'duckdb' ? value.replaceAll('\\', '\\\\') : value;
   return `"${escaped.replaceAll('"', '""')}"`;
 }
 
 export function sqlLiteral(value: string, dialect: SqlDialect = 'duckdb') {
-  const escaped = dialect === 'clickhouse' ? value.replaceAll('\\', '\\\\') : value;
+  const escaped = dialect !== 'duckdb' ? value.replaceAll('\\', '\\\\') : value;
+  if (dialect === 'bigquery') return `'${escaped.replaceAll("'", "\\'")}'`;
   return `'${escaped.replaceAll("'", "''")}'`;
 }
 

@@ -59,7 +59,7 @@ export type DatasourceExpression =
 
 export interface DatasourceInspection {
   version: string;
-  description: Array<{ column_name: string; column_type: string }>;
+  description: Array<{ column_name: string; column_type: string; cast_to?: string }>;
   samples: Record<string, unknown>[];
 }
 

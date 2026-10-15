@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   aggregationSchema,
+  bigqueryDatasetIdSchema,
+  bigqueryProjectIdSchema,
   controlStateSchema,
   dataSourceLocationSchema,
   datasourceCachePolicySchema,
@@ -152,6 +154,14 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('listDataSources') }),
   z.object({ action: z.literal('listDatasourceProviders') }),
+  z.object({
+    action: z.literal('browseDatasource'),
+    provider: z.literal('bigquery'),
+    connectionId: z.string().min(1),
+    project: bigqueryProjectIdSchema.optional(),
+    dataset: bigqueryDatasetIdSchema.optional(),
+    cursor: z.string().max(4096).optional(),
+  }),
   z.object({ action: z.literal('listLibraryMetrics') }),
   z.object({
     action: z.literal('describeDatasource'),
@@ -174,12 +184,27 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('registerDatasource'),
     cachePolicy: datasourceCachePolicySchema.optional(),
-    backend: z.enum(['duckdb', 'clickhouse']).optional(),
+    backend: z.enum(['duckdb', 'clickhouse', 'bigquery']).optional(),
     provider: z.string().min(1).optional(),
     connection: z.record(z.string(), z.string()).optional(),
     name: z.string().trim().min(1),
     location: dataSourceLocationSchema,
     cleanupToken: z.string().min(1).optional(),
+  }),
+  z.object({
+    action: z.literal('listDatasourceConnections'),
+    provider: z.string().min(1),
+    dataSourceId: z.string().min(1).optional(),
+  }),
+  z.object({
+    action: z.literal('beginDatasourceConnection'),
+    provider: z.string().min(1),
+    connectionId: z.string().min(1).optional(),
+    dataSourceId: z.string().min(1).optional(),
+  }),
+  z.object({
+    action: z.literal('disconnectDatasourceConnection'),
+    connectionId: z.string().min(1),
   }),
   z.object({
     action: z.literal('updateDatasource'),
@@ -280,3 +305,8 @@ export const apiResponseSchema = z.discriminatedUnion('ok', [
     error: z.object({ code: z.string(), message: z.string(), issues: z.unknown().optional() }),
   }),
 ]);
+
+export interface DatasourceCatalogPage {
+  entries: Array<{ id: string; label: string; location?: string; type?: string }>;
+  cursor?: string;
+}

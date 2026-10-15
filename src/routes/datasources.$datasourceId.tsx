@@ -4,6 +4,7 @@ import { ArrowLeftIcon, PlusIcon } from 'lucide-react';
 import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { useApi, useApiQuery } from '#/api/query';
 import { DatasourceCacheSettings } from '#/components/datasource-cache-settings';
+import { DatasourceConnectionFields } from '#/components/datasource-connection-fields';
 import { AppShell } from '#/components/app-shell';
 import { CalculatedFieldDialog } from '#/components/calculated-field-dialog';
 import {
@@ -193,9 +194,11 @@ function DatasourceContent() {
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight">{description.name}</h1>
                 <p className="mt-1 font-mono text-xs text-muted-foreground">
-                  {description.location.kind === 'clickhouse'
-                    ? `ClickHouse · ${description.location.database}.${description.location.table}`
-                    : `${description.location.kind === 'prefix' ? 'Prefix' : 'Object'} ${description.location.key} · ${description.location.format.toUpperCase()}`}
+                  {description.location.kind === 'bigquery'
+                    ? `BigQuery · ${description.location.project}.${description.location.dataset}.${description.location.table}`
+                    : description.location.kind === 'clickhouse'
+                      ? `ClickHouse · ${description.location.database}.${description.location.table}`
+                      : `${description.location.kind === 'prefix' ? 'Prefix' : 'Object'} ${description.location.key} · ${description.location.format.toUpperCase()}`}
                 </p>
               </div>
               {isAdmin ? (
@@ -206,6 +209,9 @@ function DatasourceContent() {
               ) : null}
             </div>
           </div>
+          {description.location.kind === 'bigquery' ? (
+            <DatasourceConnectionFields provider="bigquery" dataSourceId={datasourceId} />
+          ) : null}
           <div
             role="toolbar"
             aria-label="Datasource settings"

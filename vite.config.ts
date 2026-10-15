@@ -106,6 +106,14 @@ export default defineConfig(({ command, mode }) => ({
                   process.env.INTERNAL_R2_SIGNING_SECRET ?? 'yresonance-local-internal-r2-only',
                 UPLOAD_SIGNING_SECRET:
                   process.env.UPLOAD_SIGNING_SECRET ?? 'yresonance-local-upload-only',
+                ...Object.fromEntries(
+                  [
+                    'GOOGLE_OAUTH_CLIENT_ID',
+                    'GOOGLE_OAUTH_CLIENT_SECRET',
+                    'GOOGLE_OAUTH_REDIRECT_URI',
+                    'GOOGLE_OAUTH_HOSTED_DOMAIN',
+                  ].flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : [])),
+                ),
                 ...(process.env.RESET_ADMIN_TOKEN
                   ? { RESET_ADMIN_TOKEN: process.env.RESET_ADMIN_TOKEN }
                   : {}),
