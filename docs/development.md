@@ -6,7 +6,8 @@ Upload CSV and Parquet files from the datasource registration screen or place th
 `dev-data/`. Local workspaces see those files under their tenant-scoped
 `ws/<workspaceId>/` prefix. Vite serves the files with upload, deletion, and range
 request support so the query engine can read them without R2 credentials or a
-separate object-storage service.
+separate object-storage service. The local file and query routes require a loopback host and reject foreign browser origins.
+The query route requires `application/json` and accepts at most 1 MiB per request.
 
 For example:
 

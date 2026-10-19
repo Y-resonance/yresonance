@@ -8,6 +8,17 @@ const fields: FormulaField[] = [
 ];
 
 describe('formula compiler', () => {
+  it('bounds deeply nested and long flat formulas before recursive compilation', () => {
+    for (const formula of [
+      '('.repeat(300) + '1' + ')'.repeat(300),
+      Array(300).fill('1').join('+'),
+    ]) {
+      expect(() => compileFormula(formula, { mode: 'row', fields })).toThrow(
+        'Formula is too complex',
+      );
+    }
+  });
+
   it.each([
     { mode: 'row' as const, formula: 'media_cost % 2' },
     { mode: 'row' as const, formula: '(media_cost / impressions) % 2' },

@@ -1,3 +1,4 @@
+import { BodyTooLargeError, readRequestBytes } from '../http/body';
 import { env } from 'cloudflare:workers';
 import { ANALYTICS_PROXY_PATH, posthogHosts } from './config';
 
@@ -27,19 +28,23 @@ async function forwardAnalyticsRequest(request: Request, url: URL) {
 
   let response: Response;
   try {
+    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(15_000)]);
     response = await fetch(
       new Request(upstream, {
         method: request.method,
         headers,
         body:
           request.method !== 'GET' && request.method !== 'HEAD'
-            ? await request.arrayBuffer()
+            ? await readRequestBytes(request, 2 * 1024 * 1024, signal)
             : null,
         redirect: 'follow',
+        signal,
       }),
       isAsset && request.method === 'GET' ? { cf: { cacheEverything: true } } : undefined,
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof BodyTooLargeError)
+      return new Response(null, { status: 413, headers: { 'Cache-Control': 'no-store' } });
     console.warn('yresonance.analytics_proxy_failed');
     return new Response(null, { status: 502, headers: { 'Cache-Control': 'no-store' } });
   }

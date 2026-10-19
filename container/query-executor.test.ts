@@ -53,6 +53,41 @@ describe('query executor', () => {
     expect(execute).not.toHaveBeenCalledWith('cancelled');
   });
 
+  it('bounds queued work and releases capacity after completion', async () => {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const enqueue = createQueryExecutor(async () => {
+      await gate;
+      return 'done';
+    });
+    const pending = Array.from({ length: 32 }, (_, index) =>
+      enqueue(index, { queryId: String(index) }),
+    );
+    try {
+      await expect(enqueue('overflow', { queryId: 'overflow' })).rejects.toThrow('queue is full');
+    } finally {
+      release();
+      await Promise.all(pending);
+    }
+    await expect(enqueue('next', { queryId: 'next' })).resolves.toMatchObject({ data: 'done' });
+  });
+
+  it('propagates cancellation after a request has started', async () => {
+    const controller = new AbortController();
+    const enqueue = createQueryExecutor(
+      async (_input, signal) =>
+        new Promise((_, reject) => {
+          signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+        }),
+    );
+    const running = enqueue('running', { queryId: 'running', signal: controller.signal });
+    await Promise.resolve();
+    controller.abort(new Error('caller disconnected'));
+    await expect(running).rejects.toThrow('caller disconnected');
+  });
+
   it('does not start a request whose caller deadline has passed', async () => {
     const execute = vi.fn<(input: unknown) => Promise<unknown>>((input) => Promise.resolve(input));
     const enqueue = createQueryExecutor(execute);

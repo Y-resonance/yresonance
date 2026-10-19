@@ -47,6 +47,25 @@ test('dashboard management tools keep context and disappear in viewer preview', 
     ),
   ).not.toHaveProperty('dashboardId');
 
+  const pinnedRequest = page.waitForRequest(
+    (request) =>
+      request.url().endsWith('/api/yresonance') && request.postDataJSON().action === 'getDashboard',
+  );
+  await page.evaluate(async () => {
+    const tool = (document.modelContext as unknown as TestModelContext).tools.get('getDashboard');
+    if (!tool) throw new Error('Read tool missing');
+    await tool.execute({
+      action: 'updateDashboard',
+      dashboardId: 'other-dashboard',
+      shareToken: 'other-share-token',
+      name: 'Changed',
+    });
+  });
+  expect((await pinnedRequest).postDataJSON()).toEqual({
+    action: 'getDashboard',
+    dashboardId: 'dash_demo',
+  });
+
   const request = page.waitForRequest(
     (request) =>
       request.url().endsWith('/api/yresonance') &&

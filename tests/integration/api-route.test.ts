@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { Route } from '../../src/routes/api.yresonance';
 import { signOut } from './doubles/clerk';
 import { queryEngine } from './doubles/query-engine';
 import {
@@ -31,6 +32,50 @@ describe('POST /api/yresonance', () => {
     const body = await envelope(response);
     expect(body.ok).toBe(true);
     expect(body.data).toMatchObject({ workspace: { id: workspace.workspaceId } });
+  });
+
+  test('rejects cross-origin, non-JSON and oversized requests before service execution', async () => {
+    await signInToNewWorkspace();
+    const handlers = Route.options.server!.handlers!;
+    if (typeof handlers === 'function') throw new Error('Expected configured handlers');
+    const handler = handlers.POST;
+    if (typeof handler !== 'function') throw new Error('POST handler missing');
+    for (const [headers, body, status] of [
+      [
+        { 'content-type': 'application/json', origin: 'https://attacker.test' },
+        '{"action":"bootstrap"}',
+        403,
+      ],
+      [{ 'content-type': 'text/plain' }, '{"action":"bootstrap"}', 415],
+      [{ 'content-type': 'application/json' }, 'x'.repeat(1024 * 1024 + 1), 413],
+      [{ 'content-type': 'application/json' }, '{', 400],
+    ] as const) {
+      const response = await handler({
+        request: new Request('https://yresonance.test/api/yresonance', {
+          method: 'POST',
+          headers,
+          body,
+        }),
+      } as Parameters<typeof handler>[0]);
+      if (!(response instanceof Response)) throw new Error('Expected an HTTP response');
+      expect(response.status).toBe(status);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+    }
+  });
+
+  test('bounds validation details for large malformed arrays', async () => {
+    await signInToNewWorkspace();
+    const response = await postApiRequest({
+      action: 'updateLayout',
+      dashboardId: 'missing',
+      pageId: 'missing',
+      canvasRows: 10,
+      placements: Array(100).fill({}),
+    });
+    expect(response.status).toBe(400);
+    const issues = (await envelope(response)).error?.issues;
+    expect(issues).toBeInstanceOf(Array);
+    expect((issues as unknown[]).length).toBeLessThanOrEqual(20);
   });
 
   test('an unknown action is rejected before the service runs', async () => {

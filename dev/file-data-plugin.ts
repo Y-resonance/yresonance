@@ -1,6 +1,8 @@
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, readdir, rename, stat, unlink } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { Transform } from 'node:stream';
+import { allowDevRequest } from './request-guard.ts';
 import { pipeline } from 'node:stream/promises';
 import type { Plugin } from 'vite';
 import { paginateObjects } from '../src/data/listing.ts';
@@ -21,6 +23,8 @@ export function fileDataPlugin(directory = 'dev-data'): Plugin {
         try {
           const url = new URL(request.url ?? '/', 'http://localhost');
           if (url.pathname !== route && !url.pathname.startsWith(`${route}/`)) return next();
+
+          if (!allowDevRequest(request, response)) return;
 
           if (url.pathname === route) {
             if (request.method !== 'GET') return methodNotAllowed(response);
@@ -65,7 +69,19 @@ export function fileDataPlugin(directory = 'dev-data'): Plugin {
               `.${basename(file)}.${crypto.randomUUID()}.upload`,
             );
             try {
-              await pipeline(request, createWriteStream(temporaryFile));
+              let bytes = 0;
+              const limit = new Transform({
+                transform(chunk: Buffer, _encoding, callback) {
+                  bytes += chunk.byteLength;
+                  callback(
+                    bytes > contentLength ? new Error('Upload exceeds its declared size.') : null,
+                    chunk,
+                  );
+                },
+              });
+              await pipeline(request, limit, createWriteStream(temporaryFile));
+              if (bytes !== contentLength)
+                throw new Error('Upload size does not match Content-Length.');
               await rename(temporaryFile, file);
             } catch (error) {
               await unlink(temporaryFile).catch(() => undefined);

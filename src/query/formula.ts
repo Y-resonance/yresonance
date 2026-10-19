@@ -85,7 +85,19 @@ export function compileFormula(
   }
   const identifiers = new Set<string>();
 
+  let expansionWork = 0;
   const compile = (
+    current: FormulaNode,
+    aggregateDepth = 0,
+  ): { sql: string; type: FormulaType } => {
+    const result = compileNode(current, aggregateDepth);
+    expansionWork += result.sql.length;
+    if (result.sql.length > 100_000 || expansionWork > 1_000_000)
+      throw new Error('Formula expansion exceeds the SQL complexity limit.');
+    return result;
+  };
+
+  const compileNode = (
     current: FormulaNode,
     aggregateDepth = 0,
   ): { sql: string; type: FormulaType } => {
@@ -432,6 +444,8 @@ function binaryOperator(token: Token) {
 }
 
 function tokenize(source: string) {
+  if (source.length > 16_000)
+    throw new Error('Formula is too complex. Use at most 16,000 characters.');
   if (!source.trim()) throw new Error('Formula cannot be empty.');
   const tokens: Token[] = [];
   let index = 0;
@@ -517,6 +531,7 @@ function tokenize(source: string) {
     }
     throw new Error(`Unexpected ${character} at position ${position + 1}.`);
   }
+  if (tokens.length > 256) throw new Error('Formula is too complex. Use at most 256 tokens.');
   tokens.push({ kind: 'eof', value: '', position: source.length });
   return tokens;
 }

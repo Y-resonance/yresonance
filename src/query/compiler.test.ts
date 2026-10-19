@@ -150,6 +150,19 @@ describe('query compiler', () => {
     ).toContain('"MediaCost" * 0.8');
   });
 
+  it('rejects expanding calculated fields before producing unbounded SQL', () => {
+    const chain = Array.from({ length: 20 }, (_, index) => ({
+      ...calculatedFields[0],
+      id: `expanded_${index}`,
+      canonicalName: `expanded_${index}`,
+      expression:
+        index === 0 ? 'media_cost + media_cost' : `expanded_${index - 1} + expanded_${index - 1}`,
+    }));
+    expect(() => validateRowFormula('expanded_19', { fields, calculatedFields: chain })).toThrow(
+      'Formula expansion exceeds',
+    );
+  });
+
   it('names calculated field cycles and self-references', () => {
     expect(() =>
       validateRowFormula('first', {

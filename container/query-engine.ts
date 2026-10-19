@@ -24,7 +24,8 @@ export const queryEngineRequestSchema = z.discriminatedUnion('operation', [
   }),
 ]);
 
-export async function executeQueryEngineRequest(input: unknown) {
+export async function executeQueryEngineRequest(input: unknown, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   const request = queryEngineRequestSchema.parse(input);
   const instance = await DuckDBInstance.create(':memory:');
   const connection = await instance.connect();
@@ -33,33 +34,48 @@ export async function executeQueryEngineRequest(input: unknown) {
     await connection.run('SET threads = 2');
 
     if (request.operation === 'describeSource') {
-      const description = await connection.runAndReadAll(
-        `DESCRIBE SELECT * FROM ${request.sourceSql}`,
+      return await runWithTimeout(
+        connection,
+        async () => {
+          const description = await connection.runAndReadAll(
+            `DESCRIBE SELECT * FROM ${request.sourceSql}`,
+          );
+          const samples = await connection.runAndReadAll(
+            `SELECT * FROM ${request.sourceSql} LIMIT 20`,
+          );
+          return {
+            description: description.getRowObjectsJson(),
+            samples: samples.getRowObjectsJson(),
+          };
+        },
+        signal,
       );
-      const samples = await connection.runAndReadAll(`SELECT * FROM ${request.sourceSql} LIMIT 20`);
-      return {
-        description: description.getRowObjectsJson(),
-        samples: samples.getRowObjectsJson(),
-      };
     }
 
     if (request.operation === 'ingestCsv') {
       const directory = await mkdtemp(join(tmpdir(), 'yresonance-ingest-'));
       const destination = join(directory, 'datasource.parquet');
       try {
-        await runWithTimeout(connection, async () => {
-          const source = `read_csv_auto(${sqlString(request.sourceUrl)}, header = true)`;
-          const projection = await csvIngestionProjection(connection, source);
-          await connection.run(
-            `COPY (SELECT ${projection} FROM ${source}) TO ${sqlString(destination)} (FORMAT PARQUET, COMPRESSION ZSTD)`,
-          );
-        });
+        await runWithTimeout(
+          connection,
+          async () => {
+            const source = `read_csv_auto(${sqlString(request.sourceUrl)}, header = true)`;
+            const projection = await csvIngestionProjection(connection, source);
+            await connection.run(
+              `COPY (SELECT ${projection} FROM ${source}) TO ${sqlString(destination)} (FORMAT PARQUET, COMPRESSION ZSTD)`,
+            );
+          },
+          signal,
+        );
         const file = await openAsBlob(destination);
         const response = await fetch(request.destinationUrl, {
           method: 'PUT',
           headers: { 'content-length': String(file.size) },
           body: file,
-          signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
+          signal: AbortSignal.any([
+            ...(signal ? [signal] : []),
+            AbortSignal.timeout(QUERY_TIMEOUT_MS),
+          ]),
         });
         if (!response.ok)
           throw new Error(
@@ -71,11 +87,15 @@ export async function executeQueryEngineRequest(input: unknown) {
       }
     }
 
-    const result = await runWithTimeout(connection, async () => {
-      const statement = await connection.prepare(request.sql);
-      statement.bind(request.parameters as DuckDBValue[]);
-      return statement.runAndReadAll();
-    });
+    const result = await runWithTimeout(
+      connection,
+      async () => {
+        const statement = await connection.prepare(request.sql);
+        statement.bind(request.parameters as DuckDBValue[]);
+        return statement.runAndReadAll();
+      },
+      signal,
+    );
     const rows = result.getRowObjectsJson();
     const resultBytes = new TextEncoder().encode(JSON.stringify(rows)).byteLength;
     if (resultBytes > MAX_QUERY_RESULT_BYTES)
@@ -90,20 +110,31 @@ export async function executeQueryEngineRequest(input: unknown) {
 async function runWithTimeout<T>(
   connection: { interrupt(): void },
   operation: () => Promise<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
+  signal?.throwIfAborted();
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () =>
+      controller.abort(
+        new DOMException(`Query exceeded the ${QUERY_TIMEOUT_MS} ms time limit.`, 'TimeoutError'),
+      ),
+    QUERY_TIMEOUT_MS,
+  );
+  const combined = AbortSignal.any([controller.signal, ...(signal ? [signal] : [])]);
+  const interrupt = () => connection.interrupt();
+  combined.addEventListener('abort', interrupt, { once: true });
   try {
-    return await Promise.race([
-      operation(),
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => {
-          connection.interrupt();
-          reject(new Error(`Query exceeded the ${QUERY_TIMEOUT_MS} ms time limit.`));
-        }, QUERY_TIMEOUT_MS);
-      }),
-    ]);
+    // Wait for the interrupted operation to settle before closing its native connection.
+    const result = await operation();
+    combined.throwIfAborted();
+    return result;
+  } catch (error) {
+    combined.throwIfAborted();
+    throw error;
   } finally {
-    if (timeout) clearTimeout(timeout);
+    clearTimeout(timeout);
+    combined.removeEventListener('abort', interrupt);
   }
 }
 

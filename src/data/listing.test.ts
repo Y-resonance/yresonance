@@ -28,6 +28,23 @@ describe('paginated object listings', () => {
     ).rejects.toThrow('without a cursor');
   });
 
+  it('rejects repeated cursors and excessive object counts', async () => {
+    let calls = 0;
+    await expect(
+      collectObjectPages(async () => ({
+        objects: [],
+        truncated: ++calls < 3,
+        cursor: 'same',
+      })),
+    ).rejects.toThrow('repeated a cursor');
+    await expect(
+      collectObjectPages(async () => ({
+        objects: Array(10_001).fill('object'),
+        truncated: false,
+      })),
+    ).rejects.toThrow('10,000 object');
+  });
+
   it('creates cursors for local listings larger than one page', () => {
     const objects = Array.from({ length: 1_001 }, (_, index) => ({ key: `part-${index}` }));
     const first = paginateObjects(objects);

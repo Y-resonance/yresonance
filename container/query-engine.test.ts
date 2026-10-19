@@ -122,3 +122,24 @@ describe('native query engine', () => {
     }
   });
 });
+
+it('interrupts source sampling when the caller cancels and can run another query', async () => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error('sampling cancelled')), 100);
+  try {
+    await expect(
+      executeQueryEngineRequest(
+        {
+          operation: 'describeSource',
+          sourceSql: '(SELECT sum(i) AS total FROM range(1000000000) t(i))',
+        },
+        controller.signal,
+      ),
+    ).rejects.toThrow('sampling cancelled');
+    await expect(
+      executeQueryEngineRequest({ operation: 'query', sql: 'SELECT 42 AS answer' }),
+    ).resolves.toEqual([{ answer: 42 }]);
+  } finally {
+    clearTimeout(timer);
+  }
+});

@@ -8,7 +8,8 @@ Tools are generic on purpose. `addWidget`, `updateWidget`, `moveWidget`, and `up
 every widget type, so the agent composes them instead of learning one tool per feature. Each tool's
 input schema is generated from the same Zod contract the app's own API uses, so the agent and the
 GUI go through one validated path. Ids the page already knows, like the open dashboard, are
-filled in by the page and removed from the schema the agent sees.
+filled in by the page and removed from the schema the agent sees. The registered action,
+dashboard ID, and share context are fixed by the page even when tool arguments contain those keys.
 
 Tools by page, read-only first, then writes:
 

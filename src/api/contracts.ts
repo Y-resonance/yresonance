@@ -41,7 +41,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('createDashboard'),
     name: z.string().trim().min(1),
-    dataSourceIds: z.array(z.string()).default([]),
+    dataSourceIds: z.array(z.string()).max(100).default([]),
     timezone: timezoneSchema.default('Europe/Berlin'),
     defaultDateRange: dateRangeSchema.optional(),
   }),
@@ -113,12 +113,14 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     pageId: z.string().min(1),
     dashboardId: z.string().min(1),
     canvasRows: z.number().int().min(10),
-    placements: z.array(
-      z.object({
-        widgetId: z.string().min(1),
-        placement: gridPlacementSchema,
-      }),
-    ),
+    placements: z
+      .array(
+        z.object({
+          widgetId: z.string().min(1),
+          placement: gridPlacementSchema,
+        }),
+      )
+      .max(1_000),
   }),
   z.object({
     action: z.literal('copyWidget'),

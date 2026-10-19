@@ -535,6 +535,8 @@ export function formulaFields(
       throw new Error(`Calculated field name ${field.canonicalName} is ambiguous.`);
     calculatedByName.set(key, field);
   }
+  if (calculatedByName.size > 256) throw new Error('Too many calculated fields. Use at most 256.');
+  let totalSqlLength = 0;
   const resolved = new Map<string, FormulaField>();
   const resolving: string[] = [];
 
@@ -550,6 +552,7 @@ export function formulaFields(
     }
     const field = calculatedByName.get(key);
     if (!field) throw new Error(`Unknown calculated field ${key}.`);
+    if (resolving.length >= 64) throw new Error('Calculated field dependencies exceed 64 levels.');
     resolving.push(key);
     try {
       for (const identifier of formulaIdentifiers(field.expression)) {
@@ -566,6 +569,9 @@ export function formulaFields(
         sql: `(${compiled.sql})`,
         type: compiled.type,
       };
+      totalSqlLength += result.sql.length;
+      if (totalSqlLength > 1_000_000)
+        throw new Error('Formula expansion exceeds the calculated field SQL limit.');
       resolved.set(key, result);
       return result;
     } finally {
