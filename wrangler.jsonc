@@ -5,7 +5,7 @@
   "account_id": "17c619232f5d84567cd69896e892f326",
   "main": "src/server.ts",
   "compatibility_date": "2026-08-29",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "enable_request_signal"],
   "vars": {
     "APP_ENV": "production",
     "POSTHOG_ENABLED": "false",

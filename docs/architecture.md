@@ -61,3 +61,21 @@ workspace authorization reference. `datasource_authorizations` stores encrypted 
 `datasource_connections` stores their scoped references. The backend refreshes tokens as needed,
 compiles GoogleSQL, submits jobs with known IDs, polls and pages results within bounded limits,
 and records duration, scanned/billed bytes, slot time and cache hits without SQL, tokens or rows.
+
+## Request and compilation limits
+
+The JSON API accepts at most 1 MiB and returns at most 20 validation issues. Browser API
+requests must use JSON and the same origin. Bulk layout updates contain at most 1,000
+placements; dashboard creation accepts at most 100 datasource IDs. Analytics forwarding
+accepts at most 2 MiB and shares a 15-second deadline across request reading and forwarding.
+The Worker enables `enable_request_signal` so client disconnects reach the forwarding request.
+
+Formulas contain at most 16,000 characters and 256 tokens. Compilation stops above
+100,000 SQL characters per expression or 1,000,000 characters of intermediate work.
+Calculated fields are limited to 256 per compilation, 64 dependency levels, and
+1,000,000 retained SQL characters. Source listing stops at 100 pages or 10,000 objects
+and rejects repeated cursors.
+
+Each query engine queues at most 32 requests and runs one at a time. Caller cancellation
+and deadlines interrupt active work as well as preventing queued work from starting.
+Source description and sampling share the query engine's 30-second execution limit.

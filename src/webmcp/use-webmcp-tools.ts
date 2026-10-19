@@ -53,7 +53,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
     const fixed = options.dashboardId
       ? {
           dashboardId: options.dashboardId,
-          ...(options.shareToken ? { shareToken: options.shareToken } : {}),
+          shareToken: options.shareToken,
         }
       : {};
     const viewTools: ToolSpec[] = [
@@ -392,9 +392,9 @@ export function useWebMcpTools(options: WebMcpOptions) {
           annotations: { readOnlyHint: spec.readOnly },
           execute: async (input) => {
             const request = apiRequestSchema.parse({
+              ...input,
               action: spec.action,
               ...spec.fixed,
-              ...input,
             });
             options.onToolUse?.(spec.action);
             const result = await callApi(request, { source: 'webmcp' });

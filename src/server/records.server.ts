@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { env } from 'cloudflare:workers';
 import { createDatabase } from '#/db/client';
 import { calculatedFields, dashboards, dataSources, fields, libraryMetrics } from '#/db/schema';
@@ -50,9 +50,16 @@ function metadataStatements(
   dataSourceId: string,
   workspaceId: string,
 ) {
+  const ownedSource = database
+    .select({ id: dataSources.id })
+    .from(dataSources)
+    .where(and(eq(dataSources.id, dataSourceId), eq(dataSources.workspaceId, workspaceId)));
   return [
-    database.select().from(fields).where(eq(fields.dataSourceId, dataSourceId)),
-    database.select().from(calculatedFields).where(eq(calculatedFields.dataSourceId, dataSourceId)),
+    database.select().from(fields).where(inArray(fields.dataSourceId, ownedSource)),
+    database
+      .select()
+      .from(calculatedFields)
+      .where(inArray(calculatedFields.dataSourceId, ownedSource)),
     database.select().from(libraryMetrics).where(eq(libraryMetrics.workspaceId, workspaceId)),
   ] as const;
 }

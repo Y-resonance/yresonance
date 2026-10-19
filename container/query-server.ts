@@ -1,3 +1,4 @@
+import { readRequestBytes } from '../src/http/body.ts';
 import { executeQueryEngineRequest } from './query-engine.ts';
 import { createQueryExecutor } from './query-executor.ts';
 
@@ -13,11 +14,18 @@ const server = Bun.serve({
 
     try {
       const queryId = request.headers.get('x-yresonance-query-id') ?? crypto.randomUUID();
-      const result = await executeQuery(await request.json(), {
-        queryId,
-        signal: request.signal,
-        deadlineAt: queryDeadline(request.headers.get('x-yresonance-query-deadline')),
-      });
+      const result = await executeQuery(
+        JSON.parse(
+          new TextDecoder().decode(
+            (await readRequestBytes(request, 1024 * 1024)) ?? new Uint8Array(),
+          ),
+        ),
+        {
+          queryId,
+          signal: request.signal,
+          deadlineAt: queryDeadline(request.headers.get('x-yresonance-query-deadline')),
+        },
+      );
       return Response.json({
         ok: true,
         ...result,

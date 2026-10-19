@@ -14,6 +14,7 @@ RUN apt-get update -qq \
     && strip --strip-unneeded node_modules/@duckdb/node-bindings-linux-*/*.so node_modules/@duckdb/node-bindings-linux-*/*.node
 
 COPY container/query-engine.ts container/query-executor.ts container/query-server.ts ./
+COPY src/http/body.ts /app/src/http/body.ts
 # Precompile JS; keep the native binding external. Do not strip the signed httpfs extension.
 RUN bun build query-server.ts --target=bun --external @duckdb/node-bindings --minify --bytecode --format=cjs --outdir bundle \
     && mkdir licenses \

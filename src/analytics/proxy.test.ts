@@ -106,6 +106,39 @@ describe('PostHog proxy', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('rejects oversized bodies even without a trustworthy content length', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null));
+    vi.stubGlobal('fetch', fetchMock);
+    for (const headers of [new Headers(), new Headers({ 'content-length': '1' })]) {
+      const response = await proxyAnalyticsRequest(
+        new Request('https://yresonance.com/ingest/e/', {
+          method: 'POST',
+          headers,
+          body: new Uint8Array(2 * 1024 * 1024 + 1),
+        }),
+      );
+      expect(response?.status).toBe(413);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('forwards cancellation to the upstream request', async () => {
+    let upstreamSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: Request) => {
+        if (input instanceof Request) upstreamSignal = input.signal;
+        return new Response(null);
+      }),
+    );
+    const controller = new AbortController();
+    await proxyAnalyticsRequest(
+      new Request('https://yresonance.com/ingest/e/', { signal: controller.signal }),
+    );
+    controller.abort();
+    expect(upstreamSignal?.aborted).toBe(true);
+  });
+
   it('returns an uncacheable gateway error when the upstream is unavailable', async () => {
     vi.stubGlobal(
       'fetch',
