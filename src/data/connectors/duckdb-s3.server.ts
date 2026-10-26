@@ -12,6 +12,8 @@ import {
   compileDatasourceWidget,
   datasourceExpressionSql,
   expressionValidationQuery,
+  assertExpressionResultType,
+  assertWidgetResultTypes,
   hasNativeFormulas,
   compileDatasourceQuery,
 } from '#/data/backend-query';
@@ -98,12 +100,20 @@ export function s3DuckdbBackend(connection = loadConnection): AnalyticsDataBacke
     async validateExpression(source, expression) {
       try {
         datasourceExpressionSql(expression);
-        if (expression.formulaDialect)
-          await runPreparedQuery(
+        if (expression.formulaDialect) {
+          const columns = await runPreparedQuery<{ column_name: string; column_type: string }>(
             source,
-            (sql) => expressionValidationQuery(expression, sql),
+            (sql) => {
+              const query = expressionValidationQuery(expression, sql);
+              return { ...query, sql: `DESCRIBE ${query.sql}` };
+            },
             resolve,
           );
+          assertExpressionResultType(
+            columns.find((column) => column.column_name === 'value')?.column_type,
+            expression.semanticType,
+          );
+        }
       } catch (error) {
         throw new DatasourceError(
           'invalid_query',
@@ -112,16 +122,27 @@ export function s3DuckdbBackend(connection = loadConnection): AnalyticsDataBacke
       }
     },
     async validateQuery(source, query) {
-      compileDatasourceWidget(source, query, 'yresonance_source');
-      if (hasNativeFormulas(query))
-        await runPreparedQuery(
-          source,
-          (sql) => {
-            const compiled = compileDatasourceWidget(source, query, sql);
-            return { ...compiled, sql: `EXPLAIN ${compiled.sql}` };
-          },
-          resolve,
+      try {
+        compileDatasourceWidget(source, query, 'yresonance_source');
+        if (hasNativeFormulas(query)) {
+          const columns = await runPreparedQuery<{ column_name: string; column_type: string }>(
+            source,
+            (sql) => {
+              const compiled = compileDatasourceWidget(source, query, sql);
+              return { ...compiled, sql: `DESCRIBE ${compiled.sql}` };
+            },
+            resolve,
+          );
+          assertWidgetResultTypes(
+            columns.map((column) => ({ name: column.column_name, type: column.column_type })),
+          );
+        }
+      } catch (error) {
+        throw new DatasourceError(
+          'invalid_query',
+          error instanceof Error ? error.message : 'Invalid query.',
         );
+      }
     },
     async executeQuery<T extends Record<string, unknown>>(
       source: DataSourceRecord,

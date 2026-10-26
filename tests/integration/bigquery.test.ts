@@ -90,8 +90,30 @@ function googleNetwork({
           ],
         },
       });
-    if (url.pathname.endsWith('/jobs') && request.method === 'POST')
-      return Response.json({ jobReference: JSON.parse(body).jobReference });
+    if (url.pathname.endsWith('/jobs') && request.method === 'POST') {
+      const job = JSON.parse(body);
+      return Response.json({
+        jobReference: job.jobReference,
+        ...(job.configuration?.dryRun
+          ? {
+              statistics: {
+                query: {
+                  schema: {
+                    fields: [
+                      {
+                        name: job.configuration.query.query.includes('metric_1')
+                          ? 'metric_1'
+                          : 'value',
+                        type: 'NUMERIC',
+                      },
+                    ],
+                  },
+                },
+              },
+            }
+          : {}),
+      });
+    }
     if (url.pathname.includes('/queries/')) {
       if (tooManyRows)
         return Response.json({
@@ -490,8 +512,22 @@ test('native BigQuery formulas retain their dialect, validate through Google, an
   ).toMatchObject({ valid: false, error: { message: expect.stringContaining('requires duckdb') } });
   expect(requests.length).toBe(before);
   const originalFetch = globalThis.fetch;
+  let returnIntegerSchema = true;
+  let repeatedSchema = false;
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input as RequestInfo, init);
+    if (new URL(request.url).pathname.endsWith('/jobs') && returnIntegerSchema)
+      return Response.json({
+        statistics: {
+          query: {
+            schema: {
+              fields: [
+                { name: 'value', type: 'INTEGER', mode: repeatedSchema ? 'REPEATED' : 'NULLABLE' },
+              ],
+            },
+          },
+        },
+      });
     if (new URL(request.url).pathname.endsWith('/jobs'))
       return Response.json(
         {
@@ -504,6 +540,31 @@ test('native BigQuery formulas retain their dialect, validate through Google, an
       );
     return originalFetch(input as RequestInfo, init);
   });
+  const badDate = {
+    ...calculated,
+    name: 'Bad date',
+    canonicalName: 'bad_date',
+    expression: '42',
+    semanticType: 'date',
+  };
+  expect(await callService({ ...badDate, action: 'validateCalculatedField' })).toMatchObject({
+    valid: false,
+    error: { message: 'Formula returns INTEGER, but date requires date.' },
+  });
+  await expectApiError(callService(badDate), { status: 400, code: 'invalid_query' });
+  repeatedSchema = true;
+  expect(
+    await callService({
+      action: 'validateMetricExpression',
+      dataSourceId: source.id,
+      expression: 'ARRAY_AGG({{revenue}})',
+      formulaDialect: 'bigquery',
+    }),
+  ).toMatchObject({
+    valid: false,
+    error: { message: 'Formula returns ARRAY<INTEGER>, but count requires number.' },
+  });
+  returnIntegerSchema = false;
   expect(
     await callService({ ...calculated, id: stored.id, action: 'validateCalculatedField' }),
   ).toMatchObject({

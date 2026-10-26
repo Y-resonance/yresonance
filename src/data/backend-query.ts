@@ -1,3 +1,6 @@
+import { z } from 'zod';
+import type { SemanticType } from '#/domain/schema';
+import { formulaTypeForSemanticType } from '#/query/formula';
 import type { SqlDialect } from '#/query/dialect';
 import { quoteSqlIdentifier } from '#/query/dialect';
 import { controlOptionsQuery } from '#/domain/control-options';
@@ -89,8 +92,7 @@ export function expressionValidationQuery(
   dialect?: SqlDialect,
 ) {
   const expression = datasourceExpressionSql(definition, dialect);
-  const numeric = ['count', 'currency', 'ratio'].includes(definition.semanticType);
-  const value = numeric ? `(${expression}) + 0` : expression;
+  const value = expression;
   return {
     sql:
       definition.kind === 'libraryMetric'
@@ -126,4 +128,42 @@ export function queryFormulaDefinitions(query: DatasourceQuery) {
 
 export function hasNativeFormulas(query: WidgetDatasourceQuery) {
   return queryFormulaDefinitions(query).some((formula) => formula.formulaDialect);
+}
+
+export const expressionColumnsSchema = z
+  .array(
+    z
+      .object({ name: z.string(), type: z.string(), mode: z.string().optional() })
+      .transform(({ name, type, mode }) => ({
+        name,
+        type: mode === 'REPEATED' ? `ARRAY<${type}>` : type,
+      })),
+  )
+  .min(1);
+
+export function assertExpressionResultType(backendType: unknown, semanticType: SemanticType) {
+  const parsed = z.string().safeParse(backendType);
+  if (!parsed.success) throw new Error('The backend did not return the expression result type.');
+  let type = parsed.data.toUpperCase();
+  while (/^(?:NULLABLE|LOWCARDINALITY)\(/u.test(type)) type = type.slice(type.indexOf('(') + 1, -1);
+  const actual =
+    /^(?:U?(?:TINYINT|SMALLINT|INTEGER|INT\d*|BIGINT|HUGEINT)|FLOAT\d*|DOUBLE|REAL|DECIMAL\d*|NUMERIC|BIGNUMERIC)(?:$|\()/u.test(
+      type,
+    )
+      ? 'number'
+      : /^(?:DATE(?:TIME)?\d*|TIMESTAMP(?:_(?:MS|NS|S))?(?: WITH TIME ZONE)?)(?:$|\()/u.test(type)
+        ? 'date'
+        : /^(?:VARCHAR|STRING|TEXT|CHAR|BPCHAR|FIXEDSTRING)(?:$|\()/u.test(type)
+          ? 'text'
+          : 'unsupported';
+  const expected = formulaTypeForSemanticType(semanticType);
+  if (actual !== expected)
+    throw new Error(`Formula returns ${parsed.data}, but ${semanticType} requires ${expected}.`);
+}
+
+export function assertWidgetResultTypes(columns: z.infer<typeof expressionColumnsSchema>) {
+  for (const column of columns) {
+    if (/^(?:metric_\d+|upper_limit)$/u.test(column.name))
+      assertExpressionResultType(column.type, 'count');
+  }
 }

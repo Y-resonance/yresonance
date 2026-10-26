@@ -30,8 +30,8 @@ explain. Update it when a decision changes, not when an implementation detail do
   translate between dialects. The application still owns FROM, filtering, grouping and limits.
   Structural checks exclude statements, subqueries, qualified names and data-access/system
   functions before resolving references to trusted field SQL. Backends validate native expressions
-  against the actual datasource before saving: BigQuery dry runs, ClickHouse plans, and DuckDB
-  binder queries. ClickHouse native calls must be built-in functions, so SQL/executable UDFs cannot
+  against the actual datasource and check result types before saving: BigQuery dry runs and
+  ClickHouse/DuckDB result-schema inspection. ClickHouse native calls must be built-in functions, so SQL/executable UDFs cannot
   hide external data access. Native validation may start DuckDB; portable formula saves do not.
 - Control values are lenient, control keys are strict. Any value for an exposed control's field is
   accepted, because the editor chose to expose that field. Unknown keys are rejected.

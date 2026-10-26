@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { dataSourceLocationSchema } from '#/domain/schema';
 import { hashJson } from '#/domain/hash';
 import { quoteSqlIdentifier } from '#/query/dialect';
@@ -7,6 +8,9 @@ import {
   compileDatasourceWidget,
   datasourceExpressionSql,
   expressionValidationQuery,
+  expressionColumnsSchema,
+  assertExpressionResultType,
+  assertWidgetResultTypes,
   hasNativeFormulas,
 } from '../backend-query';
 import { authorizationReferenceSchema, googleAccessToken } from '../google-oauth.server';
@@ -42,7 +46,7 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
     query: { sql: string; parameters: unknown[] },
   ) {
     const config = location(source);
-    await bigqueryRequest(
+    return bigqueryRequest(
       (await token(source)).accessToken,
       `projects/${encodeURIComponent(config.project)}/jobs`,
       {
@@ -148,7 +152,10 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
     async validateQuery(source, query) {
       try {
         const compiled = compileDatasourceWidget(source, query, table(source), 'bigquery');
-        if (hasNativeFormulas(query)) await validateBigquery(source, compiled);
+        if (hasNativeFormulas(query)) {
+          const result = await validateBigquery(source, compiled);
+          assertWidgetResultTypes(dryRunColumns(result));
+        }
       } catch (error) {
         throw new DatasourceError(
           'invalid_query',
@@ -164,11 +171,17 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
       location(source);
       try {
         datasourceExpressionSql(expression, 'bigquery');
-        if (expression.formulaDialect)
-          await validateBigquery(
+        if (expression.formulaDialect) {
+          const result = await validateBigquery(
             source,
             expressionValidationQuery(expression, table(source), 'bigquery'),
           );
+          const columns = dryRunColumns(result);
+          assertExpressionResultType(
+            columns.find((column) => column.name === 'value')?.type,
+            expression.semanticType,
+          );
+        }
       } catch (error) {
         throw new DatasourceError(
           'invalid_query',
@@ -177,4 +190,14 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
       }
     },
   };
+}
+
+function dryRunColumns(result: unknown) {
+  return z
+    .object({
+      statistics: z.object({
+        query: z.object({ schema: z.object({ fields: expressionColumnsSchema }) }),
+      }),
+    })
+    .parse(result).statistics.query.schema.fields;
 }

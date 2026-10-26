@@ -551,8 +551,33 @@ test('native ClickHouse expressions use built-ins, validate context, and reject 
   await clickhouseBackend.validateQuery(source, query);
   expect(await clickhouseBackend.executeQuery(source, query)).toEqual([{ metric_1: 20 }]);
   await expect(
+    clickhouseBackend.validateQuery(source, {
+      ...query,
+      definition: {
+        ...query.definition,
+        metric: {
+          ...query.definition.metric,
+          source: { kind: 'expression', expression: "'text'", formulaDialect: 'clickhouse' },
+        },
+      },
+    }),
+  ).rejects.toThrow('requires number');
+  await expect(
     clickhouseBackend.validateExpression(source, { ...expression, expression: '{{amount}}' }),
   ).rejects.toThrow('aggregated');
+  const rowExpression = {
+    ...expression,
+    kind: 'calculatedField' as const,
+    canonicalName: 'typed_date',
+    semanticType: 'date' as const,
+  };
+  await expect(
+    clickhouseBackend.validateExpression(source, { ...rowExpression, expression: '42' }),
+  ).rejects.toThrow('requires date');
+  await clickhouseBackend.validateExpression(source, {
+    ...rowExpression,
+    expression: 'toDate({{day}})',
+  });
   const udf = `issue_100_${crypto.randomUUID().replaceAll('-', '')}`;
   await clickhouseRequest(workspaceId, `CREATE FUNCTION ${udf} AS x -> x + 1`, [], {
     readonly: false,

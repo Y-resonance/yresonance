@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DuckDBInstance } from '@duckdb/node-api';
 import { compileFormula } from './formula';
 import { validateRowFormula, validateAggregateFormula } from './compiler';
-import { expressionValidationQuery } from '#/data/backend-query';
+import { expressionValidationQuery, assertExpressionResultType } from '#/data/backend-query';
 import type { SqlDialect } from './dialect';
 import type { CalculatedFieldRecord, FieldRecord } from './types';
 
@@ -161,11 +161,43 @@ describe('native datasource expressions', () => {
           ).sql,
         ),
       ).rejects.toThrow(Error);
-      await expect(
-        connection.run(
-          expressionValidationQuery({ ...definition, expression: "'text'" }, 'source').sql,
-        ),
-      ).rejects.toThrow(Error);
+      const textColumns = await connection.runAndReadAll(
+        `DESCRIBE ${expressionValidationQuery({ ...definition, expression: "'text'" }, 'source').sql}`,
+      );
+      expect(() =>
+        assertExpressionResultType(textColumns.getRowObjectsJson()[0].column_type, 'count'),
+      ).toThrow('requires number');
+      for (const [expression, semanticType, compatible] of [
+        ['42', 'date', false],
+        ["'2026-08-01'", 'date', false],
+        ["DATE '2026-08-01'", 'date', true],
+        ['42', 'text', false],
+        ["'text'", 'text', true],
+        ['1.25', 'currency', true],
+        ['CAST(1 AS BOOLEAN)', 'count', false],
+      ] as const) {
+        const query = expressionValidationQuery(
+          {
+            ...definition,
+            kind: 'calculatedField',
+            canonicalName: 'typed',
+            expression,
+            semanticType,
+          },
+          'source',
+        );
+        const columns = (
+          await connection.runAndReadAll(`DESCRIBE ${query.sql}`)
+        ).getRowObjectsJson();
+        const validate = () => assertExpressionResultType(columns[0].column_type, semanticType);
+        let message: string | undefined;
+        try {
+          validate();
+        } catch (error) {
+          message = error instanceof Error ? error.message : String(error);
+        }
+        expect(message).toEqual(compatible ? undefined : expect.stringContaining('requires'));
+      }
       await expect(
         connection.run(
           expressionValidationQuery(

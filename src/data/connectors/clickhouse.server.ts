@@ -7,6 +7,9 @@ import {
   compileDatasourceWidget,
   datasourceExpressionSql,
   expressionValidationQuery,
+  expressionColumnsSchema,
+  assertExpressionResultType,
+  assertWidgetResultTypes,
   hasNativeFormulas,
   queryFormulaDefinitions,
 } from '#/data/backend-query';
@@ -143,12 +146,14 @@ export function createClickhouseBackend(connection: ClickhouseConnection): Analy
       try {
         const compiled = compileDatasourceWidget(dataSource, query, source, 'clickhouse');
         await assertNativeFunctions(dataSource, queryFormulaDefinitions(query));
-        if (hasNativeFormulas(query))
-          await connection.request(
+        if (hasNativeFormulas(query)) {
+          const result = await connection.request(
             dataSource,
-            `EXPLAIN PLAN ${compiled.sql} FORMAT JSON`,
+            `DESCRIBE TABLE (${compiled.sql}) FORMAT JSON`,
             compiled.parameters,
           );
+          assertWidgetResultTypes(expressionColumnsSchema.parse(result?.data));
+        }
       } catch (error) {
         throw new DatasourceError(
           'invalid_query',
@@ -181,7 +186,15 @@ export function createClickhouseBackend(connection: ClickhouseConnection): Analy
             await connection.table(dataSource),
             'clickhouse',
           );
-          await connection.request(dataSource, `EXPLAIN PLAN ${query.sql} FORMAT JSON`);
+          const result = await connection.request(
+            dataSource,
+            `DESCRIBE TABLE (${query.sql}) FORMAT JSON`,
+          );
+          const columns = expressionColumnsSchema.parse(result?.data);
+          assertExpressionResultType(
+            columns.find((column) => column.name === 'value')?.type,
+            expression.semanticType,
+          );
         }
       } catch (error) {
         throw new DatasourceError(

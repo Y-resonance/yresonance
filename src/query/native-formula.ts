@@ -157,16 +157,24 @@ export function compileNativeFormula(
     }
   }
   if (groups.length !== 0) throw new Error('Unbalanced SQL expression.');
+  let sqlLength = 2;
   const sql = tokens
     .map((token) => {
-      if (token.kind !== 'reference') return token.value;
+      if (token.kind !== 'reference') {
+        sqlLength += token.value.length;
+        if (sqlLength > 100_000)
+          throw new Error('Formula expansion exceeds the SQL complexity limit.');
+        return token.value;
+      }
       const field = fields.get(token.value.toLowerCase());
       if (!field) throw new Error(`Unknown formula field ${token.value}.`);
+      sqlLength += field.sql.length + 2;
+      if (sqlLength > 100_000)
+        throw new Error('Formula expansion exceeds the SQL complexity limit.');
       identifiers.add(field.canonicalName);
       return `(${field.sql})`;
     })
     .join('');
-  if (sql.length > 100_000) throw new Error('Formula expansion exceeds the SQL complexity limit.');
   return {
     sql: `(${sql})`,
     type: options.type ?? (options.mode === 'aggregate' ? 'number' : 'unknown'),
