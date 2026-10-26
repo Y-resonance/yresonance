@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.10-slim AS build
+FROM oven/bun:1.4.4-slim AS build
 WORKDIR /app/container
 # The query engine has its own manifest, so frontend dependency changes leave this layer cached.
 COPY container/package.json container/bun.lock container/install-extensions.ts ./
@@ -22,7 +22,7 @@ RUN bun build query-server.ts --target=bun --external @duckdb/node-bindings --mi
     && cp node_modules/@duckdb/node-api/LICENSE licenses/duckdb-node-api.txt \
     && rm -rf node_modules/zod node_modules/@duckdb/node-api
 
-FROM oven/bun:1.3.10-distroless
+FROM oven/bun:1.4.4-distroless
 WORKDIR /app/container
 COPY --from=build /app/container/node_modules ./node_modules
 COPY --from=build /app/container/bundle ./
