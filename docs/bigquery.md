@@ -51,8 +51,10 @@ BigQuery job timeout is 30 seconds, with a 35-second application deadline. Resul
 20,000 rows and 10 MiB. Cancellation and Google's timeout are best effort. Exact median aggregates
 sort values into an array, so large groups can hit Google's resource limits.
 
-BigQuery formulas do not support the remainder operator `%`. Formula validation rejects it before
-saving because GoogleSQL's `MOD` does not accept floating-point operands.
+Portable BigQuery formulas do not support the remainder operator `%`. Native expressions use
+`formulaDialect: "bigquery"` and GoogleSQL syntax, for example
+`SAFE_DIVIDE(SUM({{revenue}}), COUNT(*))`. The editor validates these through a BigQuery dry run
+against the selected table before saving. Native expressions cannot be reused with another dialect.
 
 Reconnect or disconnect from the datasource page. Disconnect affects every source using that
 workspace authorization. Reconnect preserves source IDs and makes old cached results unreachable.

@@ -141,6 +141,11 @@ export const filterSchema = z.object({
   connector: z.enum(['and', 'or']).default('and'),
 });
 
+export const formulaDialectSchema = z
+  .enum(['duckdb', 'clickhouse', 'bigquery'])
+  .nullable()
+  .optional();
+
 const metricSchema = z
   .object({
     source: z.discriminatedUnion('kind', [
@@ -150,7 +155,11 @@ const metricSchema = z
         aggregation: aggregationSchema,
       }),
       z.object({ kind: z.literal('library'), libraryMetricId: z.string().min(1) }),
-      z.object({ kind: z.literal('expression'), expression: z.string().min(1) }),
+      z.object({
+        kind: z.literal('expression'),
+        expression: z.string().min(1),
+        formulaDialect: formulaDialectSchema,
+      }),
     ]),
     userDefinedName: z.string().trim().min(1).optional(),
     dataType: z.enum(['number', 'percent', 'duration', 'currency']),

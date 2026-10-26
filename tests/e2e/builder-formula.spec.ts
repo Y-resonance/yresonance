@@ -122,3 +122,46 @@ test('formula text stays readable across dark and light theme changes', async ({
     await expect(formula).toContainText('impressions / 100');
   }
 });
+
+test('native metric validation errors prevent saving and recover after editing', async ({
+  page,
+}) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  await page.route('**/api/yresonance', async (route) => {
+    const input = route.request().postDataJSON();
+    if (
+      input.action === 'validateMetricExpression' &&
+      input.expression.includes('unknown_function')
+    ) {
+      await route.fulfill({
+        json: {
+          ok: true,
+          data: { valid: false, error: { message: 'Unknown SQL function.', from: 0, to: 16 } },
+        },
+      });
+    } else await route.fallback();
+  });
+  await page.goto('/dashboards/dash_demo');
+  await page.getByRole('button', { name: 'Edit Campaigns' }).click();
+  const settings = page.getByRole('complementary');
+  await settings.getByRole('button', { name: 'Media cost', exact: true }).click();
+  await page.getByRole('option', { name: 'Add custom metric' }).click();
+  await page.getByLabel('Formula language').selectOption('native');
+  const formula = page.locator('.cm-content');
+  await formula.fill('unknown_function(sum({{media_cost}}))');
+  await expect(page.getByText('Unknown SQL function.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add metric', exact: true })).toBeDisabled();
+  await formula.fill('sum(');
+  await page.getByRole('dialog').getByRole('button', { name: 'Media cost media_cost' }).click();
+  await page.keyboard.type(')');
+  await expect(formula).toHaveText('sum({{media_cost}})');
+  await page.getByText('Save to workspace library').click();
+  await expect(page.getByRole('button', { name: 'Add metric', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add metric', exact: true }).click();
+  await expect
+    .poll(() => state.source.libraryMetrics.at(-1))
+    .toMatchObject({ expression: 'sum({{media_cost}})', formulaDialect: 'duckdb' });
+  await settings.getByRole('button', { name: 'Edit formula for metric 2' }).click();
+  await expect(page.getByLabel('Formula language')).toHaveValue('native');
+  await expect(formula).toHaveText('sum({{media_cost}})');
+});

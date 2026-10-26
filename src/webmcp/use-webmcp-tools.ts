@@ -215,14 +215,14 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'upsertCalculatedField',
               description:
-                'Create or update a row-level yresonance formula after static syntax, field, and type validation.',
+                'Create or update a calculated field. Omit formulaDialect for a portable formula; set it to the datasource dialect for native SQL with {{canonical_field_name}} references. Native expressions are checked by the backend before saving.',
               readOnly: false,
               fixed,
             },
             {
               action: 'validateMetricExpression',
               description:
-                'Validate an aggregate metric formula without saving it. Every field reference must sit inside an aggregate function.',
+                'Validate an aggregate metric expression without saving. Set formulaDialect to the datasource dialect for native SQL with {{canonical_field_name}} references. Returns backend errors for native expressions; omit formulaDialect for portable formulas.',
               readOnly: true,
               fixed,
             },
@@ -351,13 +351,13 @@ export function useWebMcpTools(options: WebMcpOptions) {
                 {
                   action: 'upsertCalculatedField',
                   description:
-                    'Create or update a row-level yresonance formula after static syntax, field, and type validation.',
+                    'Create or update a calculated field. Omit formulaDialect for a portable formula; set it to the datasource dialect for native SQL with {{canonical_field_name}} references. Native expressions are checked by the backend before saving.',
                   readOnly: false,
                 },
                 {
                   action: 'validateMetricExpression',
                   description:
-                    'Validate an aggregate metric formula without saving it. Every field reference must sit inside an aggregate function.',
+                    'Validate an aggregate metric expression without saving. Set formulaDialect to the datasource dialect for native SQL with {{canonical_field_name}} references. Returns backend errors for native expressions; omit formulaDialect for portable formulas.',
                   readOnly: true,
                 },
                 {
@@ -442,6 +442,8 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
       if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;
     },
   });
+  // The host already interprets this as a JSON Schema; omit the repeated dialect URI.
+  delete json.$schema;
   const removed = new Set(['action', ...Object.keys(fixed ?? {})]);
   if (json.properties) for (const key of removed) delete json.properties[key];
   if (json.required) json.required = json.required.filter((key) => !removed.has(key));

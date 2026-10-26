@@ -8,7 +8,13 @@ import { collectObjectPages, matchingSourceObjects } from '#/data/listing';
 import { hashJson } from '#/domain/hash';
 import { compileSourceSqlFromUrls } from '#/query/compiler';
 import { describeDataSource, runPreparedQuery } from '#/query/duckdb.server';
-import { compileDatasourceQuery } from '#/data/backend-query';
+import {
+  compileDatasourceWidget,
+  datasourceExpressionSql,
+  expressionValidationQuery,
+  hasNativeFormulas,
+  compileDatasourceQuery,
+} from '#/data/backend-query';
 import type { DataSourceRecord } from '#/query/types';
 import type { AnalyticsDataBackend } from '#/data/analytics-data-backend';
 import { DatasourceError, type DatasourceQuery } from './contract';
@@ -88,6 +94,34 @@ export function s3DuckdbBackend(connection = loadConnection): AnalyticsDataBacke
           'DuckDB could not inspect these S3 files. Check the source and read permissions.',
         );
       }
+    },
+    async validateExpression(source, expression) {
+      try {
+        datasourceExpressionSql(expression);
+        if (expression.formulaDialect)
+          await runPreparedQuery(
+            source,
+            (sql) => expressionValidationQuery(expression, sql),
+            resolve,
+          );
+      } catch (error) {
+        throw new DatasourceError(
+          'invalid_query',
+          error instanceof Error ? error.message : 'Invalid expression.',
+        );
+      }
+    },
+    async validateQuery(source, query) {
+      compileDatasourceWidget(source, query, 'yresonance_source');
+      if (hasNativeFormulas(query))
+        await runPreparedQuery(
+          source,
+          (sql) => {
+            const compiled = compileDatasourceWidget(source, query, sql);
+            return { ...compiled, sql: `EXPLAIN ${compiled.sql}` };
+          },
+          resolve,
+        );
     },
     async executeQuery<T extends Record<string, unknown>>(
       source: DataSourceRecord,

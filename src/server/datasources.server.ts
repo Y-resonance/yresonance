@@ -97,6 +97,7 @@ export async function describeDatasource(
         libraryMetricApplies(dataSource, {
           kind: 'libraryMetric',
           expression: metric.expression,
+          formulaDialect: metric.formulaDialect,
           semanticType: metric.semanticType,
           metadata,
         }),

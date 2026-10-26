@@ -1,8 +1,11 @@
+import type { SqlDialect } from '#/query/dialect';
 import type { Aggregation, FieldRole, SemanticType } from '#/domain/schema';
 
 export interface DatasourceDescription {
   id: string;
   name: string;
+  location?: { kind: string };
+  connectorType?: string;
   fields: Array<{
     id: string;
     columnName: string;
@@ -21,6 +24,7 @@ export interface DatasourceDescription {
     canonicalName: string;
     label: string;
     expression: string;
+    formulaDialect?: SqlDialect | null;
     role: FieldRole;
     semanticType: SemanticType;
     defaultAggregation: Aggregation | null;
@@ -31,6 +35,7 @@ export interface DatasourceDescription {
     name: string;
     canonicalName: string;
     expression: string;
+    formulaDialect?: SqlDialect | null;
     semanticType: SemanticType;
     description: string | null;
   }>;
@@ -51,6 +56,7 @@ export interface DatasourceFieldRow {
   defaultAggregation: Aggregation | null;
   description: string;
   expression: string;
+  formulaDialect?: SqlDialect | null;
   /** Raw fields are patched by column name; library metrics belong to the metric library. */
   columnName?: string;
   editable: boolean;
@@ -98,6 +104,7 @@ export function datasourceFieldRows(description: DatasourceDescription): Datasou
       defaultAggregation: field.defaultAggregation,
       description: field.description ?? '',
       expression: field.expression,
+      formulaDialect: field.formulaDialect,
       editable: true,
     })),
     ...description.libraryMetrics.map((metric) => ({

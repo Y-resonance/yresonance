@@ -2,6 +2,8 @@ import {
   compileDatasourceQuery,
   compileDatasourceWidget,
   datasourceExpressionSql,
+  expressionValidationQuery,
+  hasNativeFormulas,
 } from '#/data/backend-query';
 import type { AnalyticsDataBackend } from '#/data/analytics-data-backend';
 import { importManagedFile } from '#/data/file-ingestion.server';
@@ -80,6 +82,11 @@ export const duckdbFileConnector: AnalyticsDataBackend = {
   async validateQuery(dataSource, query) {
     try {
       compileDatasourceWidget(dataSource, query, quoteIdentifier('yresonance_source'));
+      if (hasNativeFormulas(query))
+        await runPreparedQuery(dataSource, (sourceSql) => {
+          const compiled = compileDatasourceWidget(dataSource, query, sourceSql);
+          return { ...compiled, sql: `EXPLAIN ${compiled.sql}` };
+        });
     } catch (error) {
       throw connectorError(error, 'invalid_query');
     }
@@ -98,9 +105,13 @@ export const duckdbFileConnector: AnalyticsDataBackend = {
     }
   },
 
-  async validateExpression(_dataSource, definition) {
+  async validateExpression(dataSource, definition) {
     try {
       datasourceExpressionSql(definition);
+      if (definition.formulaDialect)
+        await runPreparedQuery(dataSource, (sourceSql) =>
+          expressionValidationQuery(definition, sourceSql),
+        );
     } catch (error) {
       throw connectorError(error, 'invalid_query');
     }

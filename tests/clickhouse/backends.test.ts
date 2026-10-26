@@ -521,3 +521,66 @@ test('large integer medians and closely spaced large values retain precision', a
     await connection.run('DROP TABLE edge_source');
   }
 });
+
+test('native ClickHouse expressions use built-ins, validate context, and reject server UDFs', async () => {
+  const expression = {
+    kind: 'libraryMetric' as const,
+    expression: 'sumIf({{amount}}, {{impressions}} > 100)',
+    formulaDialect: 'clickhouse' as const,
+    semanticType: 'count' as const,
+    metadata,
+  };
+  await clickhouseBackend.validateExpression(source, expression);
+  const query = {
+    kind: 'widget' as const,
+    dashboard,
+    definition: {
+      ...definition(),
+      metric: {
+        source: {
+          kind: 'expression' as const,
+          expression: expression.expression,
+          formulaDialect: 'clickhouse' as const,
+        },
+        dataType: 'number' as const,
+      },
+    },
+    metadata,
+    controlState: {},
+  };
+  await clickhouseBackend.validateQuery(source, query);
+  expect(await clickhouseBackend.executeQuery(source, query)).toEqual([{ metric_1: 20 }]);
+  await expect(
+    clickhouseBackend.validateExpression(source, { ...expression, expression: '{{amount}}' }),
+  ).rejects.toThrow('aggregated');
+  const udf = `issue_100_${crypto.randomUUID().replaceAll('-', '')}`;
+  await clickhouseRequest(workspaceId, `CREATE FUNCTION ${udf} AS x -> x + 1`, [], {
+    readonly: false,
+  });
+  try {
+    await expect(
+      clickhouseBackend.validateExpression(source, {
+        ...expression,
+        expression: `${udf}(sum({{amount}}))`,
+      }),
+    ).rejects.toThrow('Only built-in');
+    await expect(
+      clickhouseBackend.executeQuery(source, {
+        ...query,
+        definition: {
+          ...query.definition,
+          metric: {
+            ...query.definition.metric,
+            source: {
+              kind: 'expression',
+              expression: `${udf}(sum({{amount}}))`,
+              formulaDialect: 'clickhouse',
+            },
+          },
+        },
+      }),
+    ).rejects.toThrow('Only built-in');
+  } finally {
+    await clickhouseRequest(workspaceId, `DROP FUNCTION ${udf}`, [], { readonly: false });
+  }
+});

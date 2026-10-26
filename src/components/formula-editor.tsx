@@ -1,3 +1,5 @@
+import { sql, SQLDialect, PostgreSQL, StandardSQL } from '@codemirror/lang-sql';
+import { datasourceDialect, type SqlDialect } from '#/query/dialect';
 import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
 import { StreamLanguage, type StringStream } from '@codemirror/language';
 import { linter, lintGutter } from '@codemirror/lint';
@@ -29,6 +31,22 @@ import type { CalculatedFieldRecord, FieldRecord } from '#/query/types';
 export type FormulaValidation =
   | { valid: true; type: FormulaType; identifiers: string[] }
   | { valid: false; error: { message: string; from: number; to: number } };
+
+const bigqueryLanguage = SQLDialect.define({
+  ...StandardSQL.spec,
+  identifierQuotes: '`',
+  doubleQuotedStrings: true,
+  backslashEscapes: true,
+  hashComments: true,
+  builtin: 'safe_divide safe_cast countif regexp_extract date_diff',
+  types: 'string int64 float64 numeric bignumeric bool date datetime timestamp',
+});
+const clickhouseLanguage = SQLDialect.define({
+  ...StandardSQL.spec,
+  backslashEscapes: true,
+  builtin: 'sumIf avgIf uniqExact toStartOfMonth toDate toString',
+  types: 'String Float64 UInt64 Int64 Date DateTime Decimal',
+});
 
 const formulaLanguage = StreamLanguage.define({
   token(stream: StringStream) {
@@ -144,6 +162,7 @@ export function FormulaInput({
   onChange,
   validation,
   height = '18rem',
+  formulaDialect,
 }: {
   editorRef?: RefObject<ReactCodeMirrorRef | null>;
   datasource: DatasourceDescription;
@@ -153,15 +172,25 @@ export function FormulaInput({
   onChange: (value: string) => void;
   validation: FormulaValidation;
   height?: string;
+  formulaDialect?: SqlDialect | null;
 }) {
   const dark = useSyncExternalStore(subscribeToTheme, isDarkTheme, serverTheme);
   const completion = useMemo(
-    () => completionSource(datasource, mode, excludedFieldId),
-    [datasource, mode, excludedFieldId],
+    () => completionSource(datasource, mode, excludedFieldId, formulaDialect),
+    [datasource, mode, excludedFieldId, formulaDialect],
   );
   const extensions = useMemo(
     () => [
-      formulaLanguage,
+      formulaDialect
+        ? sql({
+            dialect:
+              formulaDialect === 'bigquery'
+                ? bigqueryLanguage
+                : formulaDialect === 'duckdb'
+                  ? PostgreSQL
+                  : clickhouseLanguage,
+          })
+        : formulaLanguage,
       autocompletion({ override: [completion] }),
       linter(
         () => (validation.valid ? [] : [{ ...validation.error, severity: 'error' as const }]),
@@ -171,7 +200,7 @@ export function FormulaInput({
       ),
       lintGutter(),
     ],
-    [completion, validation],
+    [completion, validation, formulaDialect],
   );
   return (
     <CodeMirror
@@ -189,9 +218,13 @@ export function FormulaInput({
 }
 
 /** Inserts a field reference at the cursor, quoting the name when it is not a bare identifier. */
-export function insertFieldReference(view: EditorView | undefined, canonicalName: string) {
+export function insertFieldReference(
+  view: EditorView | undefined,
+  canonicalName: string,
+  formulaDialect?: SqlDialect | null,
+) {
   if (!view) return;
-  const value = formulaIdentifier(canonicalName);
+  const value = formulaDialect ? `{{${canonicalName}}}` : formulaIdentifier(canonicalName);
   const { from, to } = view.state.selection.main;
   view.dispatch({
     changes: { from, to, insert: value },
@@ -218,17 +251,18 @@ export function formulaContext(datasource: DatasourceDescription) {
     ...field,
     dataSourceId: datasource.id,
   }));
-  return { fields, calculatedFields };
+  return { fields, calculatedFields, dialect: datasourceDialect(datasource) };
 }
 
 /** Aggregate formulas have no name or type to reconcile, so a compile pass is the whole check. */
 export function validateAggregateLocally(
   expression: string,
   context: ReturnType<typeof formulaContext>,
+  formulaDialect?: SqlDialect | null,
 ): FormulaValidation {
   try {
     if (!expression.trim()) throw new Error('A formula is required.');
-    const compiled = validateAggregateFormula(expression, context);
+    const compiled = validateAggregateFormula(expression, context, undefined, formulaDialect);
     return { valid: true, type: compiled.type, identifiers: compiled.identifiers };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -293,9 +327,17 @@ function completionSource(
   datasource: DatasourceDescription,
   mode: FormulaMode,
   excludedFieldId?: string,
+  formulaDialect?: SqlDialect | null,
 ) {
-  const functions =
-    mode === 'aggregate'
+  const nativeSuggestions =
+    formulaDialect === 'bigquery'
+      ? ['SAFE_DIVIDE', 'COUNTIF', 'DATE_DIFF', 'REGEXP_EXTRACT', 'SAFE_CAST', 'SUM', 'AVG']
+      : formulaDialect === 'clickhouse'
+        ? ['sumIf', 'avgIf', 'uniqExact', 'toStartOfMonth', 'round', 'sum', 'avg']
+        : ['date_diff', 'date_trunc', 'regexp_extract', 'try_cast', 'sum', 'avg', 'median'];
+  const functions = formulaDialect
+    ? nativeSuggestions
+    : mode === 'aggregate'
       ? [...aggregateFormulaFunctions, ...rowFormulaFunctions]
       : rowFormulaFunctions;
   const options = [
@@ -305,7 +347,7 @@ function completionSource(
       detail: field.semanticType,
       type: 'variable' as const,
       boost: 100,
-      apply: formulaIdentifier(field.canonicalName),
+      apply: formulaDialect ? `{{${field.canonicalName}}}` : formulaIdentifier(field.canonicalName),
     })),
     ...functions.map((name) => ({
       label: name,
