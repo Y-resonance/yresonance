@@ -145,7 +145,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     services:
       clickhouse:
-        image: clickhouse/clickhouse-server:26.8.16.41
+        image: clickhouse/clickhouse-server:26.10.3.7
         env:
           CLICKHOUSE_USER: yresonance_test
           CLICKHOUSE_PASSWORD: conformance_test_only
