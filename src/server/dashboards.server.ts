@@ -499,7 +499,10 @@ export async function updateWidget(request: Extract<ApiRequest, { action: 'updat
     return { widget, compiledSql: sql };
   }
 
-  await validateLibraryMetricInput(request.libraryMetric, access.session!);
+  await validateLibraryMetricInput(
+    { ...request.libraryMetric, dashboardId: request.dashboardId },
+    access.session!,
+  );
   const libraryMetric = newLibraryMetricValues(request.libraryMetric, access.document.workspaceId);
   await persistDashboard(updated, access.row.updatedAt, libraryMetric);
   return { widget, libraryMetric, compiledSql: sql };

@@ -1,3 +1,5 @@
+import { FormulaModeSelect } from './formula-mode';
+import { datasourceDialect, type SqlDialect } from '#/query/dialect';
 import { useDebouncedValue } from '#/lib/use-debounced-value';
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
@@ -29,6 +31,7 @@ export interface LibraryMetricDraft {
   name: string;
   expression: string;
   semanticType: 'count';
+  formulaDialect?: SqlDialect;
 }
 
 /**
@@ -54,6 +57,9 @@ export function MetricFormulaDialog({
   const editing = metric?.source.kind === 'expression' ? metric.source : undefined;
   const [name, setName] = useState('');
   const [expression, setExpression] = useState('');
+  const [native, setNative] = useState(false);
+  const dialect = source ? datasourceDialect(source) : 'duckdb';
+  const formulaDialect = native ? (editing?.formulaDialect ?? dialect) : undefined;
   const [saveLibrary, setSaveLibrary] = useState(false);
   const [dialogError, setDialogError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
@@ -64,6 +70,7 @@ export function MetricFormulaDialog({
     if (!open) return;
     setName(metric?.userDefinedName ?? 'Custom metric');
     setExpression(metric?.source.kind === 'expression' ? metric.source.expression : '');
+    setNative(Boolean(metric?.source.kind === 'expression' && metric.source.formulaDialect));
     setSaveLibrary(false);
     setDialogError(undefined);
   }, [open, metric]);
@@ -72,12 +79,12 @@ export function MetricFormulaDialog({
   const localValidation = useMemo<FormulaValidation>(
     () =>
       context
-        ? validateAggregateLocally(expression, context)
+        ? validateAggregateLocally(expression, context, formulaDialect)
         : {
             valid: false,
             error: { message: 'Datasource fields are still loading.', from: 0, to: 0 },
           },
-    [context, expression],
+    [context, expression, formulaDialect],
   );
 
   const debouncedExpression = useDebouncedValue(expression);
@@ -87,6 +94,7 @@ export function MetricFormulaDialog({
       dashboardId,
       dataSourceId: source?.id ?? '',
       expression: debouncedExpression,
+      formulaDialect,
     },
     {
       enabled:
@@ -105,7 +113,11 @@ export function MetricFormulaDialog({
     : remoteValidation && !remoteValidation.valid
       ? remoteValidation.error.message
       : undefined;
-  const canSave = !submitting && Boolean(name.trim()) && remoteValidation?.valid === true;
+  const canSave =
+    !submitting &&
+    Boolean(name.trim()) &&
+    localValidation.valid &&
+    remoteValidation?.valid === true;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -119,9 +131,9 @@ export function MetricFormulaDialog({
           dataType: 'number' as const,
           ...metric,
           userDefinedName: name,
-          source: { kind: 'expression', expression },
+          source: { kind: 'expression', expression, formulaDialect },
         },
-        saveLibrary ? { name, expression, semanticType: 'count' } : undefined,
+        saveLibrary ? { name, expression, semanticType: 'count', formulaDialect } : undefined,
       );
       if (!saved) {
         setDialogError('The metric could not be saved.');
@@ -142,8 +154,7 @@ export function MetricFormulaDialog({
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle>{editing ? 'Edit custom metric' : 'Add custom metric'}</DialogTitle>
           <DialogDescription>
-            Write an aggregate formula. Every field reference has to sit inside an aggregate such as
-            sum() or avg().
+            Write an aggregate expression using fields from the selected datasource.
           </DialogDescription>
         </DialogHeader>
         <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[18rem_minmax(0,1fr)]">
@@ -151,7 +162,9 @@ export function MetricFormulaDialog({
             {source ? (
               <FormulaFieldList
                 datasource={source}
-                onInsert={(canonical) => insertFieldReference(editor.current?.view, canonical)}
+                onInsert={(canonical) =>
+                  insertFieldReference(editor.current?.view, canonical, formulaDialect)
+                }
               />
             ) : null}
           </aside>
@@ -171,6 +184,7 @@ export function MetricFormulaDialog({
                   onChange={(event) => setName(event.target.value)}
                 />
               </Field>
+              <FormulaModeSelect dialect={dialect} native={native} onChange={setNative} />
               <Field>
                 <FieldLabel>Aggregate formula</FieldLabel>
                 {source ? (
@@ -178,9 +192,10 @@ export function MetricFormulaDialog({
                     editorRef={editor}
                     datasource={source}
                     mode="aggregate"
+                    formulaDialect={formulaDialect}
                     value={expression}
                     onChange={setExpression}
-                    validation={localValidation}
+                    validation={remoteValidation ?? localValidation}
                   />
                 ) : null}
                 <p

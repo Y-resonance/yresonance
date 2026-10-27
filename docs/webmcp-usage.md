@@ -35,8 +35,16 @@ page refreshes after each write.
 Security model: clients never send SQL or column names. The only query path is
 `queryWidget(widgetId, controlState, drillPath)`, used by the GUI and the WebMCP tool alike. A
 drill path only carries values for levels the editor defined. Viewers and agents
-on a shared link can only run queries the dashboard already defines. Formulas are written in
-yresonance's own text syntax, parsed to an AST, validated, and compiled to SQL on the server.
+on a shared link can only run queries the dashboard already defines. Portable formulas use yresonance's AST compiler. Editors can also set `formulaDialect` to
+`bigquery`, `duckdb`, or `clickhouse` for a native SELECT-list expression. Native expressions
+reference raw or calculated fields as `{{canonical_field_name}}`; names inside SQL strings and
+comments are never expanded. The server checks structure and dependencies, resolves trusted field
+SQL, and validates through the datasource backend before saving. Statements, subqueries,
+qualified identifiers/functions, data-access/system functions and ClickHouse UDFs are excluded.
+Omitting `formulaDialect` (or using null) keeps the portable interpretation. The same property
+belongs on custom metric `source`, calculated-field requests, and library-metric requests.
+`validateCalculatedField` and `validateMetricExpression` return backend validation errors without
+saving. Library metrics are offered only when dialect and referenced fields are compatible.
 
 Page writes return the stored dashboard. `addWidget`, `copyWidget`, and `updateLayout` require a
 `pageId`; `moveWidget` accepts one to move across pages. `updateLayout` replaces only that page's

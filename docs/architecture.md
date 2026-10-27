@@ -70,7 +70,8 @@ placements; dashboard creation accepts at most 100 datasource IDs. Analytics for
 accepts at most 2 MiB and shares a 15-second deadline across request reading and forwarding.
 The Worker enables `enable_request_signal` so client disconnects reach the forwarding request.
 
-Formulas contain at most 16,000 characters and 256 tokens. Compilation stops above
+Formulas contain at most 16,000 characters. Portable formulas allow 256 tokens; native expressions
+allow 1,024 tokens including whitespace. Compilation stops above
 100,000 SQL characters per expression or 1,000,000 characters of intermediate work.
 Calculated fields are limited to 256 per compilation, 64 dependency levels, and
 1,000,000 retained SQL characters. Source listing stops at 100 pages or 10,000 objects
