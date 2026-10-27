@@ -1,3 +1,18 @@
+import { useDebouncedValue } from '#/lib/use-debounced-value';
+import { FormulaModeSelect } from '#/components/formula-mode';
+import {
+  FormulaInput,
+  FormulaFieldList,
+  insertFieldReference,
+  formulaContext,
+  validateAggregateLocally,
+  errorRange,
+  type FormulaValidation,
+} from '#/components/formula-editor';
+import { datasourceDialect } from '#/query/dialect';
+import type { DatasourceDescription } from '#/domain/datasource-fields';
+import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
+import { useRef } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useState, type FormEvent } from 'react';
 import { useApi, useApiQuery } from '#/api/query';
@@ -15,7 +30,6 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table';
-import { Textarea } from '#/components/ui/textarea';
 import type { SemanticType } from '#/domain/schema';
 import { useWebMcpTools } from '#/webmcp/use-webmcp-tools';
 import { pageTitle } from '#/lib/page-title';
@@ -56,6 +70,20 @@ function MetricsContent() {
   const bootstrapQuery = useApiQuery<{ isAdmin: boolean }>({ action: 'bootstrap' });
   const metrics = metricsQuery.data;
   const isAdmin = bootstrapQuery.data?.isAdmin ?? false;
+  const sourcesQuery = useApiQuery<Array<{ id: string; name: string }>>({
+    action: 'listDataSources',
+  });
+  const [selectedSource, setSelectedSource] = useState('');
+  const sourceId = selectedSource || sourcesQuery.data?.[0]?.id || '';
+  const sourceQuery = useApiQuery<DatasourceDescription>(
+    { action: 'describeDatasource', dataSourceId: sourceId },
+    { enabled: Boolean(sourceId) },
+  );
+  const source = sourceQuery.data;
+  const editor = useRef<ReactCodeMirrorRef>(null);
+  const [native, setNative] = useState(false);
+  const dialect = source ? datasourceDialect(source) : 'duckdb';
+  const formulaDialect = native ? dialect : undefined;
   const [error, setError] = useState<string>();
   const [form, setForm] = useState({
     name: '',
@@ -63,6 +91,31 @@ function MetricsContent() {
     semanticType: 'ratio' as SemanticType,
     description: '',
   });
+  const debouncedExpression = useDebouncedValue(form.expression);
+  const validationQuery = useApiQuery<FormulaValidation>(
+    {
+      action: 'validateMetricExpression',
+      dataSourceId: sourceId,
+      expression: debouncedExpression,
+      formulaDialect,
+    },
+    {
+      enabled:
+        Boolean(sourceId && form.expression.trim()) && form.expression === debouncedExpression,
+    },
+  );
+  const localValidation = source
+    ? validateAggregateLocally(form.expression, formulaContext(source), formulaDialect)
+    : undefined;
+  const validation =
+    form.expression !== debouncedExpression
+      ? undefined
+      : validationQuery.error
+        ? {
+            valid: false as const,
+            error: errorRange(validationQuery.error.message, form.expression),
+          }
+        : validationQuery.data;
   const { refetch: refetchMetrics } = metricsQuery;
   const { refetch: refetchBootstrap } = bootstrapQuery;
   const refresh = useCallback(async () => {
@@ -77,6 +130,7 @@ function MetricsContent() {
         action: 'upsertLibraryMetric',
         name: form.name,
         expression: form.expression,
+        formulaDialect,
         semanticType: form.semanticType,
         description: form.description,
       });
@@ -107,8 +161,8 @@ function MetricsContent() {
             </p>
           </div>
           {isAdmin ? (
-            <form className="max-w-2xl" onSubmit={submit}>
-              <FieldGroup>
+            <form className="max-w-5xl" onSubmit={submit}>
+              <FieldGroup className="grid sm:grid-cols-2">
                 <Field>
                   <FieldLabel htmlFor="metric-name">Name</FieldLabel>
                   <Input
@@ -118,13 +172,23 @@ function MetricsContent() {
                   />
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="metric-expression">Aggregate formula</FieldLabel>
-                  <Textarea
-                    id="metric-expression"
-                    value={form.expression}
-                    onChange={(event) => setForm({ ...form, expression: event.target.value })}
-                  />
+                  <FieldLabel htmlFor="metric-datasource">Validate against datasource</FieldLabel>
+                  <NativeSelect
+                    id="metric-datasource"
+                    value={sourceId}
+                    onChange={(event) => setSelectedSource(event.target.value)}
+                  >
+                    {!sourcesQuery.data?.length ? (
+                      <NativeSelectOption value="">No datasources</NativeSelectOption>
+                    ) : null}
+                    {sourcesQuery.data?.map((item) => (
+                      <NativeSelectOption key={item.id} value={item.id}>
+                        {item.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
                 </Field>
+                <FormulaModeSelect dialect={dialect} native={native} onChange={setNative} />
                 <Field>
                   <FieldLabel htmlFor="metric-type">Type</FieldLabel>
                   <NativeSelect
@@ -141,7 +205,40 @@ function MetricsContent() {
                     ))}
                   </NativeSelect>
                 </Field>
-                <Field>
+                <Field className="sm:col-span-2">
+                  <FieldLabel>Aggregate formula</FieldLabel>
+                  {source && localValidation ? (
+                    <>
+                      <div className="grid overflow-hidden rounded-md border sm:grid-cols-[14rem_minmax(0,1fr)]">
+                        <div className="flex max-h-48 min-h-0 flex-col overflow-auto border-r">
+                          <FormulaFieldList
+                            datasource={source}
+                            onInsert={(canonical) =>
+                              insertFieldReference(editor.current?.view, canonical, formulaDialect)
+                            }
+                          />
+                        </div>
+                        <FormulaInput
+                          editorRef={editor}
+                          datasource={source}
+                          mode="aggregate"
+                          formulaDialect={formulaDialect}
+                          value={form.expression}
+                          onChange={(expression) => setForm({ ...form, expression })}
+                          validation={validation ?? localValidation}
+                          height="12rem"
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                  {validation && !validation.valid ? (
+                    <p className="text-sm text-destructive">{validation.error.message}</p>
+                  ) : null}
+                  {sourceQuery.error ? (
+                    <p className="text-sm text-destructive">{sourceQuery.error.message}</p>
+                  ) : null}
+                </Field>
+                <Field className="sm:col-span-2">
                   <FieldLabel htmlFor="metric-description">Description</FieldLabel>
                   <Input
                     id="metric-description"
@@ -149,7 +246,15 @@ function MetricsContent() {
                     onChange={(event) => setForm({ ...form, description: event.target.value })}
                   />
                 </Field>
-                <Button type="submit" disabled={!form.name.trim() || !form.expression.trim()}>
+                <Button
+                  type="submit"
+                  disabled={
+                    !form.name.trim() ||
+                    !form.expression.trim() ||
+                    validation?.valid !== true ||
+                    localValidation?.valid !== true
+                  }
+                >
                   Add metric
                 </Button>
               </FieldGroup>

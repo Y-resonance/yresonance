@@ -1,3 +1,4 @@
+import type { SqlDialect } from '#/query/dialect';
 import type { WidgetDefinition } from './schema';
 
 interface QueryMetadata {
@@ -13,12 +14,14 @@ interface QueryMetadata {
     canonicalName: string;
     label: string;
     expression: string;
+    formulaDialect?: SqlDialect | null;
   }>;
   libraryMetrics: Array<{
     id: string;
     canonicalName: string;
     name: string;
     expression: string;
+    formulaDialect?: SqlDialect | null;
   }>;
 }
 
@@ -44,16 +47,23 @@ export function widgetDependencyState(definition: WidgetDefinition, metadata: Qu
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     calculatedFields: metadata.calculatedFields
-      .map(({ id, canonicalName, label, expression }) => ({
+      .map(({ id, canonicalName, label, expression, formulaDialect }) => ({
         id,
         canonicalName,
         label,
         expression,
+        formulaDialect,
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     libraryMetrics: metadata.libraryMetrics
       .filter((metric) => libraryMetricIds.has(metric.id))
-      .map(({ id, canonicalName, name, expression }) => ({ id, canonicalName, name, expression }))
+      .map(({ id, canonicalName, name, expression, formulaDialect }) => ({
+        id,
+        canonicalName,
+        name,
+        expression,
+        formulaDialect,
+      }))
       .sort((left, right) => left.id.localeCompare(right.id)),
   };
 }

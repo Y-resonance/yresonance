@@ -1,3 +1,4 @@
+import type { SqlDialect } from './dialect';
 import type {
   DatasourceCachePolicy,
   DataSourceLocation,
@@ -36,6 +37,7 @@ export interface CalculatedFieldRecord {
   canonicalName: string;
   label: string;
   expression: string;
+  formulaDialect?: SqlDialect | null;
   role: FieldRole;
   semanticType: SemanticType;
   description: string | null;
@@ -46,6 +48,7 @@ export interface LibraryMetricRecord {
   canonicalName: string;
   name: string;
   expression: string;
+  formulaDialect?: SqlDialect | null;
   semanticType: SemanticType;
   description: string | null;
 }
