@@ -97,7 +97,7 @@
     "oxlint": "1.90.0",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "vite": "8.2.2",
+    "vite": "8.3.5",
     "vite-imagetools": "^12.0.1",
     "vitest": "4.1.12",
     "wrangler": "4.153.0"
