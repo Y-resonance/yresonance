@@ -313,7 +313,7 @@ test('external file capabilities relay ranges, enforce read budgets, and reject 
     (
       await handleExternalFileRequest(
         new Request(url),
-        `${token.slice(0, 5)}x${token.slice(6)}`,
+        `${token.slice(0, 5)}${token[5] === 'x' ? 'y' : 'x'}${token.slice(6)}`,
         env,
       )
     ).status,

@@ -79,8 +79,8 @@
   },
   "devDependencies": {
     "@clerk/testing": "^2.2.31",
-    "@cloudflare/vite-plugin": "1.54.2",
-    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@cloudflare/vite-plugin": "1.65.0",
+    "@cloudflare/vitest-pool-workers": "^0.23.0",
     "@duckdb/node-api": "^1.5.5-r.4",
     "@playwright/test": "^1.58.2",
     "@posthog/rollup-plugin": "^1.6.1",
@@ -99,6 +99,6 @@
     "vite": "8.2.2",
     "vite-imagetools": "^12.0.1",
     "vitest": "4.1.12",
-    "wrangler": "4.135.0"
+    "wrangler": "4.153.0"
   }
 }
