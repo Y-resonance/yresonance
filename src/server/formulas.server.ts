@@ -1,3 +1,4 @@
+import { DatasourceError } from '#/data/connectors/contract';
 import { requireSession, type SessionContext } from './auth.server';
 import { libraryMetrics, calculatedFields, dataSources } from '#/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -10,15 +11,9 @@ import {
 } from '#/query/compiler';
 import { loadDataSource, loadQueryMetadata } from './records.server';
 import { database } from './database.server';
-import {
-  datasourceOperation,
-  connectorFor,
-  normalize,
-  slug,
-  libraryMetricApplies,
-} from './datasource-operations.server';
+import { datasourceOperation, connectorFor, normalize, slug } from './datasource-operations.server';
 import { authorizeDashboard, dashboardUsesDataSource } from './dashboard-access.server';
-import type { SqlDialect } from '#/query/dialect';
+import { datasourceDialect, type SqlDialect } from '#/query/dialect';
 
 export async function listLibraryMetrics() {
   const session = await requireSession();
@@ -32,13 +27,19 @@ export async function upsertCalculatedField(
   request: Extract<ApiRequest, { action: 'upsertCalculatedField' }>,
 ) {
   const { session, dataSource, metadata, canonicalName } = await calculatedFieldContext(request);
-  validateCalculatedFieldExpression(request, metadata, canonicalName);
+  validateCalculatedFieldExpression(
+    request,
+    metadata,
+    canonicalName,
+    datasourceDialect(dataSource),
+  );
   await datasourceOperation(() =>
     connectorFor(dataSource).validateExpression(dataSource, {
       kind: 'calculatedField',
       id: request.id,
       canonicalName,
       expression: request.expression,
+      formulaDialect: request.formulaDialect ?? null,
       semanticType: request.semanticType,
       metadata,
     }),
@@ -47,6 +48,7 @@ export async function upsertCalculatedField(
     canonicalName,
     label: request.name,
     expression: request.expression,
+    formulaDialect: request.formulaDialect ?? null,
     role: request.role,
     semanticType: request.semanticType,
     defaultAggregation: request.defaultAggregation ?? null,
@@ -89,8 +91,20 @@ export async function validateCalculatedField(
       request,
       metadata,
       canonicalName,
-      dataSource.location.kind === 'bigquery' ? 'bigquery' : undefined,
+      datasourceDialect(dataSource),
     );
+    if (request.formulaDialect)
+      await datasourceOperation(() =>
+        connectorFor(dataSource).validateExpression(dataSource, {
+          kind: 'calculatedField',
+          id: request.id,
+          canonicalName,
+          expression: request.expression,
+          formulaDialect: request.formulaDialect,
+          semanticType: request.semanticType ?? 'text',
+          metadata,
+        }),
+      );
     return { valid: true as const, type: compiled.type, identifiers: compiled.identifiers };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -103,13 +117,19 @@ export async function previewCalculatedFieldValues(
   request: Extract<ApiRequest, { action: 'previewCalculatedFieldValues' }>,
 ) {
   const { dataSource, metadata, canonicalName } = await calculatedFieldContext(request);
-  validateCalculatedFieldExpression(request, metadata, canonicalName);
+  validateCalculatedFieldExpression(
+    request,
+    metadata,
+    canonicalName,
+    datasourceDialect(dataSource),
+  );
   const field = {
     id: request.id ?? '__preview__',
     dataSourceId: request.dataSourceId,
     canonicalName,
     label: request.name,
     expression: request.expression,
+    formulaDialect: request.formulaDialect ?? null,
     role: 'dimension' as const,
     semanticType: request.semanticType,
     description: null,
@@ -135,10 +155,25 @@ export async function validateMetricExpression(
   const { dataSource, metadata } = await datasourceFormulaContext(request);
   try {
     if (!request.expression.trim()) throw new Error('A formula is required.');
-    const compiled = validateAggregateFormula(request.expression, {
-      ...metadata,
-      dialect: dataSource.location.kind === 'bigquery' ? 'bigquery' : undefined,
-    });
+    const compiled = validateAggregateFormula(
+      request.expression,
+      {
+        ...metadata,
+        dialect: datasourceDialect(dataSource),
+      },
+      undefined,
+      request.formulaDialect,
+    );
+    if (request.formulaDialect)
+      await datasourceOperation(() =>
+        connectorFor(dataSource).validateExpression(dataSource, {
+          kind: 'libraryMetric',
+          expression: request.expression,
+          formulaDialect: request.formulaDialect,
+          semanticType: 'count',
+          metadata,
+        }),
+      );
     return { valid: true as const, type: compiled.type, identifiers: compiled.identifiers };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -202,26 +237,36 @@ function validateCalculatedFieldExpression(
   canonicalName: string,
   dialect?: SqlDialect,
 ) {
-  assertCalculatedFieldNameAvailable(canonicalName, metadata, request.id);
-  const semanticType = request.semanticType;
-  const calculatedFields = [
-    ...metadata.calculatedFields.filter((field) => field.id !== request.id),
-    {
-      id: request.id ?? '__candidate__',
-      dataSourceId: request.dataSourceId,
-      canonicalName,
-      label: request.name,
-      expression: request.expression,
-      role: 'dimension' as const,
-      semanticType: semanticType ?? 'text',
-      description: null,
-    },
-  ];
-  return validateRowFormula(
-    request.expression,
-    { fields: metadata.fields, calculatedFields, dialect },
-    semanticType,
-  );
+  try {
+    assertCalculatedFieldNameAvailable(canonicalName, metadata, request.id);
+    const semanticType = request.semanticType;
+    const calculatedFields = [
+      ...metadata.calculatedFields.filter((field) => field.id !== request.id),
+      {
+        id: request.id ?? '__candidate__',
+        dataSourceId: request.dataSourceId,
+        canonicalName,
+        label: request.name,
+        expression: request.expression,
+        formulaDialect: request.formulaDialect ?? null,
+        role: 'dimension' as const,
+        semanticType: semanticType ?? 'text',
+        description: null,
+      },
+    ];
+    return validateRowFormula(
+      request.expression,
+      { fields: metadata.fields, calculatedFields, dialect },
+      semanticType,
+      request.formulaDialect,
+    );
+  } catch (error) {
+    throw new ApiError(
+      400,
+      'invalid_query',
+      error instanceof Error ? error.message : 'Invalid formula.',
+    );
+  }
 }
 
 function formulaErrorPosition(message: string, expression: string) {
@@ -254,6 +299,7 @@ export async function upsertLibraryMetric(
     name: request.name,
     canonicalName: request.canonicalName ?? slug(request.name),
     expression: request.expression,
+    formulaDialect: request.formulaDialect ?? null,
     semanticType: request.semanticType,
     description: request.description ?? null,
     updatedAt: new Date().toISOString(),
@@ -283,7 +329,7 @@ type LibraryMetricInput = NonNullable<
 >;
 
 export async function validateLibraryMetricInput(
-  input: LibraryMetricInput,
+  input: LibraryMetricInput & { dashboardId?: string },
   session: SessionContext,
 ) {
   const sourceRows = await database()
@@ -291,29 +337,35 @@ export async function validateLibraryMetricInput(
     .from(dataSources)
     .where(eq(dataSources.workspaceId, session.workspace.id));
   let validated = false;
+  let reason = 'No datasource contains every canonical field referenced by this metric.';
+  const access =
+    !session.isAdmin && input.dashboardId
+      ? await authorizeDashboard(input.dashboardId, 'editor')
+      : undefined;
   for (const row of sourceRows) {
+    if (access && !dashboardUsesDataSource(access.document, row.id)) continue;
     const dataSource = await loadDataSource(row.id, session.workspace.id);
     const metadata = await loadQueryMetadata(row.id, session.workspace.id);
-    if (
-      await datasourceOperation(() =>
-        libraryMetricApplies(dataSource, {
-          kind: 'libraryMetric',
-          expression: input.expression,
-          semanticType: input.semanticType,
-          metadata,
-        }),
-      )
-    ) {
+    try {
+      await connectorFor(dataSource).validateExpression(dataSource, {
+        kind: 'libraryMetric',
+        expression: input.expression,
+        formulaDialect: input.formulaDialect,
+        semanticType: input.semanticType,
+        metadata,
+      });
       validated = true;
       break;
+    } catch (error) {
+      if (error instanceof DatasourceError && error.code === 'invalid_query') {
+        reason = error.message;
+        continue;
+      }
+      throw error;
     }
   }
   if (!validated)
-    throw new ApiError(
-      400,
-      'metric_not_applicable',
-      'No datasource contains every canonical field referenced by this metric.',
-    );
+    throw new ApiError(400, 'metric_not_applicable', `No compatible datasource: ${reason}`);
 }
 
 export function newLibraryMetricValues(input: LibraryMetricInput, workspaceId: string) {
@@ -323,6 +375,7 @@ export function newLibraryMetricValues(input: LibraryMetricInput, workspaceId: s
     name: input.name,
     canonicalName: input.canonicalName ?? slug(input.name),
     expression: input.expression,
+    formulaDialect: input.formulaDialect ?? null,
     semanticType: input.semanticType,
     description: input.description ?? null,
     updatedAt: new Date().toISOString(),

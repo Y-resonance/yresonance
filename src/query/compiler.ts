@@ -262,6 +262,7 @@ function metricExpression(
   }
   if (metric.source.kind === 'expression') {
     const compiled = compileFormula(metric.source.expression, {
+      formulaDialect: metric.source.formulaDialect,
       mode: 'aggregate',
       fields: formulaFields(context),
       dialect: context.dialect,
@@ -283,6 +284,7 @@ function metricExpression(
     description: library.description,
   });
   const compiled = compileFormula(library.expression, {
+    formulaDialect: library.formulaDialect,
     mode: 'aggregate',
     fields: formulaFields(context),
     dialect: context.dialect,
@@ -321,8 +323,11 @@ export function validateAggregateFormula(
   expression: string,
   context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
   semanticType?: SemanticType,
+  formulaDialect?: SqlDialect | null,
 ) {
   const compiled = compileFormula(expression, {
+    formulaDialect,
+    type: semanticType ? formulaTypeForSemanticType(semanticType) : undefined,
     mode: 'aggregate',
     fields: formulaFields(context),
     dialect: context.dialect,
@@ -339,8 +344,11 @@ export function validateRowFormula(
   expression: string,
   context: Pick<QueryContext, 'fields' | 'calculatedFields' | 'dialect'>,
   semanticType?: SemanticType,
+  formulaDialect?: SqlDialect | null,
 ) {
   const compiled = compileFormula(expression, {
+    formulaDialect,
+    type: semanticType ? formulaTypeForSemanticType(semanticType) : undefined,
     mode: 'row',
     fields: formulaFields(context),
     dialect: context.dialect,
@@ -555,11 +563,13 @@ export function formulaFields(
     if (resolving.length >= 64) throw new Error('Calculated field dependencies exceed 64 levels.');
     resolving.push(key);
     try {
-      for (const identifier of formulaIdentifiers(field.expression)) {
+      for (const identifier of formulaIdentifiers(field.expression, field.formulaDialect)) {
         const dependency = identifier.toLocaleLowerCase('en-US');
         if (calculatedByName.has(dependency)) resolve(dependency);
       }
       const compiled = compileFormula(field.expression, {
+        formulaDialect: field.formulaDialect,
+        type: formulaTypeForSemanticType(field.semanticType),
         mode: 'row',
         fields: [...raw, ...resolved.values()],
         dialect: context.dialect,

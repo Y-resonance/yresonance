@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { dataSourceLocationSchema } from '#/domain/schema';
 import { hashJson } from '#/domain/hash';
 import { quoteSqlIdentifier } from '#/query/dialect';
@@ -6,6 +7,11 @@ import {
   compileDatasourceQuery,
   compileDatasourceWidget,
   datasourceExpressionSql,
+  expressionValidationQuery,
+  expressionColumnsSchema,
+  assertExpressionResultType,
+  assertWidgetResultTypes,
+  hasNativeFormulas,
 } from '../backend-query';
 import { authorizationReferenceSchema, googleAccessToken } from '../google-oauth.server';
 import { loadConnection } from '../connection-store.server';
@@ -13,6 +19,7 @@ import {
   bigqueryRequest,
   bigqueryTablePath,
   executeBigquery,
+  parameter,
   tableSchema,
 } from '../bigquery.server';
 import { DatasourceError, type DatasourceQuery } from './contract';
@@ -33,6 +40,32 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
   async function token(source: Omit<DataSourceRecord, 'version'>) {
     const reference = authorizationReferenceSchema.parse(await connection(source));
     return googleAccessToken(source.workspaceId, reference.authorizationId);
+  }
+  async function validateBigquery(
+    source: DataSourceRecord,
+    query: { sql: string; parameters: unknown[] },
+  ) {
+    const config = location(source);
+    return bigqueryRequest(
+      (await token(source)).accessToken,
+      `projects/${encodeURIComponent(config.project)}/jobs`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          jobReference: { projectId: config.project, location: config.location },
+          configuration: {
+            dryRun: true,
+            query: {
+              query: query.sql,
+              useLegacySql: false,
+              maximumBytesBilled: config.maximumBytesBilled,
+              parameterMode: 'POSITIONAL',
+              queryParameters: query.parameters.map(parameter),
+            },
+          },
+        }),
+      },
+    );
   }
   return {
     type: 'bigquery',
@@ -118,7 +151,11 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
     },
     async validateQuery(source, query) {
       try {
-        compileDatasourceWidget(source, query, table(source), 'bigquery');
+        const compiled = compileDatasourceWidget(source, query, table(source), 'bigquery');
+        if (hasNativeFormulas(query)) {
+          const result = await validateBigquery(source, compiled);
+          assertWidgetResultTypes(dryRunColumns(result));
+        }
       } catch (error) {
         throw new DatasourceError(
           'invalid_query',
@@ -134,6 +171,17 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
       location(source);
       try {
         datasourceExpressionSql(expression, 'bigquery');
+        if (expression.formulaDialect) {
+          const result = await validateBigquery(
+            source,
+            expressionValidationQuery(expression, table(source), 'bigquery'),
+          );
+          const columns = dryRunColumns(result);
+          assertExpressionResultType(
+            columns.find((column) => column.name === 'value')?.type,
+            expression.semanticType,
+          );
+        }
       } catch (error) {
         throw new DatasourceError(
           'invalid_query',
@@ -142,4 +190,14 @@ export function bigqueryBackend(connection = loadConnection): AnalyticsDataBacke
       }
     },
   };
+}
+
+function dryRunColumns(result: unknown) {
+  return z
+    .object({
+      statistics: z.object({
+        query: z.object({ schema: z.object({ fields: expressionColumnsSchema }) }),
+      }),
+    })
+    .parse(result).statistics.query.schema.fields;
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   aggregationSchema,
+  formulaDialectSchema,
   bigqueryDatasetIdSchema,
   bigqueryProjectIdSchema,
   controlStateSchema,
@@ -24,6 +25,7 @@ const dashboardRef = { dashboardId: z.string().min(1), shareToken: z.string().mi
 const libraryMetricInputSchema = z.object({
   name: z.string().trim().min(1),
   canonicalName: z.string().trim().min(1).optional(),
+  formulaDialect: formulaDialectSchema,
   expression: z.string().min(1),
   semanticType: semanticTypeSchema,
   description: z.string().optional(),
@@ -236,6 +238,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     id: z.string().optional(),
     name: z.string().trim().min(1),
     canonicalName: z.string().trim().min(1).optional(),
+    formulaDialect: formulaDialectSchema,
     expression: z.string(),
     semanticType: semanticTypeSchema.optional(),
   }),
@@ -246,6 +249,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     id: z.string().optional(),
     name: z.string().trim().min(1),
     canonicalName: z.string().trim().min(1).optional(),
+    formulaDialect: formulaDialectSchema,
     expression: z.string().min(1),
     semanticType: semanticTypeSchema,
   }),
@@ -256,6 +260,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     id: z.string().optional(),
     name: z.string().trim().min(1),
     canonicalName: z.string().trim().min(1).optional(),
+    formulaDialect: formulaDialectSchema,
     expression: z.string().min(1),
     role: fieldRoleSchema,
     semanticType: semanticTypeSchema,
@@ -266,6 +271,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     action: z.literal('validateMetricExpression'),
     dashboardId: z.string().min(1).optional(),
     dataSourceId: z.string().min(1),
+    formulaDialect: formulaDialectSchema,
     expression: z.string(),
   }),
   z.object({
