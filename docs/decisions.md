@@ -24,9 +24,15 @@ explain. Update it when a decision changes, not when an implementation detail do
   names. The one query path is `queryWidget(widgetId, controlState, drillPath)`, shared by UI and tool.
 - Column secrecy is explicitly not a goal. A derived metric next to its denominator makes the
   numerator derivable anyway (CPM and impressions give spend).
-- Formulas use yresonance's own text syntax at two levels: row-level calculated fields and aggregate
-  metrics. The backend parses an AST, checks it against field metadata and compiles SQL with
-  trusted identifiers. Saving a formula never starts DuckDB.
+- Formulas have row-level calculated fields and aggregate metrics. Untagged formulas keep the
+  portable syntax and AST compiler. Native SQL expressions carry an explicit `formulaDialect`
+  (`bigquery`, `duckdb`, or `clickhouse`), use `{{canonical_field_name}}` references, and never
+  translate between dialects. The application still owns FROM, filtering, grouping and limits.
+  Structural checks exclude statements, subqueries, qualified names and data-access/system
+  functions before resolving references to trusted field SQL. Backends validate native expressions
+  against the actual datasource and check result types before saving: BigQuery dry runs and
+  ClickHouse/DuckDB result-schema inspection. ClickHouse native calls must be built-in functions, so SQL/executable UDFs cannot
+  hide external data access. Native validation may start DuckDB; portable formula saves do not.
 - Control values are lenient, control keys are strict. Any value for an exposed control's field is
   accepted, because the editor chose to expose that field. Unknown keys are rejected.
 - Multi-tenant from the start. A workspace is a Clerk Organization, every row carries a

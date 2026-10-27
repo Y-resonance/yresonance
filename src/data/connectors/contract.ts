@@ -1,3 +1,4 @@
+import type { SqlDialect } from '#/query/dialect';
 import type {
   ControlState,
   DashboardDocument,
@@ -47,12 +48,14 @@ export type DatasourceExpression =
       id?: string;
       canonicalName: string;
       expression: string;
+      formulaDialect?: SqlDialect | null;
       semanticType: SemanticType;
       metadata: Pick<DatasourceQueryMetadata, 'fields' | 'calculatedFields'>;
     }
   | {
       kind: 'libraryMetric';
       expression: string;
+      formulaDialect?: SqlDialect | null;
       semanticType: SemanticType;
       metadata: Pick<DatasourceQueryMetadata, 'fields' | 'calculatedFields'>;
     };

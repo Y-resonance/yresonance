@@ -1,3 +1,4 @@
+import { compileNativeFormula, nativeFormulaIdentifiers } from './native-formula';
 import { sqlLiteral, type SqlDialect } from './dialect';
 export type FormulaMode = 'row' | 'aggregate';
 export type FormulaType = 'number' | 'text' | 'date' | 'boolean' | 'null' | 'unknown';
@@ -73,8 +74,16 @@ const binaryPrecedence = new Map([
 
 export function compileFormula(
   source: string,
-  options: { mode: FormulaMode; fields: FormulaField[]; dialect?: SqlDialect },
+  options: {
+    mode: FormulaMode;
+    fields: FormulaField[];
+    dialect?: SqlDialect;
+    formulaDialect?: SqlDialect | null;
+    type?: FormulaType;
+  },
 ): CompiledFormula {
+  if (options.formulaDialect)
+    return compileNativeFormula(source, { ...options, formulaDialect: options.formulaDialect });
   const parser = new FormulaParser(tokenize(source));
   const node = parser.parse();
   const fields = new Map<string, FormulaField>();
@@ -167,7 +176,8 @@ export function compileFormula(
   return { ...result, identifiers: [...identifiers] };
 }
 
-export function formulaIdentifiers(source: string) {
+export function formulaIdentifiers(source: string, formulaDialect?: SqlDialect | null) {
+  if (formulaDialect) return nativeFormulaIdentifiers(source, formulaDialect);
   const root = new FormulaParser(tokenize(source)).parse();
   const identifiers = new Set<string>();
   const visit = (node: FormulaNode) => {

@@ -193,6 +193,18 @@ export async function clickhouseRequest(
     // Server exceptions can include SQL, URLs, and settings. Never expose or log their body.
     if (!response.ok || response.headers.has('X-ClickHouse-Exception-Code')) {
       await response.body?.cancel();
+      const code = response.headers.get('X-ClickHouse-Exception-Code');
+      const validationErrors: Record<string, string> = {
+        '43': 'Illegal argument type. Check the types of referenced fields.',
+        '46': 'Unknown SQL function. Check the function name and ClickHouse version.',
+        '47': 'Unknown SQL identifier. Use canonical field references.',
+        '62': 'Invalid SQL expression syntax.',
+        '184': 'An aggregate is not allowed here. Use a row expression for calculated fields.',
+        '215': 'Metric field references must be aggregated.',
+        '386': 'SQL argument types are incompatible.',
+      };
+      if (code && validationErrors[code])
+        throw new DatasourceError('invalid_query', validationErrors[code]);
       throw new DatasourceError(
         'datasource_connector_failed',
         'ClickHouse could not complete the request.',

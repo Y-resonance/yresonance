@@ -34,6 +34,9 @@ export async function persistDashboard(
             name: sql<string>`${libraryMetric.name}`.as('name'),
             canonicalName: sql<string>`${libraryMetric.canonicalName}`.as('canonicalName'),
             expression: sql<string>`${libraryMetric.expression}`.as('expression'),
+            formulaDialect: sql<string | null>`${libraryMetric.formulaDialect}`.as(
+              'formulaDialect',
+            ),
             semanticType: sql<string>`${libraryMetric.semanticType}`.as('semanticType'),
             description: sql<string | null>`${libraryMetric.description}`.as('description'),
             updatedAt: sql<string>`${libraryMetric.updatedAt}`.as('updatedAt'),

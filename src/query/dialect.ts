@@ -43,3 +43,14 @@ export function clickhouseColumnType(type: string): string {
   if (decimal) return `Nullable(Decimal(${decimal[1]}, ${decimal[2]}))`;
   throw new Error(`Unsupported ClickHouse import type ${type}.`);
 }
+
+export function datasourceDialect(source: {
+  location?: { kind: string };
+  connectorType?: string;
+}): SqlDialect {
+  if (source.location?.kind === 'bigquery' || source.connectorType === 'bigquery')
+    return 'bigquery';
+  if (source.location?.kind === 'clickhouse' || source.connectorType?.includes('clickhouse'))
+    return 'clickhouse';
+  return 'duckdb';
+}

@@ -2,6 +2,10 @@ import {
   compileDatasourceQuery,
   compileDatasourceWidget,
   datasourceExpressionSql,
+  expressionValidationQuery,
+  assertExpressionResultType,
+  assertWidgetResultTypes,
+  hasNativeFormulas,
 } from '#/data/backend-query';
 import type { AnalyticsDataBackend } from '#/data/analytics-data-backend';
 import { importManagedFile } from '#/data/file-ingestion.server';
@@ -80,6 +84,18 @@ export const duckdbFileConnector: AnalyticsDataBackend = {
   async validateQuery(dataSource, query) {
     try {
       compileDatasourceWidget(dataSource, query, quoteIdentifier('yresonance_source'));
+      if (hasNativeFormulas(query)) {
+        const columns = await runPreparedQuery<{ column_name: string; column_type: string }>(
+          dataSource,
+          (sourceSql) => {
+            const compiled = compileDatasourceWidget(dataSource, query, sourceSql);
+            return { ...compiled, sql: `DESCRIBE ${compiled.sql}` };
+          },
+        );
+        assertWidgetResultTypes(
+          columns.map((column) => ({ name: column.column_name, type: column.column_type })),
+        );
+      }
     } catch (error) {
       throw connectorError(error, 'invalid_query');
     }
@@ -98,9 +114,22 @@ export const duckdbFileConnector: AnalyticsDataBackend = {
     }
   },
 
-  async validateExpression(_dataSource, definition) {
+  async validateExpression(dataSource, definition) {
     try {
       datasourceExpressionSql(definition);
+      if (definition.formulaDialect) {
+        const columns = await runPreparedQuery<{ column_name: string; column_type: string }>(
+          dataSource,
+          (sourceSql) => {
+            const query = expressionValidationQuery(definition, sourceSql);
+            return { ...query, sql: `DESCRIBE ${query.sql}` };
+          },
+        );
+        assertExpressionResultType(
+          columns.find((column) => column.column_name === 'value')?.column_type,
+          definition.semanticType,
+        );
+      }
     } catch (error) {
       throw connectorError(error, 'invalid_query');
     }
