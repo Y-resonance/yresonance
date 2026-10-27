@@ -8,7 +8,15 @@ import { collectObjectPages, matchingSourceObjects } from '#/data/listing';
 import { hashJson } from '#/domain/hash';
 import { compileSourceSqlFromUrls } from '#/query/compiler';
 import { describeDataSource, runPreparedQuery } from '#/query/duckdb.server';
-import { compileDatasourceQuery } from '#/data/backend-query';
+import {
+  compileDatasourceWidget,
+  datasourceExpressionSql,
+  expressionValidationQuery,
+  assertExpressionResultType,
+  assertWidgetResultTypes,
+  hasNativeFormulas,
+  compileDatasourceQuery,
+} from '#/data/backend-query';
 import type { DataSourceRecord } from '#/query/types';
 import type { AnalyticsDataBackend } from '#/data/analytics-data-backend';
 import { DatasourceError, type DatasourceQuery } from './contract';
@@ -86,6 +94,53 @@ export function s3DuckdbBackend(connection = loadConnection): AnalyticsDataBacke
         throw new DatasourceError(
           'datasource_inspection_failed',
           'DuckDB could not inspect these S3 files. Check the source and read permissions.',
+        );
+      }
+    },
+    async validateExpression(source, expression) {
+      try {
+        datasourceExpressionSql(expression);
+        if (expression.formulaDialect) {
+          const columns = await runPreparedQuery<{ column_name: string; column_type: string }>(
+            source,
+            (sql) => {
+              const query = expressionValidationQuery(expression, sql);
+              return { ...query, sql: `DESCRIBE ${query.sql}` };
+            },
+            resolve,
+          );
+          assertExpressionResultType(
+            columns.find((column) => column.column_name === 'value')?.column_type,
+            expression.semanticType,
+          );
+        }
+      } catch (error) {
+        throw new DatasourceError(
+          'invalid_query',
+          error instanceof Error ? error.message : 'Invalid expression.',
+        );
+      }
+    },
+    async validateQuery(source, query) {
+      try {
+        compileDatasourceWidget(source, query, 'yresonance_source');
+        if (hasNativeFormulas(query)) {
+          const columns = await runPreparedQuery<{ column_name: string; column_type: string }>(
+            source,
+            (sql) => {
+              const compiled = compileDatasourceWidget(source, query, sql);
+              return { ...compiled, sql: `DESCRIBE ${compiled.sql}` };
+            },
+            resolve,
+          );
+          assertWidgetResultTypes(
+            columns.map((column) => ({ name: column.column_name, type: column.column_type })),
+          );
+        }
+      } catch (error) {
+        throw new DatasourceError(
+          'invalid_query',
+          error instanceof Error ? error.message : 'Invalid query.',
         );
       }
     },

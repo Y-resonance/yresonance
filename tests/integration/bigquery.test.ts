@@ -90,8 +90,30 @@ function googleNetwork({
           ],
         },
       });
-    if (url.pathname.endsWith('/jobs') && request.method === 'POST')
-      return Response.json({ jobReference: JSON.parse(body).jobReference });
+    if (url.pathname.endsWith('/jobs') && request.method === 'POST') {
+      const job = JSON.parse(body);
+      return Response.json({
+        jobReference: job.jobReference,
+        ...(job.configuration?.dryRun
+          ? {
+              statistics: {
+                query: {
+                  schema: {
+                    fields: [
+                      {
+                        name: job.configuration.query.query.includes('metric_1')
+                          ? 'metric_1'
+                          : 'value',
+                        type: 'NUMERIC',
+                      },
+                    ],
+                  },
+                },
+              },
+            }
+          : {}),
+      });
+    }
     if (url.pathname.includes('/queries/')) {
       if (tooManyRows)
         return Response.json({
@@ -385,4 +407,177 @@ test('catalog browsing follows pagination, reads source metadata without query j
   await callService({ action: 'disconnectDatasourceConnection', connectionId: grant.id });
   await expectApiError(callService(browse), { status: 403, code: 'datasource_access_denied' });
   expect(requests).toHaveLength(before);
+});
+
+test('native BigQuery formulas retain their dialect, validate through Google, and reject failed saves', async () => {
+  const requests = googleNetwork();
+  await signInToNewWorkspace();
+  await completeGoogleConnection(await begin());
+  const grant = (await connections()).connections[0]!;
+  const source = (await callService({
+    action: 'registerDatasource',
+    provider: 'bigquery',
+    name: 'Native sales',
+    location,
+    connection: { authorizationId: grant.id },
+  })) as DataSourceRecord & { fields: Array<{ id: string; columnName: string }> };
+  const calculated = {
+    action: 'upsertCalculatedField',
+    dataSourceId: source.id,
+    name: 'Rounded revenue',
+    canonicalName: 'rounded_revenue',
+    expression: 'ROUND({{revenue}}, 2)',
+    formulaDialect: 'bigquery',
+    semanticType: 'currency',
+    role: 'metric',
+  };
+  const stored = (await callService(calculated)) as { id: string; formulaDialect: string };
+  expect(stored.formulaDialect).toBe('bigquery');
+  const expression = 'SAFE_DIVIDE(SUM({{rounded_revenue}}), COUNT(*))';
+  expect(
+    await callService({
+      action: 'validateMetricExpression',
+      dataSourceId: source.id,
+      expression,
+      formulaDialect: 'bigquery',
+    }),
+  ).toMatchObject({ valid: true, identifiers: ['rounded_revenue'] });
+  const metric = (await callService({
+    action: 'upsertLibraryMetric',
+    name: 'Average revenue',
+    expression,
+    formulaDialect: 'bigquery',
+    semanticType: 'currency',
+  })) as { id: string };
+  expect(
+    await callService({ action: 'describeDatasource', dataSourceId: source.id }),
+  ).toMatchObject({
+    calculatedFields: [expect.objectContaining({ id: stored.id, formulaDialect: 'bigquery' })],
+    libraryMetrics: [
+      expect.objectContaining({ id: metric.id, formulaDialect: 'bigquery', expression }),
+    ],
+  });
+  const dashboard = await createDashboard();
+  const nativeDefinition = {
+    type: 'scorecard',
+    title: 'Native average',
+    dataSourceId: source.id,
+    dateRangeFieldId: source.fields.find((field) => field.columnName === 'day')!.id,
+    metric: {
+      source: { kind: 'expression', expression, formulaDialect: 'bigquery' },
+      dataType: 'number',
+    },
+  } as const;
+  const widget = await addWidget(dashboard.id, nativeDefinition);
+  const atomic = (await callService({
+    action: 'updateWidget',
+    dashboardId: dashboard.id,
+    widgetId: widget.id,
+    definition: nativeDefinition,
+    libraryMetric: {
+      name: 'Atomic average',
+      expression,
+      formulaDialect: 'bigquery',
+      semanticType: 'currency',
+    },
+  })) as { libraryMetric: { id: string } };
+  expect(await callService({ action: 'listLibraryMetrics' })).toContainEqual(
+    expect.objectContaining({
+      id: atomic.libraryMetric.id,
+      formulaDialect: 'bigquery',
+      expression,
+    }),
+  );
+  const dryRuns = requests
+    .filter((request) => request.url.pathname.endsWith('/jobs'))
+    .map((request) => JSON.parse(request.body));
+  expect(dryRuns.length).toBeGreaterThan(0);
+  expect(dryRuns.every((job) => job.configuration.dryRun === true)).toBe(true);
+  expect(
+    dryRuns.some(
+      (job) =>
+        job.configuration.query.query.includes('SAFE_DIVIDE') &&
+        job.configuration.query.query.includes('`revenue`') &&
+        !job.configuration.query.query.includes('{{'),
+    ),
+  ).toBe(true);
+  const before = requests.length;
+  expect(
+    await callService({
+      action: 'validateMetricExpression',
+      dataSourceId: source.id,
+      expression,
+      formulaDialect: 'duckdb',
+    }),
+  ).toMatchObject({ valid: false, error: { message: expect.stringContaining('requires duckdb') } });
+  expect(requests.length).toBe(before);
+  const originalFetch = globalThis.fetch;
+  let returnIntegerSchema = true;
+  let repeatedSchema = false;
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input as RequestInfo, init);
+    if (new URL(request.url).pathname.endsWith('/jobs') && returnIntegerSchema)
+      return Response.json({
+        statistics: {
+          query: {
+            schema: {
+              fields: [
+                { name: 'value', type: 'INTEGER', mode: repeatedSchema ? 'REPEATED' : 'NULLABLE' },
+              ],
+            },
+          },
+        },
+      });
+    if (new URL(request.url).pathname.endsWith('/jobs'))
+      return Response.json(
+        {
+          error: {
+            message: 'No matching signature for function ROUND',
+            errors: [{ reason: 'invalidQuery' }],
+          },
+        },
+        { status: 400 },
+      );
+    return originalFetch(input as RequestInfo, init);
+  });
+  const badDate = {
+    ...calculated,
+    name: 'Bad date',
+    canonicalName: 'bad_date',
+    expression: '42',
+    semanticType: 'date',
+  };
+  expect(await callService({ ...badDate, action: 'validateCalculatedField' })).toMatchObject({
+    valid: false,
+    error: { message: 'Formula returns INTEGER, but date requires date.' },
+  });
+  await expectApiError(callService(badDate), { status: 400, code: 'invalid_query' });
+  repeatedSchema = true;
+  expect(
+    await callService({
+      action: 'validateMetricExpression',
+      dataSourceId: source.id,
+      expression: 'ARRAY_AGG({{revenue}})',
+      formulaDialect: 'bigquery',
+    }),
+  ).toMatchObject({
+    valid: false,
+    error: { message: 'Formula returns ARRAY<INTEGER>, but count requires number.' },
+  });
+  returnIntegerSchema = false;
+  expect(
+    await callService({ ...calculated, id: stored.id, action: 'validateCalculatedField' }),
+  ).toMatchObject({
+    valid: false,
+    error: { message: 'No matching signature for function ROUND' },
+  });
+  await expectApiError(
+    callService({ ...calculated, name: 'Rejected field', canonicalName: 'rejected' }),
+    { status: 400, code: 'invalid_query' },
+  );
+  expect(await callService({ action: 'listLibraryMetrics' })).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: metric.id, formulaDialect: 'bigquery' }),
+    ]),
+  );
 });

@@ -311,6 +311,7 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
             request.name.toLowerCase().replaceAll(' ', '_'),
           label: request.name,
           expression: request.expression,
+          formulaDialect: request.formulaDialect,
           role: request.role,
           semanticType: request.semanticType,
           defaultAggregation: request.defaultAggregation ?? null,

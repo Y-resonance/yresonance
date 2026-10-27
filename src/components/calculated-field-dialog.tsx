@@ -1,3 +1,5 @@
+import { FormulaModeSelect } from './formula-mode';
+import { datasourceDialect, type SqlDialect } from '#/query/dialect';
 import { useDebouncedValue } from '#/lib/use-debounced-value';
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
@@ -55,6 +57,9 @@ export function CalculatedFieldDialog({
   const initial = useMemo(() => initialValues(field), [field]);
   const [name, setName] = useState(initial.name);
   const [expression, setExpression] = useState(initial.expression);
+  const [native, setNative] = useState(Boolean(field?.formulaDialect));
+  const dialect = datasourceDialect(datasource);
+  const formulaDialect = native ? dialect : undefined;
   const [role, setRole] = useState<FieldRole>(initial.role);
   const [semanticType, setSemanticType] = useState<SemanticType>(initial.semanticType);
   const [aggregation, setAggregation] = useState<Aggregation | ''>(initial.aggregation);
@@ -74,6 +79,7 @@ export function CalculatedFieldDialog({
     const values = initialValues(field);
     setName(values.name);
     setExpression(values.expression);
+    setNative(Boolean(field?.formulaDialect));
     setRole(values.role);
     setSemanticType(values.semanticType);
     setAggregation(values.aggregation);
@@ -90,16 +96,30 @@ export function CalculatedFieldDialog({
   const canonicalName = field?.canonicalName ?? slug(name);
   const context = useMemo(() => formulaContext(datasource), [datasource]);
   const localValidation = useMemo(
-    () => validateLocally(name, canonicalName, expression, field, context),
-    [name, canonicalName, expression, field, context],
+    () =>
+      validateLocally(
+        name,
+        canonicalName,
+        expression,
+        field,
+        context,
+        formulaDialect,
+        semanticType,
+      ),
+    [name, canonicalName, expression, field, context, native, dialect, semanticType],
   );
   const compatibleTypes = useMemo(
-    () => (localValidation.valid ? semanticTypesForFormulaType(localValidation.type) : []),
-    [localValidation],
+    () =>
+      native
+        ? (['count', 'currency', 'ratio', 'text', 'id', 'date'] as SemanticType[])
+        : localValidation.valid
+          ? semanticTypesForFormulaType(localValidation.type)
+          : [],
+    [localValidation, native],
   );
 
   useEffect(() => {
-    if (!localValidation.valid) return;
+    if (native || !localValidation.valid) return;
     const types = semanticTypesForFormulaType(localValidation.type);
     if (!types.length) return;
     if (preserveLoadedDefaults.current) {
@@ -112,7 +132,7 @@ export function CalculatedFieldDialog({
       setRole(nextRole);
       setAggregation(nextRole === 'metric' ? 'sum' : '');
     }
-  }, [localValidation, semanticType]);
+  }, [localValidation, semanticType, native]);
 
   const validationRequest = useMemo(
     () => ({
@@ -123,9 +143,19 @@ export function CalculatedFieldDialog({
       name,
       canonicalName: field?.canonicalName,
       expression,
+      formulaDialect,
       semanticType,
     }),
-    [dashboardId, datasource.id, field?.id, field?.canonicalName, name, expression, semanticType],
+    [
+      dashboardId,
+      datasource.id,
+      field?.id,
+      field?.canonicalName,
+      name,
+      expression,
+      semanticType,
+      formulaDialect,
+    ],
   );
   const debouncedRequest = useDebouncedValue(validationRequest);
   const validationQuery = useApiQuery<FormulaValidation>(debouncedRequest, {
@@ -144,6 +174,7 @@ export function CalculatedFieldDialog({
   useEffect(() => setPreviewValues(undefined), [validationRequest]);
 
   const dirty =
+    native !== Boolean(field?.formulaDialect) ||
     name !== initial.name ||
     expression !== initial.expression ||
     role !== initial.role ||
@@ -186,6 +217,7 @@ export function CalculatedFieldDialog({
         name,
         canonicalName: field?.canonicalName,
         expression,
+        formulaDialect,
         role,
         semanticType,
         defaultAggregation: role === 'metric' ? aggregation || null : null,
@@ -214,6 +246,7 @@ export function CalculatedFieldDialog({
         name,
         canonicalName: field?.canonicalName,
         expression,
+        formulaDialect,
         semanticType,
       });
       setPreviewValues(result.values);
@@ -238,7 +271,9 @@ export function CalculatedFieldDialog({
             <FormulaFieldList
               datasource={datasource}
               excludedFieldId={field?.id}
-              onInsert={(canonical) => insertFieldReference(editor.current?.view, canonical)}
+              onInsert={(canonical) =>
+                insertFieldReference(editor.current?.view, canonical, formulaDialect)
+              }
             />
           </aside>
           <form className="min-h-0 overflow-y-auto" onSubmit={submit}>
@@ -258,16 +293,18 @@ export function CalculatedFieldDialog({
                   <Input id="calculated-field-id" value={canonicalName} readOnly />
                 </Field>
               </div>
+              <FormulaModeSelect dialect={dialect} native={native} onChange={setNative} />
               <Field>
                 <FieldLabel>Formula</FieldLabel>
                 <FormulaInput
                   editorRef={editor}
                   datasource={datasource}
                   mode="row"
+                  formulaDialect={formulaDialect}
                   excludedFieldId={field?.id}
                   value={expression}
                   onChange={setExpression}
-                  validation={localValidation}
+                  validation={remoteValidation ?? localValidation}
                 />
                 <p
                   className={
@@ -397,6 +434,8 @@ function validateLocally(
   expression: string,
   field: DatasourceFieldRow | undefined,
   context: ReturnType<typeof formulaContext>,
+  formulaDialect?: SqlDialect | null,
+  semanticType?: SemanticType,
 ): FormulaValidation {
   try {
     if (!name.trim()) throw new Error('Name is required.');
@@ -410,15 +449,22 @@ function validateLocally(
         canonicalName,
         label: name,
         expression,
+        formulaDialect,
         role: 'dimension' as const,
-        semanticType: 'text' as const,
+        semanticType: semanticType ?? 'text',
         description: null,
       },
     ];
-    const compiled = validateRowFormula(expression, {
-      fields: context.fields,
-      calculatedFields,
-    });
+    const compiled = validateRowFormula(
+      expression,
+      {
+        fields: context.fields,
+        calculatedFields,
+        dialect: context.dialect,
+      },
+      formulaDialect ? semanticType : undefined,
+      formulaDialect,
+    );
     return { valid: true, type: compiled.type, identifiers: compiled.identifiers };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

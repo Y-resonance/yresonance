@@ -99,6 +99,13 @@
       "when": 1791723258512,
       "tag": "0013_rapid_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1793047460339,
+      "tag": "0014_smart_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }

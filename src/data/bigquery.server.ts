@@ -59,7 +59,12 @@ export async function bigqueryRequest(
   const body = await readJsonResponse(response, MAX_RESULT_BYTES);
   if (!response.ok) {
     const error = z
-      .object({ error: z.object({ errors: z.array(z.object({ reason: z.string() })).optional() }) })
+      .object({
+        error: z.object({
+          message: z.string().optional(),
+          errors: z.array(z.object({ reason: z.string() })).optional(),
+        }),
+      })
       .safeParse(body);
     const reasons = error.success
       ? (error.data.error.errors?.map((entry) => entry.reason) ?? [])
@@ -82,7 +87,9 @@ export async function bigqueryRequest(
     if (response.status === 400)
       throw new DatasourceError(
         'invalid_query',
-        'BigQuery rejected the query. Check field types, partition filter requirements, and the query byte limit.',
+        error.success && error.data.error.message
+          ? error.data.error.message.slice(0, 1200)
+          : 'BigQuery rejected the query. Check field types, partition filter requirements, and the query byte limit.',
       );
     throw new DatasourceError('datasource_connector_failed', 'BigQuery is unavailable.');
   }
@@ -238,7 +245,7 @@ export async function executeBigquery(
   }
 }
 
-function parameter(value: unknown) {
+export function parameter(value: unknown) {
   const data = z.union([z.string(), z.number().finite(), z.boolean(), z.null()]).parse(value);
   return {
     parameterType: {
