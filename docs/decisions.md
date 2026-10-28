@@ -29,7 +29,7 @@ explain. Update it when a decision changes, not when an implementation detail do
   trusted identifiers. Saving a formula never starts DuckDB.
 - Control values are lenient, control keys are strict. Any value for an exposed control's field is
   accepted, because the editor chose to expose that field. Unknown keys are rejected.
-- Multi-tenant from the start. A workspace is a Clerk Organization, every row carries a
+- Multi-tenant from the start. Clerk workspaces map to a Clerk Organization. Keycloak workspaces use application-owned memberships and roles. Every row carries a
   `workspaceId`, R2 keys live under a per-workspace prefix.
 - The query container has no internet access and no storage credentials. It reads exact,
   short-lived signed object URLs through the Worker.
@@ -37,7 +37,7 @@ explain. Update it when a decision changes, not when an implementation detail do
 ## Platform
 
 - One Cloudflare deploy: Worker (TanStack Start app and API) plus the query container. D1 with
-  Drizzle for application data, R2 for data files, KV for query results, Clerk for auth.
+  Drizzle for application data, R2 for data files, KV for query results, Clerk or direct Keycloak OIDC for auth.
 - DuckDB remains the default analytics backend, running natively in a Bun container per workspace.
   DuckDB inside the Worker (Ducklings) hit the Worker memory limit on real datasources. Datasources
   can also use ClickHouse through its HTTPS endpoint, with credentials kept on the Worker.
@@ -125,12 +125,19 @@ breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.
 - Bring your own BigQuery uses one table or view and bills query jobs to that table's project.
   Editors authorize a Google Workspace account through an Internal OAuth app. The grant is
   workspace-scoped and powers every permitted dashboard viewer, including unlisted links.
-  Google authorization is separate from Clerk login. The application only generates read queries.
+  Google authorization is separate from application login. The application only generates read queries.
 - Reusable OAuth grants live separately from datasource metadata. Access and refresh tokens are
   encrypted with workspace/authorization binding. Callbacks use expiring, single-use state bound to
-  the initiating Clerk user and workspace, plus PKCE. Google verifies the account's hosted domain.
+  the initiating application user and workspace, plus PKCE. Google verifies the account's hosted domain.
   Disconnecting blocks cached results; reconnecting keeps datasource IDs and changes cache identity.
 - Registration inspects metadata without scanning data. Nested/repeated fields require a scalar
   view. Query jobs have a configurable billed-byte ceiling, default 1 GB, a 30-second job timeout,
   and result limits of 20,000 rows / 10 MiB. Failed requests attempt cancellation; Google cancellation
   and job timeout are best effort, while the billed-byte ceiling bounds each query.
+
+## Direct Keycloak authentication
+
+- Authentication provider is a deployment setting. Clerk remains the default; Keycloak uses OIDC with opaque server-side sessions.
+- Keycloak owns identity, while yresonance owns workspace membership and admin roles. Verified-email invitations require explicit acceptance. Keycloak claims do not grant workspace access.
+- Existing Clerk identities and data are preserved. Providers are not automatically linked by email, and switching providers does not migrate permissions.
+- App sessions have a bounded absolute lifetime. Keycloak backchannel logout and refresh tokens are deferred. See [authentication](authentication.md) for setup and session semantics.

@@ -2,7 +2,8 @@ import { type ApiRequest } from '#/api/contracts';
 import { ApiError } from './errors';
 import { shareLinks, dashboardGrants } from '#/db/schema';
 import { and, eq, isNull, inArray } from 'drizzle-orm';
-import { clerkClient } from '@clerk/tanstack-react-start/server';
+import { authProvider } from '#/auth/config.server';
+import { findWorkspaceUser, userProfiles } from '#/auth/directory.server';
 import { authorizeDashboard } from './dashboard-access.server';
 import { database } from './database.server';
 
@@ -34,12 +35,18 @@ export async function shareDashboard(request: Extract<ApiRequest, { action: 'sha
       );
   } else {
     if (request.operation.kind === 'grant') {
-      const users = await clerkClient().users.getUserList({
-        emailAddress: [request.operation.userEmail],
-        limit: 2,
-      });
-      const user = users.data[0];
-      if (!user) throw new ApiError(404, 'user_not_found', 'No Clerk user has that email address.');
+      const user = await findWorkspaceUser(
+        request.operation.userEmail,
+        access.session.workspace.id,
+      );
+      if (!user)
+        throw new ApiError(
+          404,
+          'user_not_found',
+          authProvider() === 'keycloak'
+            ? 'No workspace member has that email address. Invite them to the workspace first.'
+            : 'No user has that email address.',
+        );
       const values = {
         dashboardId: request.dashboardId,
         clerkUserId: user.id,
@@ -57,11 +64,11 @@ export async function shareDashboard(request: Extract<ApiRequest, { action: 'sha
     } else {
       let userId = request.operation.userId;
       if (!userId && request.operation.userEmail) {
-        const users = await clerkClient().users.getUserList({
-          emailAddress: [request.operation.userEmail],
-          limit: 2,
-        });
-        userId = users.data[0]?.id;
+        const user = await findWorkspaceUser(
+          request.operation.userEmail,
+          access.session.workspace.id,
+        );
+        userId = user?.id;
       }
       if (!userId)
         throw new ApiError(400, 'user_reference_required', 'Provide a user id or email to revoke.');
@@ -116,23 +123,15 @@ export async function dashboardCollaborators(dashboardIds: string[]) {
 
 async function resolveCollaborators<T extends { clerkUserId: string }>(grants: T[]) {
   const userIds = [...new Set(grants.map((grant) => grant.clerkUserId))];
-  const userPages = await Promise.all(
-    chunk(userIds, 100).map((page) =>
-      clerkClient().users.getUserList({
-        userId: page,
-        limit: page.length,
-      }),
-    ),
-  );
-  const userById = new Map(userPages.flatMap((page) => page.data).map((user) => [user.id, user]));
+  const userPages = await Promise.all(chunk(userIds, 100).map((page) => userProfiles(page)));
+  const userById = new Map(userPages.flat().map((user) => [user.id, user]));
   return grants.map((grant) => {
     const user = userById.get(grant.clerkUserId);
     return {
       ...grant,
       imageUrl: user?.imageUrl,
-      userEmail: user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress,
-      displayName:
-        [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username || undefined,
+      userEmail: user?.email,
+      displayName: user?.displayName,
     };
   });
 }

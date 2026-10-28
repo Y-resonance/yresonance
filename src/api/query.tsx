@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/tanstack-react-start';
+import { useAuth } from '#/auth/provider';
 import {
   queryOptions,
   useInfiniteQuery,
@@ -21,6 +21,8 @@ import type { ApiRequest, DatasourceCatalogPage } from './contracts';
 // HTTP verbs do not distinguish reads: the application API uses POST for every action.
 const reads = new Set<ApiRequest['action']>([
   'bootstrap',
+  'listWorkspaces',
+  'listWorkspaceMembers',
   'listDashboards',
   'getDashboard',
   'getSharedDashboard',

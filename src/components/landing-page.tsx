@@ -1,3 +1,4 @@
+import { useAuthProvider } from '#/auth/provider';
 import { GetAccessButton, SignInAction } from '#/components/auth-actions';
 import { useSignUpMode } from '#/hooks/use-sign-up-mode';
 import { BrowserFrame } from '#/components/browser-frame';
@@ -223,7 +224,14 @@ const sectionTitle = 'text-3xl font-semibold tracking-tight text-balance sm:text
 const sectionBody = 'mt-4 max-w-xl text-base leading-7 text-muted-foreground';
 
 export function LandingPage() {
-  const mode = useSignUpMode();
+  return useAuthProvider() === 'keycloak' ? <LandingContent /> : <ClerkLandingPage />;
+}
+
+function ClerkLandingPage() {
+  return <LandingContent mode={useSignUpMode()} />;
+}
+
+function LandingContent({ mode }: { mode?: ReturnType<typeof useSignUpMode> }) {
   return (
     <main className="overflow-x-clip">
       <section className={cn(section, 'relative isolate pt-16 pb-24 text-center sm:pt-28')}>

@@ -1,8 +1,13 @@
 import { clerkMiddleware } from '@clerk/tanstack-react-start/server';
-import { createStart } from '@tanstack/react-start';
+import { createIsomorphicFn, createStart } from '@tanstack/react-start';
 
-export const startInstance = createStart(() => {
-  return {
-    requestMiddleware: [clerkMiddleware()],
-  };
-});
+const requestMiddleware = createIsomorphicFn()
+  .client(() => [])
+  .server(async () => {
+    const { authProvider } = await import('./auth/config.server');
+    return authProvider() === 'clerk' ? [clerkMiddleware()] : [];
+  });
+
+export const startInstance = createStart(async () => ({
+  requestMiddleware: await requestMiddleware(),
+}));

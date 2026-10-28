@@ -1,4 +1,4 @@
-import { Show } from '@clerk/tanstack-react-start';
+import { Show } from '#/auth/provider';
 import { createFileRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
 import { AppShell } from '#/components/app-shell';

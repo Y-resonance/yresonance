@@ -19,12 +19,7 @@
     "QUERY_DATA_SOURCE_BASE_URL": "r2://yresonance-data",
   },
   "secrets": {
-    "required": [
-      "CLERK_SECRET_KEY",
-      "INTERNAL_R2_SIGNING_SECRET",
-      "UPLOAD_SIGNING_SECRET",
-      "RESET_ADMIN_TOKEN",
-    ],
+    "required": ["INTERNAL_R2_SIGNING_SECRET", "UPLOAD_SIGNING_SECRET", "RESET_ADMIN_TOKEN"],
   },
   "d1_databases": [
     {
@@ -114,12 +109,7 @@
         "QUERY_DATA_SOURCE_BASE_URL": "r2://yresonance-data-preview",
       },
       "secrets": {
-        "required": [
-          "CLERK_SECRET_KEY",
-          "INTERNAL_R2_SIGNING_SECRET",
-          "UPLOAD_SIGNING_SECRET",
-          "RESET_ADMIN_TOKEN",
-        ],
+        "required": ["INTERNAL_R2_SIGNING_SECRET", "UPLOAD_SIGNING_SECRET", "RESET_ADMIN_TOKEN"],
       },
       "d1_databases": [
         {

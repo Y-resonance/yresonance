@@ -78,9 +78,9 @@ preserves asset cache headers. See [PostHog's proxy reference](https://posthog.c
 
 - Web analytics capture pageviews, page exits, campaign attribution, and Web Vitals.
 - `product_action` records API actions with `action`, `result`, `duration_ms`, `source` (`gui` or
-  `webmcp`), resource IDs, and Clerk organization ID as `workspace_id`.
+  `webmcp`), resource IDs, and the auth workspace identifier as `workspace_id`.
 - `workspace_action` records onboarding actions and their outcomes.
-- Clerk user IDs identify signed-in visitors. Logout and account switches reset the browser identity.
+- The configured auth provider supplies signed-in user IDs. Logout and account switches reset the browser identity.
 - PostHog Logs receive `api_request_completed` from `yresonance-api` and API failures from
   `yresonance-web`. Only these explicit log records are exported. Existing console logs remain in
   Cloudflare. Server exports finish through `waitUntil` without delaying API responses.

@@ -1,3 +1,5 @@
+import { useAuthProvider } from '#/auth/provider';
+import { KeycloakSignIn } from '#/components/keycloak-sign-in';
 import { SignIn } from '@clerk/tanstack-react-start';
 import { createFileRoute } from '@tanstack/react-router';
 import { pageTitle } from '#/lib/page-title';
@@ -16,6 +18,8 @@ export const Route = createFileRoute('/sign-in/$')({
 });
 
 function Page() {
+  const provider = useAuthProvider();
+  if (provider === 'keycloak') return <KeycloakSignIn />;
   return (
     <div className="flex min-h-screen items-center justify-center">
       <SignIn signUpUrl="/sign-up" fallbackRedirectUrl="/" />

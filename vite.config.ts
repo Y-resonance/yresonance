@@ -14,6 +14,15 @@ import { posthogHosts } from './src/analytics/config';
 const devPort = resolveDevPort(process.env.YRESONANCE_PORT);
 const devDataBaseUrl = `http://localhost:${devPort}/__dev-data`;
 const enableDevContainers = process.env.YRESONANCE_ENABLE_CONTAINERS === '1';
+const authVariables = Object.fromEntries(
+  [
+    'AUTH_PROVIDER',
+    'AUTH_APP_URL',
+    'AUTH_SESSION_SECONDS',
+    'KEYCLOAK_ISSUER',
+    'KEYCLOAK_CLIENT_ID',
+  ].flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : [])),
+);
 const uploadPostHogSourceMaps = process.env.POSTHOG_UPLOAD_SOURCEMAPS === 'true';
 
 if (uploadPostHogSourceMaps && (!process.env.POSTHOG_API_KEY || !process.env.POSTHOG_PROJECT_ID))
@@ -70,8 +79,18 @@ export default defineConfig(({ command, mode }) => ({
         : {}),
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
+        // Cloudflare concatenates configuration arrays, so provider secrets are
+        // added here while shared secrets stay in wrangler.jsonc.
+        secrets: {
+          required: [
+            (process.env.AUTH_PROVIDER ?? config.vars?.AUTH_PROVIDER ?? 'clerk') === 'keycloak'
+              ? 'KEYCLOAK_CLIENT_SECRET'
+              : 'CLERK_SECRET_KEY',
+          ],
+        },
         vars: {
           ...config.vars,
+          ...authVariables,
           POSTHOG_ENABLED: process.env.POSTHOG_ENABLED ?? config.vars?.POSTHOG_ENABLED ?? 'false',
           POSTHOG_PROJECT_TOKEN:
             process.env.POSTHOG_PROJECT_TOKEN ?? config.vars?.POSTHOG_PROJECT_TOKEN ?? '',
@@ -88,6 +107,7 @@ export default defineConfig(({ command, mode }) => ({
           ? {
               vars: {
                 APP_ENV: 'development',
+                ...authVariables,
                 POSTHOG_ENABLED: process.env.POSTHOG_ENABLED ?? 'false',
                 POSTHOG_PROJECT_TOKEN:
                   process.env.POSTHOG_PROJECT_TOKEN ?? config.vars?.POSTHOG_PROJECT_TOKEN,
@@ -108,6 +128,7 @@ export default defineConfig(({ command, mode }) => ({
                   process.env.UPLOAD_SIGNING_SECRET ?? 'yresonance-local-upload-only',
                 ...Object.fromEntries(
                   [
+                    'KEYCLOAK_CLIENT_SECRET',
                     'GOOGLE_OAUTH_CLIENT_ID',
                     'GOOGLE_OAUTH_CLIENT_SECRET',
                     'GOOGLE_OAUTH_REDIRECT_URI',

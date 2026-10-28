@@ -30,6 +30,22 @@ const libraryMetricInputSchema = z.object({
 });
 
 export const apiRequestSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('listWorkspaces') }),
+  z.object({ action: z.literal('createWorkspace'), name: z.string().trim().min(1).max(100) }),
+  z.object({ action: z.literal('selectWorkspace'), workspaceId: z.string().min(1) }),
+  z.object({ action: z.literal('acceptWorkspaceInvitation'), invitationId: z.string().min(1) }),
+  z.object({ action: z.literal('listWorkspaceMembers') }),
+  z.object({
+    action: z.literal('inviteWorkspaceMember'),
+    email: z.email(),
+    role: z.enum(['admin', 'member']).default('member'),
+  }),
+  z.object({
+    action: z.literal('updateWorkspaceMember'),
+    userId: z.string().min(1),
+    role: z.enum(['admin', 'member', 'remove']),
+  }),
+  z.object({ action: z.literal('revokeWorkspaceInvitation'), invitationId: z.string().min(1) }),
   z.object({ action: z.literal('bootstrap') }),
   z.object({ action: z.literal('listDashboards') }),
   z.object({

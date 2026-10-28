@@ -248,3 +248,70 @@ export const shareLinks = sqliteTable(
   },
   (table) => [index('share_links_dashboard_id_idx').on(table.dashboardId)],
 );
+
+// Clerk IDs in the existing tables remain stable. Keycloak users receive local IDs;
+// their workspace key uses the reserved local: prefix in clerk_organization_id.
+export const authUsers = sqliteTable(
+  'auth_users',
+  {
+    id: text().primaryKey(),
+    issuer: text().notNull(),
+    subject: text().notNull(),
+    email: text().notNull(),
+    name: text().notNull(),
+  },
+  (table) => [uniqueIndex('auth_users_identity_unique').on(table.issuer, table.subject)],
+);
+
+export const workspaceMembers = sqliteTable(
+  'workspace_members',
+  {
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    role: text({ enum: ['admin', 'member'] }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.userId] }),
+    index('workspace_members_user_idx').on(table.userId),
+  ],
+);
+
+export const workspaceInvitations = sqliteTable(
+  'workspace_invitations',
+  {
+    id: text().primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    email: text().notNull(),
+    role: text({ enum: ['admin', 'member'] }).notNull(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (table) => [uniqueIndex('workspace_invitations_email_unique').on(table.workspaceId, table.email)],
+);
+
+export const authSessions = sqliteTable(
+  'auth_sessions',
+  {
+    id: text().primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'set null' }),
+    expiresAt: integer('expires_at').notNull(),
+    encryptedIdToken: text('encrypted_id_token').notNull(),
+  },
+  (table) => [index('auth_sessions_expiry_idx').on(table.expiresAt)],
+);
+
+export const authLoginStates = sqliteTable('auth_login_states', {
+  id: text().primaryKey(),
+  verifier: text().notNull(),
+  nonce: text().notNull(),
+  returnTo: text('return_to').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});

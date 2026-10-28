@@ -6,6 +6,11 @@ const resetRequestSchema = z.object({
 });
 
 const applicationTables = [
+  'auth_login_states',
+  'auth_sessions',
+  'workspace_invitations',
+  'workspace_members',
+  'auth_users',
   'dashboard_grants',
   'share_links',
   'dashboards',

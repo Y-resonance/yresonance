@@ -66,3 +66,14 @@ Disconnect stops queries for every source using that workspace grant, including 
 `provider: "bigquery"` and `connectionId`. Omit project and dataset to list projects, supply project
 to list datasets, or both to list tables/views. Responses contain `entries` and an optional
 `cursor` for the next page. Dataset entries include `location` for registration.
+
+## Keycloak workspaces
+
+Signed-in Keycloak pages expose `listWorkspaces`, `createWorkspace`,
+`selectWorkspace`, and `acceptWorkspaceInvitation`. Active-workspace admins additionally get
+`listWorkspaceMembers`, `inviteWorkspaceMember`, `updateWorkspaceMember`, and
+`revokeWorkspaceInvitation`. These actions are available only with direct Keycloak authentication.
+Workspace activation reloads the page to reset identity-scoped UI and browser caches. Login stays
+human-driven. Invitations require the recipient's verified email and expire after seven days;
+no email is sent. Removing a member also removes their dashboard grants. The last workspace admin
+cannot be demoted or removed. Every API request rechecks membership and admin permissions.

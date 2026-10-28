@@ -64,6 +64,7 @@
     "drizzle-orm": "^0.45.2",
     "fast-xml-parser": "^5.11.2",
     "lucide-react": "^1.37.0",
+    "openid-client": "^6.8.8",
     "posthog-js": "^1.435.8",
     "posthog-node": "^5.55.0",
     "react": "19.2.8",

@@ -1,3 +1,7 @@
+import { authProvider } from '#/auth/config.server';
+import { requireKeycloakSession } from '#/auth/keycloak.server';
+import { workspaceMembers } from '#/db/schema';
+import { and } from 'drizzle-orm';
 import { auth } from '@clerk/tanstack-react-start/server';
 import { eq } from 'drizzle-orm';
 import { env } from 'cloudflare:workers';
@@ -14,6 +18,25 @@ export interface SessionContext {
 }
 
 export async function requireIdentity() {
+  if (authProvider() === 'keycloak') {
+    const { session, user } = await requireKeycloakSession();
+    const member = session.workspaceId
+      ? await createDatabase(env.DB).query.workspaceMembers.findFirst({
+          where: and(
+            eq(workspaceMembers.workspaceId, session.workspaceId),
+            eq(workspaceMembers.userId, user.id),
+          ),
+        })
+      : undefined;
+    if (!member)
+      throw new ApiError(409, 'organization_required', 'Select or create a workspace to continue.');
+    return {
+      userId: user.id,
+      orgId: `local:${member.workspaceId}`,
+      orgSlug: null,
+      isAdmin: member.role === 'admin',
+    };
+  }
   const session = await auth();
   if (!session.isAuthenticated || !session.userId)
     throw new ApiError(401, 'unauthenticated', 'Sign in to continue.');
@@ -44,6 +67,8 @@ export async function workspaceSession(
   workspace: typeof workspaces.$inferSelect | undefined,
 ): Promise<SessionContext> {
   const db = createDatabase(env.DB);
+  if (!workspace && authProvider() === 'keycloak')
+    throw new ApiError(403, 'workspace_access_denied', 'Workspace access is required.');
   if (!workspace) {
     const id = `ws_${crypto.randomUUID()}`;
     await db

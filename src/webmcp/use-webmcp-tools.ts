@@ -28,6 +28,7 @@ interface WebMcpOptions {
   canEdit?: boolean;
   canManageDataSources?: boolean;
   isAdmin?: boolean;
+  canManageWorkspaces?: boolean;
   onToolUse?: (action: ApiRequest['action']) => void;
   onMutation?: () => void | Promise<void>;
 }
@@ -56,6 +57,57 @@ export function useWebMcpTools(options: WebMcpOptions) {
           shareToken: options.shareToken,
         }
       : {};
+    const workspaceTools: ToolSpec[] = options.canManageWorkspaces
+      ? [
+          {
+            action: 'listWorkspaces',
+            description: 'List your workspace memberships and pending invitations.',
+            readOnly: true,
+          },
+          {
+            action: 'createWorkspace',
+            description: 'Create a workspace and become its admin. Activates it for this session.',
+            readOnly: false,
+          },
+          {
+            action: 'selectWorkspace',
+            description: 'Activate a workspace you belong to. Reload the page after switching.',
+            readOnly: false,
+          },
+          {
+            action: 'acceptWorkspaceInvitation',
+            description:
+              'Accept a pending invitation bound to your verified email and activate that workspace.',
+            readOnly: false,
+          },
+          ...(options.isAdmin
+            ? ([
+                {
+                  action: 'listWorkspaceMembers',
+                  description: 'List active workspace members and pending invitations.',
+                  readOnly: true,
+                },
+                {
+                  action: 'inviteWorkspaceMember',
+                  description:
+                    'Invite a person by verified email as a member or admin. No email is sent; they accept after signing in. Expires after seven days.',
+                  readOnly: false,
+                },
+                {
+                  action: 'updateWorkspaceMember',
+                  description:
+                    'Change a workspace member role or remove them and their dashboard grants. The last admin cannot be removed or demoted.',
+                  readOnly: false,
+                },
+                {
+                  action: 'revokeWorkspaceInvitation',
+                  description: 'Revoke a pending invitation in the active workspace.',
+                  readOnly: false,
+                },
+              ] satisfies ToolSpec[])
+            : []),
+        ]
+      : [];
     const viewTools: ToolSpec[] = [
       ...(!options.shareToken
         ? ([
@@ -338,46 +390,48 @@ export function useWebMcpTools(options: WebMcpOptions) {
           },
         ]
       : [];
-    const adminTools: ToolSpec[] = options.isAdmin
-      ? [
-          ...(!options.dashboardId
-            ? ([
-                {
-                  action: 'validateCalculatedField',
-                  description:
-                    'Validate a row-level calculated field without saving it. Returns its type and referenced field IDs, or an error position.',
-                  readOnly: true,
-                },
-                {
-                  action: 'upsertCalculatedField',
-                  description:
-                    'Create or update a row-level yresonance formula after static syntax, field, and type validation.',
-                  readOnly: false,
-                },
-                {
-                  action: 'validateMetricExpression',
-                  description:
-                    'Validate an aggregate metric formula without saving it. Every field reference must sit inside an aggregate function.',
-                  readOnly: true,
-                },
-                {
-                  action: 'updateFieldMetadata',
-                  description:
-                    'Update field semantics, label, canonical name, visibility, description, default aggregation, or cast override.',
-                  readOnly: false,
-                },
-                {
-                  action: 'upsertLibraryMetric',
-                  description:
-                    'Create or update a workspace aggregate metric written against canonical field names.',
-                  readOnly: false,
-                },
-              ] satisfies ToolSpec[])
-            : []),
-        ]
-      : [];
+    const adminTools: ToolSpec[] =
+      options.isAdmin && !options.canManageWorkspaces
+        ? [
+            ...(!options.dashboardId
+              ? ([
+                  {
+                    action: 'validateCalculatedField',
+                    description:
+                      'Validate a row-level calculated field without saving it. Returns its type and referenced field IDs, or an error position.',
+                    readOnly: true,
+                  },
+                  {
+                    action: 'upsertCalculatedField',
+                    description:
+                      'Create or update a row-level yresonance formula after static syntax, field, and type validation.',
+                    readOnly: false,
+                  },
+                  {
+                    action: 'validateMetricExpression',
+                    description:
+                      'Validate an aggregate metric formula without saving it. Every field reference must sit inside an aggregate function.',
+                    readOnly: true,
+                  },
+                  {
+                    action: 'updateFieldMetadata',
+                    description:
+                      'Update field semantics, label, canonical name, visibility, description, default aggregation, or cast override.',
+                    readOnly: false,
+                  },
+                  {
+                    action: 'upsertLibraryMetric',
+                    description:
+                      'Create or update a workspace aggregate metric written against canonical field names.',
+                    readOnly: false,
+                  },
+                ] satisfies ToolSpec[])
+              : []),
+          ]
+        : [];
     for (const spec of [
-      ...viewTools,
+      ...(options.canManageWorkspaces ? [] : viewTools),
+      ...workspaceTools,
       ...createTools,
       ...overviewTools,
       ...editTools,
@@ -398,6 +452,12 @@ export function useWebMcpTools(options: WebMcpOptions) {
             });
             options.onToolUse?.(spec.action);
             const result = await callApi(request, { source: 'webmcp' });
+            if (
+              ['createWorkspace', 'selectWorkspace', 'acceptWorkspaceInvitation'].includes(
+                spec.action,
+              )
+            )
+              window.location.assign('/');
             if (!spec.readOnly) await options.onMutation?.();
             return result;
           },
@@ -417,6 +477,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
     options.canEdit,
     options.canManageDataSources,
     options.isAdmin,
+    options.canManageWorkspaces,
     options.onToolUse,
     options.onMutation,
     callApi,

@@ -5,7 +5,7 @@ import type {} from '@tanstack/react-start';
 import { apiRequestSchema, type ApiResponse } from '#/api/contracts';
 import { ApiError } from '#/server/errors';
 import { executeRequest } from '#/server/service.server';
-import { auth } from '@clerk/tanstack-react-start/server';
+import { requestIdentity } from '#/auth/request-identity.server';
 import { trackApiRequest } from '#/analytics/server';
 import type { ApiRequest } from '#/api/contracts';
 
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/api/yresonance')({
         const startedAt = Date.now();
         let input: ApiRequest | undefined;
         // Auth identity wins over the browser's correlation header.
-        let session: Awaited<ReturnType<typeof auth>> | undefined;
+        let session: Awaited<ReturnType<typeof requestIdentity>> | undefined;
         try {
           const origin = request.headers.get('origin');
           if (
@@ -33,7 +33,7 @@ export const Route = createFileRoute('/api/yresonance')({
             'application/json'
           )
             throw new ApiError(415, 'unsupported_media_type', 'Use application/json.');
-          session = await auth();
+          session = await requestIdentity(request);
           let payload: unknown;
           try {
             payload = JSON.parse(

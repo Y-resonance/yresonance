@@ -1,4 +1,5 @@
-import { ClerkProvider } from '@clerk/tanstack-react-start';
+import { AuthProvider } from '#/auth/provider';
+import { getAuthState } from '#/auth/state-function';
 import { HeadContent, Link, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import { queryOptions, type QueryClient } from '@tanstack/react-query';
 import { ApiSessionBoundary } from '#/api/query';
@@ -11,13 +12,18 @@ import { browserAnalytics } from '#/analytics/browser';
 import appCss from '../styles.css?url';
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  loader: ({ context }) =>
-    context.queryClient.ensureQueryData(
-      queryOptions({
-        queryKey: ['analytics-config'],
-        queryFn: () => getAnalyticsConfig(),
-      }),
-    ),
+  loader: async ({ context }) => {
+    const [auth, analytics] = await Promise.all([
+      getAuthState(),
+      context.queryClient.ensureQueryData(
+        queryOptions({
+          queryKey: ['analytics-config'],
+          queryFn: () => getAnalyticsConfig(),
+        }),
+      ),
+    ]);
+    return { auth, analytics };
+  },
   headers: () => ({ 'Cache-Control': 'private, no-store' }),
   onCatch: (error) => browserAnalytics()?.captureException(error),
   head: () => ({
@@ -52,7 +58,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
-  const analytics = Route.useLoaderData();
+  const { auth, analytics } = Route.useLoaderData();
   return (
     // The pre-paint theme script owns this element's class before React hydrates.
     <html lang="en" suppressHydrationWarning>
@@ -69,7 +75,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up">
+        <AuthProvider state={auth}>
           <AnalyticsProvider config={analytics ?? null}>
             <ApiSessionBoundary>
               <TooltipProvider>
@@ -78,7 +84,7 @@ function RootDocument({ children }: { children: ReactNode }) {
               </TooltipProvider>
             </ApiSessionBoundary>
           </AnalyticsProvider>
-        </ClerkProvider>
+        </AuthProvider>
       </body>
     </html>
   );

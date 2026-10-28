@@ -1,4 +1,7 @@
-import { useAuth, useOrganizationList, useUser } from '@clerk/tanstack-react-start';
+import { useAuth } from '#/auth/provider';
+import { KeycloakWorkspaces } from '#/components/keycloak-workspaces';
+import { useAuthProvider } from '#/auth/provider';
+import { useOrganizationList, useUser } from '@clerk/tanstack-react-start';
 import { ArrowRightIcon } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
@@ -17,9 +20,17 @@ type PendingAction =
 
 export function WorkspaceGate({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, orgId } = useAuth();
+  const provider = useAuthProvider();
 
   if (!isLoaded) return <WorkspaceGateLoading />;
   if (!isSignedIn || orgId) return children;
+  if (provider === 'keycloak')
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-12">
+        <h1 className="mb-6 text-2xl font-semibold">Choose a workspace</h1>
+        <KeycloakWorkspaces />
+      </main>
+    );
   return <WorkspaceSetup />;
 }
 

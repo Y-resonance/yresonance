@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { AuthProvider } from '#/auth/provider';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceGate } from './workspace-gate';
@@ -35,6 +37,7 @@ const clerk = vi.hoisted(() => ({
 }));
 
 vi.mock('@clerk/tanstack-react-start', () => ({
+  ClerkProvider: ({ children }: { children: ReactNode }) => children,
   useAuth: () => clerk.auth,
   useUser: () => clerk.user,
   useOrganizationList: () => clerk.organizationList,
@@ -51,9 +54,7 @@ describe('WorkspaceGate', () => {
   it('renders the private route when an organization is already active', () => {
     clerk.auth.orgId = 'org_active';
 
-    expect(renderToStaticMarkup(<WorkspaceGate>Private route</WorkspaceGate>)).toBe(
-      'Private route',
-    );
+    expect(renderWithAuth(<WorkspaceGate>Private route</WorkspaceGate>)).toBe('Private route');
   });
 
   it('shows pending invitations before existing memberships', () => {
@@ -71,7 +72,7 @@ describe('WorkspaceGate', () => {
       },
     ];
 
-    const html = renderToStaticMarkup(<WorkspaceGate>Private route</WorkspaceGate>);
+    const html = renderWithAuth(<WorkspaceGate>Private route</WorkspaceGate>);
 
     expect(html.indexOf('Pending invitations')).toBeLessThan(html.indexOf('Your workspaces'));
     expect(html).toContain('Invited workspace');
@@ -80,7 +81,7 @@ describe('WorkspaceGate', () => {
   });
 
   it('makes workspace creation the primary choice for a new user', () => {
-    const html = renderToStaticMarkup(<WorkspaceGate>Private route</WorkspaceGate>);
+    const html = renderWithAuth(<WorkspaceGate>Private route</WorkspaceGate>);
 
     expect(html).toContain('Create a workspace');
     expect(html).toContain('name="workspaceName"');
@@ -88,3 +89,11 @@ describe('WorkspaceGate', () => {
     expect(html).not.toContain('Your workspaces');
   });
 });
+
+function renderWithAuth(children: ReactNode) {
+  return renderToStaticMarkup(
+    <AuthProvider state={{ provider: 'clerk', userId: null, orgId: null, sessionId: null }}>
+      {children}
+    </AuthProvider>,
+  );
+}

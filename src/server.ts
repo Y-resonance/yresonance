@@ -1,5 +1,6 @@
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
 import { env } from 'cloudflare:workers';
+import { handleKeycloakAuth } from './auth/keycloak.server';
 import { searchDiscoveryResponse } from './search-discovery';
 import { handleResetRequest } from './reset.server';
 import { trackApiRequest } from './analytics/server';
@@ -17,6 +18,8 @@ export default createServerEntry({
     const startedAt = Date.now();
     const url = new URL(request.url);
     try {
+      if (url.pathname.startsWith('/api/auth/'))
+        return await handleKeycloakAuth(request, url.pathname.slice('/api/auth/'.length));
       if (url.pathname === '/api/admin/reset') return await handleResetRequest(request);
       return await handler.fetch(request);
     } catch (error) {

@@ -1,4 +1,6 @@
-import { Show, UserButton } from '@clerk/tanstack-react-start';
+import { Show, useAuthProvider } from '#/auth/provider';
+import { UserButton } from '@clerk/tanstack-react-start';
+import { KeycloakAccount } from '#/components/keycloak-workspaces';
 import { Link } from '@tanstack/react-router';
 import { MenuIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
@@ -41,6 +43,7 @@ export function AppShell({
   children: ReactNode;
   requireWorkspace?: boolean;
 }) {
+  const provider = useAuthProvider();
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-background">
@@ -76,14 +79,18 @@ export function AppShell({
             <ThemeToggle />
             <Show when="signed-out">
               <SignInAction>
-                <Button className="hidden min-[360px]:inline-flex" variant="ghost" size="sm">
+                <Button
+                  className={provider === 'clerk' ? 'hidden min-[360px]:inline-flex' : undefined}
+                  variant="ghost"
+                  size="sm"
+                >
                   Sign in
                 </Button>
               </SignInAction>
               <GetAccessButton size="sm" />
             </Show>
             <Show when="signed-in">
-              <UserButton />
+              {provider === 'keycloak' ? <KeycloakAccount /> : <UserButton />}
             </Show>
           </div>
         </div>

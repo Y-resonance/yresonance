@@ -8,7 +8,7 @@ access or R2 credentials.
 Editors register uploaded or existing CSV and Parquet files from tenant-scoped R2 prefixes.
 ClickHouse is also available for managed uploads and authorized external tables. See
 [ClickHouse setup and freshness](clickhouse.md) for server configuration. Auth is
-Clerk, with workspaces mapped to Clerk organizations. Application data lives in D1 with Drizzle.
+configurable per deployment: Clerk maps workspaces to Clerk organizations; direct Keycloak OIDC uses application-owned memberships and roles. Both use D1 for workspace data. See [authentication setup](authentication.md). Application data lives in D1 with Drizzle.
 Signed dashboard requests batch the dashboard and workspace reads. Widget creation and updates
 load datasource metadata once, then reuse it for validation, hashing, and SQL compilation before
 the conditional dashboard save. Query execution batches datasource and metadata reads too.
@@ -42,7 +42,7 @@ presigned storage URLs never reach the query container.
 Browser API reads and writes use TanStack Query through `src/api/query.tsx`. Query clients are
 created inside Start's router factory, so SSR requests never share a cache in a Worker isolate.
 The Router SSR integration owns the provider and hydration. HTML responses are private and
-uncacheable, as are authenticated API responses. Browser keys include the Clerk
+uncacheable, as are authenticated API responses. Browser keys include the active auth
 session, user, and workspace; switching identity remounts the UI and cancels/removes the old cache.
 Authenticated API reads remain client-side. The analytics configuration server function uses the
 request's query client in the root loader.

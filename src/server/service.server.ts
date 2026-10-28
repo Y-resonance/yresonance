@@ -1,3 +1,13 @@
+import {
+  listWorkspaces,
+  createWorkspace,
+  selectWorkspace,
+  acceptWorkspaceInvitation,
+  listWorkspaceMembers,
+  inviteWorkspaceMember,
+  updateWorkspaceMember,
+  revokeWorkspaceInvitation,
+} from './workspaces.server';
 import { browseDatasource } from './datasource-catalog.server';
 import { type ApiRequest } from '#/api/contracts';
 import { ApiError } from './errors';
@@ -83,6 +93,22 @@ export async function executeRequest(request: ApiRequest): Promise<unknown> {
 
 async function dispatchRequest(request: ApiRequest): Promise<unknown> {
   switch (request.action) {
+    case 'listWorkspaces':
+      return listWorkspaces();
+    case 'createWorkspace':
+      return createWorkspace(request.name);
+    case 'selectWorkspace':
+      return selectWorkspace(request.workspaceId);
+    case 'acceptWorkspaceInvitation':
+      return acceptWorkspaceInvitation(request.invitationId);
+    case 'listWorkspaceMembers':
+      return listWorkspaceMembers();
+    case 'inviteWorkspaceMember':
+      return inviteWorkspaceMember(request);
+    case 'updateWorkspaceMember':
+      return updateWorkspaceMember(request);
+    case 'revokeWorkspaceInvitation':
+      return revokeWorkspaceInvitation(request.invitationId);
     case 'browseDatasource':
       return browseDatasource(request);
     case 'listDatasourceConnections':
