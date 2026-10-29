@@ -33,7 +33,7 @@ jobs:
           fi
       - run: bun run check
       - name: Setup Blacksmith Builder
-        uses: useblacksmith/setup-docker-builder@v1
+        uses: useblacksmith/setup-docker-builder@v2
       # The only Vite production build in this pipeline; the dry run reads its output.
       - run: bun run build
       - name: Validate the deployment package
@@ -202,7 +202,7 @@ jobs:
           test -n "$POSTHOG_PROJECT_TOKEN"
       - run: bun install --frozen-lockfile
       - name: Setup Blacksmith Builder
-        uses: useblacksmith/setup-docker-builder@v1
+        uses: useblacksmith/setup-docker-builder@v2
       - run: bun run build
       - name: Migrate and deploy the current main commit
         env:
