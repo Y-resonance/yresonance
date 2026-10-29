@@ -22,7 +22,7 @@ jobs:
           bun-version: 1.4.4
       - uses: actions/setup-node@v7
         with:
-          node-version: 24.22.1
+          node-version: 26.12.1
       - run: bun install --frozen-lockfile
       - run: bun run generate-routes
       - name: Check generated routes
@@ -51,7 +51,7 @@ jobs:
           bun-version: 1.4.4
       - uses: actions/setup-node@v7
         with:
-          node-version: 24.22.1
+          node-version: 26.12.1
       - run: bun install --frozen-lockfile
       - run: bun run test:integration
 
@@ -71,7 +71,7 @@ jobs:
           bun-version: 1.4.4
       - uses: actions/setup-node@v7
         with:
-          node-version: 24.22.1
+          node-version: 26.12.1
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps --only-shell chromium
       - run: bun run test:e2e:ui --shard=${{ matrix.shard }}/2
@@ -98,7 +98,7 @@ jobs:
           bun-version: 1.4.4
       - uses: actions/setup-node@v7
         with:
-          node-version: 24.22.1
+          node-version: 26.12.1
       - name: Collect the Clerk development instance configuration
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
@@ -168,7 +168,7 @@ jobs:
           bun-version: 1.4.4
       - uses: actions/setup-node@v7
         with:
-          node-version: 24.22.1
+          node-version: 26.12.1
       - run: bun install --frozen-lockfile
       - run: bun run test:clickhouse
 
@@ -195,7 +195,7 @@ jobs:
           bun-version: 1.4.4
       - uses: actions/setup-node@v7
         with:
-          node-version: 24.22.1
+          node-version: 26.12.1
       - name: Check production build configuration
         run: |
           test -n "$VITE_CLERK_PUBLISHABLE_KEY"
