@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers';
+import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin';
 import { defineConfig } from 'vitest/config';
 
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
@@ -18,8 +18,8 @@ export default defineConfig({
   plugins: [
     cloudflareTest({
       miniflare: {
-        // The pinned test runtime supports no later date. Flags match wrangler.jsonc.
-        compatibilityDate: '2026-08-22',
+        // Date and flags match wrangler.jsonc.
+        compatibilityDate: '2026-08-29',
         compatibilityFlags: ['nodejs_compat', 'enable_request_signal'],
         d1Databases: ['DB'],
         kvNamespaces: ['QUERY_CACHE'],
