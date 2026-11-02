@@ -58,7 +58,7 @@ export function DatasourceDialog({
         </Button>
         <div className="flex flex-col gap-2">
           {source.fields.map((field) => (
-            <DatasourceFieldRow
+            <SourceFieldRow
               key={field.id}
               field={field}
               sourceId={source.id}
@@ -126,7 +126,7 @@ export function DatasourceDialog({
   );
 }
 
-export function DatasourceFieldRow({
+function SourceFieldRow({
   field,
   sourceId,
   dashboardId,
