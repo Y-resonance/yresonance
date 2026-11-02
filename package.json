@@ -81,7 +81,7 @@
   "devDependencies": {
     "@clerk/testing": "^2.2.31",
     "@cloudflare/vite-plugin": "1.66.0",
-    "@cloudflare/vitest-pool-workers": "^0.23.0",
+    "@cloudflare/vitest-plugin": "^1.4.12",
     "@duckdb/node-api": "^1.5.5-r.4",
     "@playwright/test": "^1.58.2",
     "@posthog/rollup-plugin": "^1.6.1",

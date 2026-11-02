@@ -37,7 +37,7 @@
       "./worker-configuration.d.ts",
       "node",
       "vite/client",
-      "@cloudflare/vitest-pool-workers/types"
+      "@cloudflare/vitest-plugin/types"
     ],
     "paths": {
       "#/*": ["./src/*"]
