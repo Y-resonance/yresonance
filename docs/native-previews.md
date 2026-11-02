@@ -32,13 +32,15 @@ The existing `env.preview` remains a manual shared staging deployment.
    `afc669177af249c590f7538cdc439f54`. Verify it if the Worker is recreated.
    Retain the repository `CLOUDFLARE_API_TOKEN` cleanup secret. It needs Workers,
    containers, D1, KV, and R2 deletion permissions, plus Workers Builds read access.
-3. Configure Cloudflare's preview build environment with `BUN_VERSION=1.4.4`,
+3. Configure Cloudflare's preview build environment with
    `VITE_CLERK_PUBLISHABLE_KEY` from the Clerk development instance, and
    `CLOUDFLARE_API_TOKEN` with Worker/container deployment and D1/KV/R2 creation,
    read, write, and migration permissions. Add the five `CLICKHOUSE_PREVIEW_*` variables from
    [ClickHouse setup](clickhouse.md) as preview build secrets and GitHub repository cleanup secrets
    when ClickHouse is enabled. Do not expose these credentials to
    fork builds or copy production Clerk keys.
+   Do not set `BUN_VERSION` on any build trigger: Workers Builds reads the Bun
+   version from `packageManager` in `package.json`, which matches CI and the Dockerfile.
 4. Set the Previews Base runtime secrets using the development Clerk instance
    and non-production signing keys. Supply values interactively:
 
