@@ -5,7 +5,12 @@ import { Calendar } from '#/components/ui/calendar';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
 import { Popover, PopoverContent, PopoverTrigger } from '#/components/ui/popover';
 import type { DateRange } from '#/domain/schema';
-import { dateRangePresets, resolveDateRange, tryResolveDateRange, yesterday } from '#/domain/dates';
+import {
+  dateRangePresets,
+  latestQueryableDate,
+  tryResolveDateRange,
+  yesterday,
+} from '#/domain/dates';
 import { isYesterday, sameDateRange } from '#/domain/date-range-search';
 
 type DateValue = DateRange['startDate'];
@@ -31,7 +36,7 @@ export function DateRangePicker({
   const [draft, setDraft] = useState(range);
   const resolved = tryResolveDateRange(range, timezone);
   const draftResolved = tryResolveDateRange(draft, timezone);
-  const latest = resolveDateRange({ startDate: yesterday, endDate: yesterday }, timezone).end;
+  const latest = latestQueryableDate(timezone);
   const activePreset = dateRangePresets.find((preset) => sameDateRange(preset.range, range));
   const isDefault = defaultRange ? sameDateRange(defaultRange, range) : false;
   // "This month" on the 1st starts today, after the latest complete day. It is valid and shows no
@@ -181,8 +186,13 @@ function DateSide({
         className="w-full"
         value={mode}
         onChange={(event) =>
-          // Switching to a fixed date pins the day this side shows right now.
-          onChange(event.target.value === 'yesterday' ? yesterday : { fixed: resolved ?? latest })
+          // Switching to a fixed date pins the day this side shows right now, but never a day after
+          // yesterday, such as the start of "This month" on the 1st.
+          onChange(
+            event.target.value === 'yesterday'
+              ? yesterday
+              : { fixed: resolved && resolved < latest ? resolved : latest },
+          )
         }
       >
         <NativeSelectOption value="fixed">Fixed date</NativeSelectOption>

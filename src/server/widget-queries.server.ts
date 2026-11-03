@@ -17,7 +17,12 @@ import {
 } from '#/domain/control-state';
 import { loadQueryMetadata, loadQueryContext } from './records.server';
 import { queryResultColumns } from '#/domain/query-result';
-import { resolveDateRange, comparisonDateRange } from '#/domain/dates';
+import {
+  comparisonDateRange,
+  invalidRangeMessage,
+  latestQueryableDate,
+  resolveDateRange,
+} from '#/domain/dates';
 import { dateBucketTarget, resolveDateGranularity } from '#/domain/date-granularity';
 import { hashJson } from '#/domain/hash';
 import { widgetDependencyState, queryCacheState } from '#/domain/cache';
@@ -390,8 +395,10 @@ async function prepareWidgetQuery(
   const dateRange = controlState.dateRange ?? dashboard.defaultDateRange;
   const resolvedDateRange = resolveDateRange(dateRange, dashboard.timezone);
   // Ranges are cut off at yesterday, so "This month" on the 1st has no complete day yet. Such a
-  // range returns no rows without asking the datasource, which would reject the reversed bounds.
-  const noCompleteDays = resolvedDateRange.start > resolvedDateRange.end;
+  // range returns no rows without asking the datasource. Any other reversed range is a bad request.
+  const noCompleteDays = resolvedDateRange.start > latestQueryableDate(dashboard.timezone);
+  if (!noCompleteDays && resolvedDateRange.start > resolvedDateRange.end)
+    throw new ApiError(400, 'invalid_date_range', invalidRangeMessage);
   const bucketTarget = dateBucketTarget(width);
   const comparisonGranularity = resolvedWidgetDateGranularity(
     definition,

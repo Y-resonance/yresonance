@@ -84,6 +84,29 @@ describe('widget queries', () => {
     expect(queryEngine.queryCalls).toHaveLength(0);
   });
 
+  test('a range that ends before it starts is rejected', async () => {
+    const { dashboardId, widgetId } = await seedScorecardDashboard();
+    const daysAgo = (amount: number) => ({
+      relative: {
+        amount,
+        unit: 'day' as const,
+        direction: 'past' as const,
+        anchor: 'startOfDay' as const,
+      },
+    });
+
+    await expectApiError(
+      callService({
+        action: 'queryWidget',
+        dashboardId,
+        widgetId,
+        controlState: { dateRange: { startDate: daysAgo(1), endDate: daysAgo(7) } },
+      }),
+      { status: 400, code: 'invalid_date_range' },
+    );
+    expect(queryEngine.queryCalls).toHaveLength(0);
+  });
+
   test('date dimensions rebucket when a widget crosses a width tier', async () => {
     const workspace = await signInToNewWorkspace();
     const source = await seedDataSource(workspace);

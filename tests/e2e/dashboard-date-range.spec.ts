@@ -51,3 +51,18 @@ test('switching a yesterday end to a fixed date pins the day it showed', async (
   await expect(page).toHaveURL(/dateRange=2026-08-03\.\.\d{4}-\d{2}-\d{2}/u);
   await expect(dateRange).not.toContainText('yesterday');
 });
+
+test('fixing "This month" on the 1st pins yesterday instead of a day without data', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'));
+  await mockYresonanceApi(page, { role: 'viewer' });
+  await page.goto('/dashboards/dash_demo?dateRange=this-month');
+  const { start, end } = await openPicker(page);
+  await expect(page.getByText('No complete days yet')).toBeVisible();
+
+  await start.getByLabel('Start date type').selectOption('fixed');
+  await end.getByLabel('End date type').selectOption('fixed');
+  await page.getByRole('button', { name: 'Apply' }).click();
+  await expect(page).toHaveURL(/dateRange=2026-10-31\.\.2026-10-31/u);
+});

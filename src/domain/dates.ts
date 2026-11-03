@@ -5,7 +5,7 @@ export interface ResolvedDateRange {
   end: string;
 }
 
-const invalidRangeMessage = 'The start date must not be after the end date.';
+export const invalidRangeMessage = 'The start date must not be after the end date.';
 export const unsupportedDateRangeMessage = 'The date range is outside the supported calendar.';
 
 // Data for the current day is never complete, so yesterday is the latest day a dashboard can query.
@@ -100,11 +100,16 @@ export function resolveDateRange(
   now = new Date(),
 ): ResolvedDateRange {
   const end = resolveDateValue(range.endDate, timezone, now);
-  const latest = resolveDateValue(yesterday, timezone, now);
+  const latest = latestQueryableDate(timezone, now);
   return {
     start: resolveDateValue(range.startDate, timezone, now),
     end: end > latest ? latest : end,
   };
+}
+
+// Yesterday in the dashboard timezone, as `YYYY-MM-DD`.
+export function latestQueryableDate(timezone: string, now = new Date()) {
+  return resolveDateValue(yesterday, timezone, now);
 }
 
 // Ranges saved before the yesterday cutoff ended today. Shift those by one day so "Last 7 days"
