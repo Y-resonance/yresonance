@@ -50,16 +50,21 @@ export function migrateTextDefinition(definition: unknown) {
   };
 }
 
+const FEATURE_SAMPLE_LENGTH = 4_000;
+
 /**
  * Formatting a text widget uses, for adoption telemetry. Pattern based rather than a full parse,
  * which is precise enough to tell plain text from formatted text without shipping a parser to the
  * Worker.
  */
 export function markdownFeatures(markdown: string) {
+  // The patterns backtrack quadratically on hostile input (e.g. thousands of unclosed `[`), and
+  // documents can be up to the 1 MiB request limit. Telemetry only needs a signal, so read the start.
+  const sample = markdown.slice(0, FEATURE_SAMPLE_LENGTH);
   return {
-    hasLinks: /\[[^\]]*\]\([^)]+\)|<(?:https|mailto):[^>]+>/i.test(markdown),
+    hasLinks: /\[[^\]]*\]\([^)]+\)|<(?:https|mailto):[^>]+>/i.test(sample),
     hasFormatting:
-      /\*\*[^*]+\*\*|__[^_]+__|(^|[^*])\*[^*\s][^*]*\*|(^|\W)_[^_\s][^_]*_/.test(markdown) ||
-      /^\s{0,3}(#{1,6}\s|[-*+]\s|\d+[.)]\s|([-*_])(\s*\2){2,}\s*$)/m.test(markdown),
+      /\*\*[^*]+\*\*|__[^_]+__|(^|[^*])\*[^*\s][^*]*\*|(^|\W)_[^_\s][^_]*_/.test(sample) ||
+      /^\s{0,3}(#{1,6}\s|[-*+]\s|\d+[.)]\s|([-*_])(\s*\2){2,}\s*$)/m.test(sample),
   };
 }

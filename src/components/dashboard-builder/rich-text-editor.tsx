@@ -98,7 +98,9 @@ export default function RichTextEditor({
   // an untouched (possibly legacy) document never saves it.
   const dirty = useRef(false);
   const commitRef = useRef(onCommit);
-  commitRef.current = onCommit;
+  useEffect(() => {
+    commitRef.current = onCommit;
+  });
   // Editing a link moves focus into its popover. That is still editing, so it does not commit.
   const linkPopover = useRef<HTMLDivElement>(null);
   const editor = useEditor({
