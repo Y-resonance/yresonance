@@ -34,7 +34,11 @@ export function DateRangePicker({
   const latest = resolveDateRange({ startDate: yesterday, endDate: yesterday }, timezone).end;
   const activePreset = dateRangePresets.find((preset) => sameDateRange(preset.range, range));
   const isDefault = defaultRange ? sameDateRange(defaultRange, range) : false;
-  const reversed = draftResolved ? draftResolved.start > draftResolved.end : false;
+  // "This month" on the 1st starts today, after the latest complete day. It is valid and shows no
+  // rows, unlike a custom range whose start was picked after its end.
+  const noCompleteDays = draftResolved ? draftResolved.start > latest : false;
+  const reversed =
+    draftResolved && !noCompleteDays ? draftResolved.start > draftResolved.end : false;
 
   function changeOpen(next: boolean) {
     if (next) setDraft(range);
@@ -122,7 +126,9 @@ export function DateRangePicker({
               />
             </div>
             <div className="flex items-center justify-end gap-2 px-3 pb-3">
-              {reversed ? (
+              {noCompleteDays ? (
+                <span className="mr-auto text-sm text-muted-foreground">No complete days yet</span>
+              ) : reversed ? (
                 <span className="mr-auto text-sm text-destructive">Start is after end</span>
               ) : null}
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
