@@ -102,8 +102,11 @@ explain. Update it when a decision changes, not when an implementation detail do
   equality filter. Tables are excluded: they already show several dimensions with subtotals.
 - Comparison runs as a second query with a shifted date range.
 - Relative dates resolve in the dashboard's timezone, default `Europe/Berlin`.
-- Rich text is stored as versioned JSON, never as HTML. Styling is an open object owned by each
-  renderer.
+- Text widgets store versioned Markdown (`markdown-v1`), never HTML. The renderer allows a small
+  subset, and only https: and mailto: links, which open in a new tab, so agent and API content is
+  safe too. Older text is read as Markdown and stored as such on the next save; there is no bulk
+  migration. Editing happens in the inspector, and its editor loads lazily so viewers never
+  download it. Styling is an open object owned by each renderer.
 
 ## Deferred
 

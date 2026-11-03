@@ -53,6 +53,11 @@ placements. `updatePage` renames, changes draft status, or moves a page to a zer
 `removePage` requires `confirm: true` when it contains widgets and cannot remove the last page.
 View tools on shared links and viewer grants can read and query only published pages.
 
+Text widgets take Markdown in `content.document` with `schemaVersion: "markdown-v1"`: headings,
+bold, italic, bullet and numbered lists, links, and horizontal rules. Links must use https: or
+mailto: and open in a new tab; other links render as plain text. Raw HTML and images are not
+rendered.
+
 `registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an
 existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from
 1 to 86400. `queryWidget` accepts `refresh: true` to bypass and replace a cached result, including

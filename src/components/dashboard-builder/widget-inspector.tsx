@@ -16,7 +16,7 @@ import {
   type QuerySettingsProps,
 } from './shared';
 import { type LibraryMetricDraft } from '#/components/metric-formula-dialog';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { type DatasourceFieldRow } from '#/domain/datasource-fields';
 import { changeSource } from './datasource';
 import { calculatedFieldRow, DatasourceDialog } from './datasource-dialog';
@@ -26,8 +26,6 @@ import { XIcon, MinusIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react
 import { Alert, AlertDescription } from '#/components/ui/alert';
 import { Field, FieldLabel, FieldDescription } from '#/components/ui/field';
 import { Input } from '#/components/ui/input';
-import { Textarea } from '#/components/ui/textarea';
-import { textDocument, replacePlainTextDocument } from '#/domain/text-content';
 import { DateRangePicker } from '#/components/date-range-picker';
 import { CalculatedFieldDialog } from '#/components/calculated-field-dialog';
 import { textStyleClasses } from '#/domain/text-style';
@@ -55,6 +53,9 @@ import {
   EditFormulaButton,
 } from './field-picker';
 import { MetricSettings } from './metric-settings';
+
+// Tiptap only loads once an editor opens a text widget, never for viewers or share links.
+const RichTextEditor = lazy(() => import('./rich-text-editor'));
 
 export function WidgetSettings({
   dashboardId,
@@ -196,33 +197,17 @@ export function WidgetSettings({
       {definition.type === 'text' ? (
         <>
           <Field>
-            <FieldLabel htmlFor={`text-${widget.id}`}>Text</FieldLabel>
-            <Textarea
-              id={`text-${widget.id}`}
-              value={textDocument(definition.content.document)}
-              readOnly={typeof definition.content.document !== 'string'}
-              onChange={(event) =>
-                typeof definition.content.document === 'string' &&
-                setLocalDefinition({
-                  ...definition,
-                  content: {
-                    ...definition.content,
-                    document: replacePlainTextDocument(
-                      definition.content.document,
-                      event.target.value,
-                    ),
-                  },
-                })
-              }
-              onBlur={() => {
-                if (typeof definition.content.document === 'string') void commit(definition);
-              }}
-            />
-            {typeof definition.content.document !== 'string' ? (
-              <FieldDescription>
-                Structured text is read-only here so its document format stays intact.
-              </FieldDescription>
-            ) : null}
+            <FieldLabel>Text</FieldLabel>
+            <Suspense fallback={<div className="min-h-34 rounded-lg border border-input" />}>
+              <RichTextEditor
+                key={widget.id}
+                label="Text"
+                value={definition.content.document}
+                onCommit={(document) =>
+                  void commit({ ...definition, content: { ...definition.content, document } })
+                }
+              />
+            </Suspense>
           </Field>
           <TextStyleSettings
             legend="Text style"

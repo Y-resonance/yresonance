@@ -57,7 +57,10 @@ describe('duplicating dashboards', () => {
       action: 'addWidget',
       dashboardId: dashboard.id,
       pageId: withDraft.pages.at(-1)!.id,
-      definition: { type: 'text', content: { schemaVersion: 'plain', document: 'Draft notes' } },
+      definition: {
+        type: 'text',
+        content: { schemaVersion: 'markdown-v1', document: 'Draft notes' },
+      },
       width: 6,
       height: 3,
     });

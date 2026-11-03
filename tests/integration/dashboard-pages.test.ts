@@ -31,7 +31,7 @@ async function addPage(dashboardId: string, name: string, hidden = false) {
   return dashboard.pages.at(-1)!;
 }
 
-const text = { type: 'text', content: { schemaVersion: 'plain', document: 'Report' } };
+const text = { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'Report' } };
 
 describe('dashboard pages', () => {
   test('page edits persist, widget moves and copies stay within their target canvas, and deletion needs confirmation', async () => {
@@ -40,7 +40,7 @@ describe('dashboard pages', () => {
     const overview = dashboard.pages[0];
     const widget = await addWidget(dashboard.id, {
       type: 'text',
-      content: { schemaVersion: 'plain', document: 'Report' },
+      content: { schemaVersion: 'markdown-v1', document: 'Report' },
     });
     const channels = await addPage(dashboard.id, 'Channels');
     const drafts = await addPage(dashboard.id, 'Draft', true);

@@ -17,7 +17,7 @@ import type { DashboardWidget } from './schema';
 const widget: DashboardWidget = {
   id: 'one',
   layout: { x: 0, y: 0, width: 6, height: 2 },
-  definition: { type: 'text', content: { schemaVersion: 'plain', document: 'hello' } },
+  definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'hello' } },
   definitionHash: 'hash',
 };
 

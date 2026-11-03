@@ -22,7 +22,7 @@ const chart: DashboardWidget = {
 const note: DashboardWidget = {
   id: 'two',
   layout: { x: 6, y: 0, width: 6, height: 2 },
-  definition: { type: 'text', content: { schemaVersion: 'plain', document: 'hello' } },
+  definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'hello' } },
   definitionHash: 'hash',
 };
 const widgets = [chart, note];
