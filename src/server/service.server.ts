@@ -27,6 +27,7 @@ import {
   queryWidget,
   explainWidget,
   getControlOptions,
+  getDataAvailability,
 } from './widget-queries.server';
 import {
   listDataSources,
@@ -154,6 +155,13 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
         request.controlId,
         request.search,
         request.shareToken,
+      );
+    case 'getDataAvailability':
+      return getDataAvailability(
+        request.dashboardId,
+        request.pageId,
+        request.shareToken,
+        request.refresh,
       );
     case 'listDatasourceProviders':
       return listDatasourceProviders();

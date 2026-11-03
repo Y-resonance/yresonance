@@ -15,6 +15,9 @@ import {
   type SeededDataSource,
   type TestWorkspace,
 } from './fixtures';
+import type { DashboardDocument } from '#/domain/schema';
+
+const engineMetrics = { queryDurationMs: 1, queueDurationMs: 0, resultBytes: 2 };
 
 interface QueryResult {
   rows: Array<Record<string, unknown>>;
@@ -700,5 +703,54 @@ describe('query engine failures', () => {
       }),
       { status: 400, code: 'unknown_field' },
     );
+  });
+
+  test('data availability is the earliest latest date among the shown page sources', async () => {
+    const workspace = await signInToNewWorkspace();
+    const [fresh, lagging, elsewhere] = await Promise.all([
+      seedDataSource(workspace),
+      seedDataSource(workspace),
+      seedDataSource(workspace),
+    ]);
+    const dashboard = await createDashboard();
+    await addWidget(dashboard.id, scorecardDefinition(fresh));
+    await addWidget(dashboard.id, scorecardDefinition(lagging));
+    const withSecondPage = (await callService({
+      action: 'addPage',
+      dashboardId: dashboard.id,
+      name: 'Archive',
+    })) as DashboardDocument;
+    const secondPageId = withSecondPage.pages.at(-1)!.id;
+    await callService({
+      action: 'addWidget',
+      dashboardId: dashboard.id,
+      pageId: secondPageId,
+      definition: scorecardDefinition(elsewhere),
+      width: 4,
+      height: 3,
+    });
+    const latest = new Map([
+      [fresh.name, '2026-10-30T08:15:00.000Z'],
+      [lagging.name, '2026-10-28'],
+      [elsewhere.name, '2026-01-01'],
+    ]);
+    queryEngine.answerWith((request) => {
+      const value =
+        request.operation === 'query'
+          ? [...latest].find(([name]) => request.sql.includes(name))?.[1]
+          : undefined;
+      return { body: { ok: true, data: value ? [{ value }] : [], metrics: engineMetrics } };
+    });
+
+    expect(await callService({ action: 'getDataAvailability', dashboardId: dashboard.id })).toEqual(
+      { through: '2026-10-28' },
+    );
+    expect(
+      await callService({
+        action: 'getDataAvailability',
+        dashboardId: dashboard.id,
+        pageId: secondPageId,
+      }),
+    ).toEqual({ through: '2026-01-01' });
   });
 });

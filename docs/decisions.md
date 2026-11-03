@@ -58,6 +58,10 @@ explain. Update it when a decision changes, not when an implementation detail do
   Expiry runs a new query on the next request; open dashboards do not auto-refresh.
   Editors and viewers can fetch fresh results for the displayed dashboard and replace matching
   cached results. Workspace access mappings are checked before reading cached external results.
+- The dashboard header shows "Data available through" the earliest of the latest dates in each
+  date field the shown page's widgets filter by, so every widget there has data up to that day.
+  It is per page so a stale source elsewhere does not hold the date back. It is derived from the
+  data, uses the same datasource cache lifetime, and follows the refresh action.
 - Managed CSV uploads are converted to Parquet before registration. ClickHouse imports stream
   the inspected Parquet into one database per environment, with workspace-scoped tables. Production
   and previews use separate SQL users. Preview databases follow branch lifecycles. External tables on the managed ClickHouse host require

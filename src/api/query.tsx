@@ -28,6 +28,7 @@ const reads = new Set<ApiRequest['action']>([
   'queryWidget',
   'explainWidget',
   'getControlOptions',
+  'getDataAvailability',
   'listDataSources',
   'listDatasourceProviders',
   'browseDatasource',
@@ -43,6 +44,7 @@ const analyticsReads = new Set<ApiRequest['action']>([
   'queryWidget',
   'previewWidget',
   'getControlOptions',
+  'getDataAvailability',
   'previewCalculatedFieldValues',
 ]);
 
