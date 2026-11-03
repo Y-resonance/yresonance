@@ -93,3 +93,34 @@ test('viewers get a responsive image that opens its link in a new tab', async ({
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
 });
+
+test('an invalid link stays a draft and does not block other image settings', async ({ page }) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.assets.push(logo);
+  state.dashboard.pages[0].widgets.push({
+    id: 'w_logo',
+    layout: { x: 8, y: 0, width: 4, height: 2 },
+    definition: { type: 'image', assetId: logo.id, alt: 'Client logo', fit: 'contain' },
+    definitionHash: 'hash_logo',
+  });
+  await mockAssetRoutes(page, state.assets);
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Edit Client logo' }).click();
+  const link = page.getByLabel('Link');
+  await link.fill('http://client.example');
+  await link.blur();
+  await expect(page.getByText('Use an https:// link.')).toBeVisible();
+
+  await page.getByLabel('Fit').selectOption('cover');
+  const stored = () => state.dashboard.pages[0].widgets.find((item) => item.id === 'w_logo');
+  await expect
+    .poll(() => stored()?.definition)
+    .toEqual({
+      type: 'image',
+      assetId: logo.id,
+      alt: 'Client logo',
+      fit: 'cover',
+    });
+});

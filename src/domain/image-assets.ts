@@ -118,10 +118,22 @@ export function variantWidth(requested: number, asset: { width: number; contentT
   return requested < asset.width ? requested : undefined;
 }
 
-/** AVIF or WebP when the browser accepts it, otherwise the original's format. */
-export function variantFormat(accept: string | null, originalFormat: ImageFormat): ImageFormat {
+// Cloudflare encodes AVIF only up to this size and falls back to another format above it.
+const MAX_AVIF_WIDTH = 1200;
+
+/**
+ * AVIF or WebP when the browser accepts it, otherwise the original's format. GIFs and wide
+ * variants skip AVIF: Cloudflare keeps animations only in WebP and GIF, and won't encode AVIF
+ * above 1200 px.
+ */
+export function variantFormat(
+  accept: string | null,
+  originalFormat: ImageFormat,
+  width: number,
+): ImageFormat {
   const accepted = (accept ?? '').toLowerCase();
-  if (accepted.includes('image/avif')) return 'avif';
+  if (accepted.includes('image/avif') && originalFormat !== 'gif' && width <= MAX_AVIF_WIDTH)
+    return 'avif';
   if (accepted.includes('image/webp')) return 'webp';
   return originalFormat;
 }

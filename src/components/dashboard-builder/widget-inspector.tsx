@@ -239,7 +239,6 @@ export function WidgetSettings({
           dashboardId={dashboardId}
           definition={definition}
           commit={commit}
-          setLocalDefinition={setLocalDefinition}
         />
       ) : null}
       {definition.type === 'dateControl' ? (

@@ -276,35 +276,45 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
             ? 'at_or_above_original'
             : 'width_not_allowed',
     );
-  const format = variantFormat(request.headers.get('accept'), originalFormat);
+  const format = variantFormat(request.headers.get('accept'), originalFormat, width);
   const variantKey = imageAssetKey(asset.prefix, asset.id, `w${width}.${format}`);
   const variantHeaders = { ...assetHeaders, 'content-type': imageContentTypes[format] };
   const stored = await env.DATA.get(variantKey);
   if (stored) {
-    log({ variant: 'stored', bytes: stored.size, format, width });
+    const storedType = stored.httpMetadata?.contentType ?? variantHeaders['content-type'];
+    log({ variant: 'stored', bytes: stored.size, format: storedType, width });
     return new Response(stored.body, {
-      headers: { ...variantHeaders, 'content-length': String(stored.size) },
+      headers: {
+        ...variantHeaders,
+        'content-type': storedType,
+        'content-length': String(stored.size),
+      },
     });
   }
 
   const original = await env.DATA.get(originalKey);
   if (!original) throw notFound;
   let bytes: ArrayBuffer;
+  // Cloudflare may encode another format than requested, so the result's own type is stored.
+  let contentType: string;
   try {
     const result = await env.IMAGES.input(original.body)
       .transform({ width, fit: 'scale-down' })
       .output({ format: imageContentTypes[format], quality: 80 });
+    contentType = result.contentType();
     // Variants are small next to the 20 MB originals; R2 needs their length before storing.
     bytes = await result.response().arrayBuffer();
-    await env.DATA.put(variantKey, bytes, {
-      httpMetadata: { contentType: variantHeaders['content-type'] },
-    });
+    await env.DATA.put(variantKey, bytes, { httpMetadata: { contentType } });
   } catch (error) {
     return serveOriginal('transform_failed', imagesErrorCode(error));
   }
-  log({ variant: 'created', bytes: bytes.byteLength, format, width });
+  log({ variant: 'created', bytes: bytes.byteLength, format: contentType, width });
   return new Response(bytes, {
-    headers: { ...variantHeaders, 'content-length': String(bytes.byteLength) },
+    headers: {
+      ...variantHeaders,
+      'content-type': contentType,
+      'content-length': String(bytes.byteLength),
+    },
   });
 }
 

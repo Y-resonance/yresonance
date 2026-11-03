@@ -66,9 +66,13 @@ describe('responsive variants', () => {
   });
 
   test('prefers AVIF, then WebP, then the original format', () => {
-    expect(variantFormat('image/avif,image/webp,*/*', 'png')).toBe('avif');
-    expect(variantFormat('image/webp,*/*', 'jpeg')).toBe('webp');
-    expect(variantFormat('*/*', 'gif')).toBe('gif');
+    const modern = 'image/avif,image/webp,*/*';
+    expect(variantFormat(modern, 'png', 960)).toBe('avif');
+    expect(variantFormat('image/webp,*/*', 'jpeg', 960)).toBe('webp');
+    expect(variantFormat('*/*', 'gif', 960)).toBe('gif');
+    // AVIF loses GIF animation and is not encoded above 1200 px.
+    expect(variantFormat(modern, 'gif', 640)).toBe('webp');
+    expect(variantFormat(modern, 'png', 1920)).toBe('webp');
   });
 
   test('srcset lists smaller variants plus the original width', () => {

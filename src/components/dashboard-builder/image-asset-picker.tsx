@@ -167,21 +167,30 @@ export function imageWidgetDefinition(asset: ImageAsset) {
 
 type ImageDefinition = Extract<WidgetDefinition, { type: 'image' }>;
 
-/** Inspector fields for an image widget: the image itself, alt text, fit and an optional link. */
+/**
+ * Inspector fields for an image widget: the image itself, alt text, fit and an optional link.
+ * Alt text and link are drafts until they are valid, so an invalid entry never rides along with
+ * the next fit or image change.
+ */
 export function ImageSettings({
   widgetId,
   dashboardId,
   definition,
   commit,
-  setLocalDefinition,
 }: {
   widgetId: string;
   dashboardId: string;
   definition: ImageDefinition;
   commit: (definition: WidgetDefinition) => Promise<void>;
-  setLocalDefinition: (definition: WidgetDefinition) => void;
 }) {
+  const [alt, setAlt] = useState(definition.alt);
+  const [link, setLink] = useState(definition.href ?? '');
   const [linkError, setLinkError] = useState<string>();
+  useEffect(() => {
+    setAlt(definition.alt);
+    setLink(definition.href ?? '');
+    setLinkError(undefined);
+  }, [definition.alt, definition.href]);
   return (
     <>
       <Field>
@@ -196,10 +205,12 @@ export function ImageSettings({
         <FieldLabel htmlFor={`alt-${widgetId}`}>Alt text</FieldLabel>
         <Input
           id={`alt-${widgetId}`}
-          value={definition.alt}
-          onChange={(event) => setLocalDefinition({ ...definition, alt: event.target.value })}
+          value={alt}
+          onChange={(event) => setAlt(event.target.value)}
           onBlur={() => {
-            if (definition.alt.trim()) void commit(definition);
+            const next = alt.trim();
+            if (!next) setAlt(definition.alt);
+            else if (next !== definition.alt) void commit({ ...definition, alt: next });
           }}
         />
         <FieldDescription>Describes the image for screen readers.</FieldDescription>
@@ -223,19 +234,19 @@ export function ImageSettings({
           id={`link-${widgetId}`}
           type="url"
           placeholder="https://"
-          value={definition.href ?? ''}
+          value={link}
           aria-invalid={Boolean(linkError)}
           onChange={(event) => {
             setLinkError(undefined);
-            setLocalDefinition({ ...definition, href: event.target.value || undefined });
+            setLink(event.target.value);
           }}
           onBlur={() => {
-            const href = definition.href?.trim();
+            const href = link.trim() || undefined;
             if (href && !(URL.canParse(href) && new URL(href).protocol === 'https:')) {
               setLinkError('Use an https:// link.');
               return;
             }
-            void commit({ ...definition, href: href || undefined });
+            if (href !== definition.href) void commit({ ...definition, href });
           }}
         />
         {linkError ? <FieldError>{linkError}</FieldError> : null}
