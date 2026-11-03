@@ -10,7 +10,8 @@ Use cf CLI for investiating deployment-relevant topics.
 ## Evidence
 
 Capture evidence for UI changes in a temporary directory outside the checkout. Publish screenshots
-with `dkwws upload` and embed the returned URLs in the relevant GitHub issue or PR using `gh`.
+through `gh --attach` when supported, or use `dkwws upload` and embed the returned URLs in the
+relevant GitHub issue or PR using `gh`.
 Keep evidence files out of git. Read [the evidence workflow](docs/development.md#review-evidence)
 before capturing or publishing evidence; it covers completion checks and product image assets.
 
