@@ -73,6 +73,10 @@ function exportApiRequest({
     ...(input?.action === 'moveWidget' && input.stacking
       ? { widget_stacking: input.stacking }
       : {}),
+    // Agents restack through updateLayout entries, so count those as well.
+    ...(input?.action === 'updateLayout'
+      ? { widget_restacks: input.placements.filter((entry) => entry.stacking).length }
+      : {}),
     ...(input?.action === 'registerDatasource'
       ? { datasource_provider: input.provider ?? input.backend ?? 'duckdb-file' }
       : {}),
