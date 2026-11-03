@@ -230,6 +230,13 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         });
         return ok(route, original);
       }
+      case 'updateDashboard':
+        state.dashboard = {
+          ...state.dashboard,
+          name: request.name ?? state.dashboard.name,
+          theme: request.theme ?? state.dashboard.theme,
+        };
+        return ok(route, state.dashboard);
       case 'trackPageView':
         return ok(route, { pageId: request.pageId });
       case 'bootstrap':

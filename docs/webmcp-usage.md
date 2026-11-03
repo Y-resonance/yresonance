@@ -53,6 +53,12 @@ placements. `updatePage` renames, changes draft status, or moves a page to a zer
 `removePage` requires `confirm: true` when it contains widgets and cannot remove the last page.
 View tools on shared links and viewer grants can read and query only published pages.
 
+Styling goes through the same generic writes. `updateDashboard` takes a `theme` that replaces the
+stored one (`{}` clears it): `brandColor`, `canvasBackground`, `chartPalette` (`brand` derives the
+series colours from `brandColor`), and `widgetDefaults`. Every widget definition takes an optional
+`appearance` with the same fields as `widgetDefaults`, and each field it sets wins over the theme.
+Colours are `theme:brand`, `theme:surface`, `theme:muted`, `theme:foreground`, or `#rrggbb`.
+
 `registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an
 existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from
 1 to 86400. `queryWidget` accepts `refresh: true` to bypass and replace a cached result, including

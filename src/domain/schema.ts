@@ -79,6 +79,38 @@ export const textStyleSchema = z.object({
 // into every widget variant.
 const optionalTextStyle = textStyleSchema.optional();
 
+// A theme reference or a fixed colour. Theme references follow the dashboard brand and dark mode;
+// hex values render as stored in both modes.
+export const themeColorSchema = z.enum([
+  'theme:brand',
+  'theme:surface',
+  'theme:muted',
+  'theme:foreground',
+]);
+const hexColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
+export const colorSchema = z.union([themeColorSchema, hexColorSchema]);
+
+// Background and border of a widget box. Used on a widget and as the dashboard theme's widget
+// defaults; resolveAppearance in ./appearance merges the two field by field.
+export const appearanceSchema = z.object({
+  background: colorSchema.optional(),
+  backgroundOpacity: z.number().int().min(0).max(100).optional(),
+  borderColor: colorSchema.optional(),
+  borderRadius: z.number().int().min(0).max(32).optional(),
+  borderWidth: z.number().int().min(0).max(8).optional(),
+  borderStyle: z.enum(['solid', 'dashed', 'dotted']).optional(),
+  shadow: z.boolean().optional(),
+});
+const optionalAppearance = appearanceSchema.optional();
+
+export const dashboardThemeSchema = z.object({
+  brandColor: hexColorSchema.optional(),
+  canvasBackground: colorSchema.optional(),
+  widgetDefaults: optionalAppearance,
+  // 'brand' derives the chart series colours from brandColor.
+  chartPalette: z.enum(['default', 'brand']).optional(),
+});
+
 export const dateGranularitySchema = z.enum([
   'auto',
   'raw',
@@ -211,7 +243,7 @@ const cardBase = {
   dataSourceId: z.string().min(1),
   dateRangeFieldId: z.string().min(1),
   filter: filterSchema.optional(),
-  styling: stylingSchema,
+  appearance: optionalAppearance,
 };
 
 export const widgetDefinitionSchema = z.discriminatedUnion('type', [
@@ -224,17 +256,18 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     allowMultiple: z.boolean().default(true),
     filter: filterSchema.optional(),
     optionsSortDirection: z.enum(['asc', 'desc']).optional(),
-    styling: stylingSchema,
+    appearance: optionalAppearance,
   }),
   z.object({
     type: z.literal('dateControl'),
     defaultDateRange: dateRangeSchema.optional(),
-    styling: stylingSchema,
+    appearance: optionalAppearance,
   }),
   z.object({
     type: z.literal('text'),
     content: z.object({ schemaVersion: z.string().min(1), document: z.unknown() }),
     textStyle: optionalTextStyle,
+    appearance: optionalAppearance,
   }),
   z.object({
     ...cardBase,
@@ -343,6 +376,7 @@ const dashboardFields = {
   timezone: z.string().min(1).default('Europe/Berlin'),
   defaultDateRange: dateRangeSchema,
   columns: z.number().int().positive().default(12),
+  theme: dashboardThemeSchema.optional(),
   createdBy: z.string().min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -491,6 +525,8 @@ export type Aggregation = z.infer<typeof aggregationSchema>;
 export type DataSourceLocation = z.infer<typeof dataSourceLocationSchema>;
 export type TextStyle = z.infer<typeof textStyleSchema>;
 export type BarColorBy = z.infer<typeof barColorBySchema>;
+export type Appearance = z.infer<typeof appearanceSchema>;
+export type DashboardTheme = z.infer<typeof dashboardThemeSchema>;
 
 export const defaultDateRange: DateRange = {
   startDate: { relative: { amount: 30, unit: 'day', direction: 'past', anchor: 'startOfDay' } },

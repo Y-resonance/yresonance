@@ -133,7 +133,8 @@ export function useWebMcpTools(options: WebMcpOptions) {
         ? [
             {
               action: 'updateDashboard',
-              description: 'Update the open dashboard name, timezone, or default date range.',
+              description:
+                'Update the open dashboard name, timezone, default date range, or theme. theme replaces the stored theme: brandColor, canvasBackground, chartPalette (brand derives series colors from brandColor), and widgetDefaults, the appearance every widget inherits unless it sets its own.',
               readOnly: false,
               fixed,
             },
@@ -161,14 +162,14 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
+                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. Every widget takes an optional appearance (background, border, radius, shadow) that overrides the theme widgetDefaults field by field. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
             {
               action: 'updateWidget',
               description:
-                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors or a colorScale heatmap or in-cell bar (invert when lower is better), not both; showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle.',
+                'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors or a colorScale heatmap or in-cell bar (invert when lower is better), not both; showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. Every widget takes an optional appearance (background, border, radius, shadow) that overrides the theme widgetDefaults field by field.',
               readOnly: false,
               fixed,
             },
@@ -272,7 +273,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'updateDashboard',
               description:
-                'Rename a dashboard or update its timezone or default date range. Requires editor access.',
+                'Rename a dashboard or update its timezone, default date range, or theme. Requires editor access.',
               readOnly: false,
             },
             {
@@ -454,5 +455,45 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
   const removed = new Set(['action', ...Object.keys(fixed ?? {})]);
   if (json.properties) for (const key of removed) delete json.properties[key];
   if (json.required) json.required = json.required.filter((key) => !removed.has(key));
-  return json as Record<string, unknown>;
+  return compactSchema(json) as Record<string, unknown>;
+}
+
+/**
+ * Drops JSON Schema noise that tells an agent nothing, to stay within the descriptor budget:
+ * - the long regex zod adds next to a `format` that already names the shape (the API validates it)
+ * - `allOf` wrappers around a single reference, which zod adds to optional reused schemas
+ * - `propertyNames: { type: 'string' }`, which every JSON object key already satisfies
+ * - empty `required` lists
+ * Only schema keywords are walked, so property names and default values are never touched.
+ */
+function compactSchema(node: unknown): unknown {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return node;
+  const { allOf, pattern, propertyNames, required, ...rest } = node as Record<string, unknown>;
+  if (Array.isArray(allOf) && allOf.length === 1 && Object.keys(node).length === 1)
+    return compactSchema(allOf[0]);
+  const schemaMap = (value: unknown) =>
+    value && typeof value === 'object'
+      ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, compactSchema(item)]))
+      : value;
+  const schemaList = (value: unknown) => (Array.isArray(value) ? value.map(compactSchema) : value);
+  return {
+    ...rest,
+    ...(pattern === undefined || rest.format !== undefined ? {} : { pattern }),
+    ...(required === undefined || (Array.isArray(required) && !required.length)
+      ? {}
+      : { required }),
+    ...(propertyNames === undefined ||
+    JSON.stringify(propertyNames) === JSON.stringify({ type: 'string' })
+      ? {}
+      : { propertyNames: compactSchema(propertyNames) }),
+    ...(allOf === undefined ? {} : { allOf: schemaList(allOf) }),
+    ...(rest.properties === undefined ? {} : { properties: schemaMap(rest.properties) }),
+    ...(rest.definitions === undefined ? {} : { definitions: schemaMap(rest.definitions) }),
+    ...(rest.items === undefined ? {} : { items: compactSchema(rest.items) }),
+    ...(rest.additionalProperties === undefined
+      ? {}
+      : { additionalProperties: compactSchema(rest.additionalProperties) }),
+    ...(rest.anyOf === undefined ? {} : { anyOf: schemaList(rest.anyOf) }),
+    ...(rest.oneOf === undefined ? {} : { oneOf: schemaList(rest.oneOf) }),
+  };
 }

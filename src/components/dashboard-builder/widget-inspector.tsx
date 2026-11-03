@@ -55,10 +55,13 @@ import {
   EditFormulaButton,
 } from './field-picker';
 import { MetricSettings } from './metric-settings';
+import { AppearanceSettings } from './appearance-settings';
+import { resolveAppearance } from '#/domain/appearance';
 
 export function WidgetSettings({
   dashboardId,
   dashboardDefaultDateRange,
+  theme,
   timezone,
   widget,
   dataSources,
@@ -69,6 +72,7 @@ export function WidgetSettings({
 }: {
   dashboardId: string;
   dashboardDefaultDateRange: DashboardDocument['defaultDateRange'];
+  theme: DashboardDocument['theme'];
   timezone: string;
   widget: DashboardWidget;
   dataSources: BuilderDataSource[];
@@ -334,6 +338,13 @@ export function WidgetSettings({
           ) : null}
         </>
       ) : null}
+      <AppearanceSettings
+        legend="Background and border"
+        value={definition.appearance}
+        inherited={resolveAppearance(theme, undefined)}
+        theme={theme}
+        onChange={(appearance) => void commit({ ...definition, appearance })}
+      />
     </div>
   );
 }

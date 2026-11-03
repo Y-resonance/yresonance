@@ -7,6 +7,7 @@ import { waitUntil } from 'cloudflare:workers';
 import type { ApiRequest } from '#/api/contracts';
 import { analyticsConfig } from './config.server';
 import { sanitizeAnalyticsProperties } from './config';
+import { appearanceFieldNames } from '#/domain/appearance';
 
 export function trackApiRequest(options: Parameters<typeof exportApiRequest>[0]) {
   try {
@@ -72,6 +73,14 @@ function exportApiRequest({
     ...(input && 'dataSourceId' in input ? { datasource_id: input.dataSourceId } : {}),
     ...(input?.action === 'registerDatasource'
       ? { datasource_provider: input.provider ?? input.backend ?? 'duckdb-file' }
+      : {}),
+    // Which styling options people use: theme fields set on save, and per-widget overrides.
+    ...(input?.action === 'updateDashboard' && input.theme
+      ? { theme_fields: appearanceFieldNames(input.theme) }
+      : {}),
+    ...((input?.action === 'addWidget' || input?.action === 'updateWidget') &&
+    input.definition.appearance
+      ? { appearance_fields: appearanceFieldNames(input.definition.appearance) }
       : {}),
   };
   if (distinctId) {

@@ -34,6 +34,7 @@ import {
   type ComboMetric,
   type ControlState,
   type DashboardDocument,
+  type DashboardTheme,
   type DashboardWidget,
   type DateRange,
   type DrillPath,
@@ -58,6 +59,7 @@ import { widgetQueryRequest } from '#/domain/widget-query';
 import { cn } from '#/lib/utils';
 import { textBoxClasses, textStyleClasses } from '#/domain/text-style';
 import { colorsPerCategory, paletteColor } from '#/domain/chart-colors';
+import { dashboardCanvasStyle, widgetBoxStyle } from '#/domain/appearance';
 import {
   controlDefaultValues,
   toggleControlValue,
@@ -127,6 +129,7 @@ export function DashboardView({
       <Widget
         widget={widget}
         dashboardId={dashboard.id}
+        theme={dashboard.theme}
         timezone={dashboard.timezone}
         defaultDateRange={defaultDateRange}
         shareToken={shareToken}
@@ -141,6 +144,7 @@ export function DashboardView({
       className="grid grid-cols-1 gap-4 md:auto-rows-[var(--grid-row-height)] md:grid-cols-12 md:gap-[var(--grid-gap)] md:p-[var(--grid-gap)]"
       style={
         {
+          ...dashboardCanvasStyle(dashboard.theme),
           '--grid-row-height': `${DASHBOARD_GRID.rowHeight}px`,
           '--grid-gap': `${DASHBOARD_GRID.margin[0]}px`,
         } as CSSProperties
@@ -193,6 +197,7 @@ function isControlWidget(widget: DashboardWidget) {
 function Widget({
   widget,
   dashboardId,
+  theme,
   timezone,
   defaultDateRange,
   shareToken,
@@ -203,6 +208,7 @@ function Widget({
 }: {
   widget: DashboardWidget;
   dashboardId: string;
+  theme: DashboardTheme | undefined;
   timezone: string;
   defaultDateRange?: DateRange;
   shareToken?: string;
@@ -211,9 +217,11 @@ function Widget({
   setControlState: (state: ControlState) => void;
   onDateRangeChange?: (range: DateRange) => void;
 }) {
+  // Every widget kind is a card, so the resolved background and border land on that card.
+  const boxStyle = widgetBoxStyle(theme, widget.definition.appearance);
   if (widget.definition.type === 'text')
     return (
-      <Card>
+      <Card style={boxStyle}>
         {/* The card is stretched to its grid row, so the content takes the leftover height and the
             stored vertical alignment decides where the text sits in it. */}
         <CardContent
@@ -231,6 +239,7 @@ function Widget({
   if (widget.definition.type === 'dateControl')
     return (
       <DateControl
+        boxStyle={boxStyle}
         timezone={timezone}
         defaultDateRange={defaultDateRange}
         controlState={controlState}
@@ -241,6 +250,7 @@ function Widget({
   if (widget.definition.type === 'control')
     return (
       <FilterControl
+        boxStyle={boxStyle}
         widgetId={widget.id}
         definitionHash={widget.definitionHash}
         definition={widget.definition}
@@ -252,6 +262,7 @@ function Widget({
     );
   return (
     <QueryCard
+      boxStyle={boxStyle}
       widget={widget}
       dashboardId={dashboardId}
       shareToken={shareToken}
@@ -278,6 +289,7 @@ export function DashboardWidgetView({
     <Widget
       widget={widget}
       dashboardId={dashboard.id}
+      theme={dashboard.theme}
       timezone={dashboard.timezone}
       defaultDateRange={dashboardDateControlRange(dashboard)}
       preview={preview}
@@ -288,12 +300,14 @@ export function DashboardWidgetView({
 }
 
 function DateControl({
+  boxStyle,
   timezone,
   defaultDateRange,
   controlState,
   setControlState,
   onDateRangeChange,
 }: {
+  boxStyle: CSSProperties | undefined;
   timezone: string;
   defaultDateRange?: DateRange;
   controlState: ControlState;
@@ -303,7 +317,7 @@ function DateControl({
   const range = controlState.dateRange;
   if (!range) return null;
   return (
-    <Card size="sm" className="h-full px-3 py-3 ring-inset">
+    <Card size="sm" className="h-full px-3 py-3 ring-inset" style={boxStyle}>
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-2 md:flex-row md:items-center md:gap-3">
         <CardTitle className="shrink-0">Date range</CardTitle>
         <div className="min-w-0 flex-1 md:max-w-80">
@@ -323,6 +337,7 @@ function DateControl({
 }
 
 function FilterControl({
+  boxStyle,
   widgetId,
   definitionHash,
   definition,
@@ -331,6 +346,7 @@ function FilterControl({
   controlState,
   setControlState,
 }: {
+  boxStyle: CSSProperties | undefined;
   widgetId: string;
   definitionHash: string;
   definition: Extract<DashboardWidget['definition'], { type: 'control' }>;
@@ -373,7 +389,7 @@ function FilterControl({
     updateSelected(toggleControlValue(selected, value, true));
   };
   return (
-    <Card size="sm" className="h-full px-3 py-3 ring-inset">
+    <Card size="sm" className="h-full px-3 py-3 ring-inset" style={boxStyle}>
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-2 md:flex-row md:items-center md:gap-3">
         <CardTitle className="shrink-0">{definition.userDefinedName ?? 'Filter'}</CardTitle>
         <div className="flex min-w-0 flex-1 flex-col gap-2 md:max-w-80">
@@ -498,12 +514,14 @@ interface WidgetQueryResult {
 }
 
 function QueryCard({
+  boxStyle,
   widget,
   dashboardId,
   shareToken,
   preview,
   controlState,
 }: {
+  boxStyle: CSSProperties | undefined;
   widget: DashboardWidget;
   dashboardId: string;
   shareToken?: string;
@@ -511,8 +529,10 @@ function QueryCard({
   controlState: ControlState;
 }) {
   const definition = widget.definition;
-  // Compare query inputs by content, since saves and refreshes replace their objects.
-  const definitionKey = stableStringify(definition);
+  // Compare query inputs by content, since saves and refreshes replace their objects. Appearance
+  // only restyles the card, so it never re-runs the query or resets paging and drill state.
+  const { appearance: _appearance, ...queriedDefinition } = definition;
+  const definitionKey = stableStringify(queriedDefinition);
   // Empty selections are left out so a control that only gains an empty entry does not re-run
   // the query. Controls with defaults always carry values, so no default is hidden by this.
   const controlsKey = stableStringify({
@@ -608,7 +628,7 @@ function QueryCard({
     setDrillPath(next);
   };
   return (
-    <Card className="h-full min-h-0">
+    <Card className="h-full min-h-0" style={boxStyle}>
       <CardHeader className="shrink-0">
         <CardTitle className={textStyleClasses(definition.titleStyle)}>
           {definition.title}

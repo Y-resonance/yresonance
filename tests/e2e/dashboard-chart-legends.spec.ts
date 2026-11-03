@@ -144,5 +144,7 @@ test('charts show legends without widget configuration', async ({ page }) => {
   await expect(pie.locator('.recharts-legend-wrapper')).toContainText('Always on');
 
   await bar.getByRole('button', { name: 'Edit Spend by campaign' }).press('Enter');
-  await expect(page.getByRole('complementary').getByRole('switch')).toHaveCount(0);
+  await expect(
+    page.getByRole('complementary').getByRole('switch', { name: /legend/i }),
+  ).toHaveCount(0);
 });

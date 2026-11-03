@@ -15,7 +15,6 @@ const chart: DashboardWidget = {
       source: { kind: 'field', fieldId: 'amount', aggregation: 'sum' },
       dataType: 'number',
     },
-    styling: {},
   },
   definitionHash: 'hash',
 };

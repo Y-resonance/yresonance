@@ -12,6 +12,7 @@ import { dashboardCanvas, type DashboardCanvas } from '#/domain/dashboard-pages'
 import { dashboardControlWidgets, dashboardWidgets } from '#/domain/schema';
 import {
   type DashboardDocument,
+  type DashboardTheme,
   type ControlState,
   type DashboardWidget,
   type DateRange,
@@ -63,6 +64,7 @@ import {
   type PendingCanvasWidget,
 } from './dashboard-builder/canvas-layout';
 import { WidgetSettings } from './dashboard-builder/widget-inspector';
+import { ThemeSettings } from './dashboard-builder/appearance-settings';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
@@ -399,6 +401,31 @@ export function DashboardBuilder({
     }
   }
 
+  async function updateTheme(theme: DashboardTheme) {
+    const previous = dashboardRef.current.theme;
+    updateDashboard((current) => ({ ...current, theme }));
+    startSaving();
+    setError(undefined);
+    try {
+      try {
+        await enqueueMutation(() =>
+          callApi({ action: 'updateDashboard', dashboardId: dashboardRef.current.id, theme }),
+        );
+      } catch (caught) {
+        // Only undo when no later theme edit has replaced this one in the meantime.
+        updateDashboard((current) =>
+          current.theme === theme ? { ...current, theme: previous } : current,
+        );
+        throw caught;
+      }
+      await refresh();
+    } catch (caught) {
+      setError(message(caught));
+    } finally {
+      finishSaving();
+    }
+  }
+
   async function removeWidget(widget: DashboardWidget) {
     const revision = ++mutationRevisionRef.current;
     startSaving();
@@ -480,6 +507,9 @@ export function DashboardBuilder({
     void saveLayout(layoutFor(next.widgets), next.canvasRows);
   }
 
+  const themePanel = (
+    <ThemeSettings theme={dashboard.theme} onChange={(theme) => void updateTheme(theme)} />
+  );
   const inspectorPanel = (
     <fieldset disabled={saving} className="min-w-0 border-0 p-0">
       {selected ? (
@@ -487,6 +517,7 @@ export function DashboardBuilder({
           <WidgetSettings
             dashboardId={dashboard.id}
             dashboardDefaultDateRange={dashboard.defaultDateRange}
+            theme={dashboard.theme}
             timezone={dashboard.timezone}
             widget={selected}
             dataSources={dataSources}
@@ -537,7 +568,10 @@ export function DashboardBuilder({
           ) : null}
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">Select a widget to edit it.</p>
+        <div className="flex flex-col gap-5">
+          <p className="text-sm text-muted-foreground">Select a widget to edit it.</p>
+          {themePanel}
+        </div>
       )}
     </fieldset>
   );
@@ -577,7 +611,18 @@ export function DashboardBuilder({
                   Every builder action is available without drag and resize.
                 </SheetDescription>
               </SheetHeader>
-              <div className="px-4 pb-6">{selected ? inspectorPanel : catalogPanel}</div>
+              <div className="px-4 pb-6">
+                {selected ? (
+                  inspectorPanel
+                ) : (
+                  <div className="flex flex-col gap-6">
+                    {catalogPanel}
+                    <fieldset disabled={saving} className="min-w-0 border-0 p-0">
+                      {themePanel}
+                    </fieldset>
+                  </div>
+                )}
+              </div>
             </SheetContent>
           </Sheet>
         </div>

@@ -81,13 +81,12 @@ function queryDefinition(definition: WidgetDefinition) {
     return queryMetric;
   };
   const {
-    styling: _styling,
+    appearance: _appearance,
     title: _title,
     titleStyle: _titleStyle,
     textStyle: _textStyle,
     ...query
   } = definition as WidgetDefinition & {
-    styling?: unknown;
     title?: string;
     titleStyle?: unknown;
     textStyle?: unknown;
