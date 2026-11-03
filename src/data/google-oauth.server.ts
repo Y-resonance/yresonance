@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { clerkClient } from '@clerk/tanstack-react-start/server';
-import { and, eq, lt, inArray } from 'drizzle-orm';
+import { and, eq, lt, inArray, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { datasourceAuthorizations, workspaces } from '#/db/schema';
 import { database } from '#/server/database.server';
@@ -473,19 +473,23 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
         'Google connection membership could not be verified.',
       );
   }
-  async function revoke(expectedConfig = encryptedGrant): Promise<never> {
+  async function revoke(unchanged: SQL): Promise<never> {
     await db
       .update(datasourceAuthorizations)
       .set({ status: 'reconnect_required', encryptedConfig: null })
       .where(
         and(
           eq(datasourceAuthorizations.id, authorizationId),
-          eq(datasourceAuthorizations.encryptedConfig, expectedConfig),
+          eq(datasourceAuthorizations.workspaceId, workspaceId),
+          eq(datasourceAuthorizations.status, 'connected'),
+          unchanged,
         ),
       );
     throw reconnectError();
   }
-  if (!isMember) return revoke();
+  // Refresh rotates credentials within the same authorization revision. Membership loss must
+  // revoke that refreshed grant too, while preserving a newer explicit reconnect/disconnect.
+  if (!isMember) return revoke(eq(datasourceAuthorizations.updatedAt, revision));
   async function verifiedToken(accessToken: string, expectedConfig = encryptedGrant) {
     // Check the grant even on cache hits: a revoked access token must not serve cached data.
     const response = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
@@ -498,7 +502,8 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
         'Google authorization is unavailable.',
       );
     });
-    if (response.status === 401) return revoke(expectedConfig);
+    if (response.status === 401)
+      return revoke(eq(datasourceAuthorizations.encryptedConfig, expectedConfig));
     if (!response.ok)
       throw new DatasourceError(
         'datasource_connector_failed',

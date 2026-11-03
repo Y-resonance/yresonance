@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { expect, test, vi } from 'vitest';
 import { createDatabase } from '#/db/client';
 import { datasourceAuthorizations } from '#/db/schema';
-import { completeGoogleConnection } from '#/data/google-oauth.server';
+import { completeGoogleConnection, googleAccessToken } from '#/data/google-oauth.server';
 import { executeBigquery } from '#/data/bigquery.server';
 import { signOut, removeClerkMembership, setClerkDirectory } from './doubles/clerk';
 import * as clerk from './doubles/clerk';
@@ -876,4 +876,63 @@ test('a stalled membership lookup times out without deleting credentials or requ
   }
   expect((await connections()).connections).toEqual([grant]);
   expect(await callService(browse)).toMatchObject({ entries: [] });
+});
+
+test('membership loss revokes a concurrently refreshed grant until the owner explicitly reconnects', async () => {
+  const requests = googleNetwork();
+  const owner = await signInToNewWorkspace();
+  await completeGoogleConnection(await begin());
+  const grant = (await connections()).connections[0]!;
+  const client = clerk.clerkClient();
+  let notifyStarted!: () => void;
+  let finishMembership!: () => void;
+  const started = new Promise<void>((resolve) => {
+    notifyStarted = resolve;
+  });
+  const waiting = new Promise<void>((resolve) => {
+    finishMembership = resolve;
+  });
+  let firstLookup = true;
+  const lookup = vi.spyOn(clerk, 'clerkClient').mockReturnValue({
+    ...client,
+    organizations: {
+      getOrganizationMembershipList: async (params) => {
+        if (firstLookup) {
+          firstLookup = false;
+          notifyStarted();
+          await waiting;
+        }
+        return client.organizations.getOrganizationMembershipList(params);
+      },
+    },
+  });
+  try {
+    const denied = expect(googleAccessToken(owner.workspaceId, grant.id)).rejects.toMatchObject({
+      code: 'datasource_access_denied',
+    });
+    await started;
+    // Another request refreshes the grant while the first request's membership lookup waits.
+    await googleAccessToken(owner.workspaceId, grant.id);
+    expect(requests.some((request) => request.body.includes('grant_type=refresh_token'))).toBe(
+      true,
+    );
+    removeClerkMembership(owner.orgId, owner.userId);
+    finishMembership();
+    await denied;
+    const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+      where: eq(datasourceAuthorizations.id, grant.id),
+    });
+    expect(stored).toMatchObject({ status: 'reconnect_required', encryptedConfig: null });
+    signInAsOwner(owner);
+    await expect(googleAccessToken(owner.workspaceId, grant.id)).rejects.toMatchObject({
+      code: 'datasource_access_denied',
+    });
+    await completeGoogleConnection(await begin(grant.id));
+    expect(await googleAccessToken(owner.workspaceId, grant.id)).toMatchObject({
+      accessToken: 'private-access-token',
+    });
+  } finally {
+    finishMembership();
+    lookup.mockRestore();
+  }
 });
