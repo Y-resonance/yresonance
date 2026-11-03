@@ -358,8 +358,11 @@ function HexInput({
   }, [onChange]);
   const commit = () => {
     const hex = input.trim().startsWith('#') ? input.trim() : `#${input.trim()}`;
-    if (/^#[0-9a-f]{6}$/i.test(hex)) onChange(hex.toLowerCase());
-    else setInput(value ?? '');
+    const next = hex.toLowerCase();
+    // Leaving the field unchanged must not save, like the number settings.
+    if (!/^#[0-9a-f]{6}$/.test(next)) setInput(value ?? '');
+    else if (next !== value) onChange(next);
+    else setInput(next);
   };
   return (
     <div className="flex gap-1">
