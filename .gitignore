@@ -23,3 +23,10 @@ dev-data/*
 .wrangler-branch.json
 .wrangler-preview-migrations.json
 .generated/
+
+# Review evidence is uploaded from temporary directories; product assets stay in src/assets.
+/docs/evidence/
+/docs/review-evidence/
+/docs/discovery/
+/screenshots/
+/evidence/

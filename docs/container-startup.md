@@ -1,5 +1,8 @@
 # Query container startup
 
+Historical measurements from 2026-10-03. These results explain the retained optimizations;
+use [the deployment guide](preview-environments.md) and current code for operating instructions.
+
 Measured on 3 October 2026 using native Linux ARM64 containers in Docker Desktop on macOS.
 These measurements describe local process and Docker readiness, not Cloudflare cold starts.
 
