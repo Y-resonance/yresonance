@@ -263,7 +263,7 @@ async function latestFieldDate(
     }),
   );
   const value = normalize(row?.value);
-  const date = typeof value === 'string' ? (/^\d{4}-\d{2}-\d{2}/u.exec(value)?.[0] ?? null) : null;
+  const date = typeof value === 'string' ? calendarDay(value) : null;
   if (ttlSeconds > 0)
     await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), date }), {
       expirationTtl: Math.max(60, ttlSeconds),
@@ -275,6 +275,15 @@ async function latestFieldDate(
       }),
     );
   return date;
+}
+
+// The leading YYYY-MM-DD of a date or timestamp, or null when it is not a real calendar day. A text
+// column marked as a date can hold values like 2026-02-30, which Date would roll into March.
+function calendarDay(value: string) {
+  const day = /^\d{4}-\d{2}-\d{2}/u.exec(value)?.[0];
+  if (!day) return null;
+  const parsed = new Date(`${day}T00:00:00Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().startsWith(day) ? day : null;
 }
 
 function cacheTtlSeconds(dataSource: DataSourceRecord) {

@@ -757,6 +757,10 @@ describe('query engine failures', () => {
   test.each([
     ['fails', { status: 400, body: { ok: false, error: 'Binder Error: column not found' } }],
     ['has no dated rows', { body: { ok: true, data: [], metrics: engineMetrics } }],
+    [
+      'has an impossible date',
+      { body: { ok: true, data: [{ value: '2026-02-30' }], metrics: engineMetrics } },
+    ],
   ])('data availability is unknown when one of the page sources %s', async (_case, reply) => {
     const workspace = await signInToNewWorkspace();
     const [healthy, other] = await Promise.all([
