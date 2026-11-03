@@ -41,7 +41,7 @@ export function DataAvailability({
   const through = query.data?.through;
   if (!through) return null;
   return (
-    <span className="text-sm whitespace-nowrap text-muted-foreground">
+    <span className="text-sm text-muted-foreground">
       Data available through {formatThrough(through)}
     </span>
   );

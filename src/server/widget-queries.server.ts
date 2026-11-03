@@ -181,8 +181,8 @@ export async function queryWidget(
  * The day a dashboard page's data reaches, shown as "Data available through" in the header. Each
  * card filters one datasource by one date field; this reads the latest date of every such pair on
  * the page and returns the earliest of them, so every widget there has data up to that day. Scoped
- * to one page so a stale source elsewhere does not hold back the date. A source that fails is left
- * out, since its widgets already show the error.
+ * to one page so a stale source elsewhere does not hold back the date. When any source fails the
+ * date is unknown and `through` is null.
  */
 export async function getDataAvailability(
   dashboardId: string,
@@ -219,7 +219,8 @@ export async function getDataAvailability(
       sources: pairs.size,
       failed,
     });
-  return { through: dates.sort()[0] ?? null };
+  // Leaving a failed source out could claim more recent data than its widgets have.
+  return { through: failed ? null : (dates.sort()[0] ?? null) };
 }
 
 async function latestFieldDate(

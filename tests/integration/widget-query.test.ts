@@ -753,4 +753,24 @@ describe('query engine failures', () => {
       }),
     ).toEqual({ through: '2026-01-01' });
   });
+
+  test('data availability is unknown when one of the page sources fails', async () => {
+    const workspace = await signInToNewWorkspace();
+    const [healthy, broken] = await Promise.all([
+      seedDataSource(workspace),
+      seedDataSource(workspace),
+    ]);
+    const dashboard = await createDashboard();
+    await addWidget(dashboard.id, scorecardDefinition(healthy));
+    await addWidget(dashboard.id, scorecardDefinition(broken));
+    queryEngine.answerWith((request) =>
+      request.operation === 'query' && request.sql.includes(broken.name)
+        ? { status: 400, body: { ok: false, error: 'Binder Error: column not found' } }
+        : { body: { ok: true, data: [{ value: '2026-10-30' }], metrics: engineMetrics } },
+    );
+
+    expect(await callService({ action: 'getDataAvailability', dashboardId: dashboard.id })).toEqual(
+      { through: null },
+    );
+  });
 });

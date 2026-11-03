@@ -61,7 +61,7 @@ function SharedDashboard() {
             </h1>
           </div>
           {dashboard ? (
-            <div className="flex items-center gap-3">
+            <div className="flex max-w-full flex-wrap items-center gap-3">
               <DataAvailability
                 dashboardId={dashboard.id}
                 pageId={activeDashboardPage(dashboard, search.page)?.id}
