@@ -754,18 +754,21 @@ describe('query engine failures', () => {
     ).toEqual({ through: '2026-01-01' });
   });
 
-  test('data availability is unknown when one of the page sources fails', async () => {
+  test.each([
+    ['fails', { status: 400, body: { ok: false, error: 'Binder Error: column not found' } }],
+    ['has no dated rows', { body: { ok: true, data: [], metrics: engineMetrics } }],
+  ])('data availability is unknown when one of the page sources %s', async (_case, reply) => {
     const workspace = await signInToNewWorkspace();
-    const [healthy, broken] = await Promise.all([
+    const [healthy, other] = await Promise.all([
       seedDataSource(workspace),
       seedDataSource(workspace),
     ]);
     const dashboard = await createDashboard();
     await addWidget(dashboard.id, scorecardDefinition(healthy));
-    await addWidget(dashboard.id, scorecardDefinition(broken));
+    await addWidget(dashboard.id, scorecardDefinition(other));
     queryEngine.answerWith((request) =>
-      request.operation === 'query' && request.sql.includes(broken.name)
-        ? { status: 400, body: { ok: false, error: 'Binder Error: column not found' } }
+      request.operation === 'query' && request.sql.includes(other.name)
+        ? reply
         : { body: { ok: true, data: [{ value: '2026-10-30' }], metrics: engineMetrics } },
     );
 

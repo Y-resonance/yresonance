@@ -62,7 +62,7 @@ explain. Update it when a decision changes, not when an implementation detail do
   date field the shown page's widgets filter by, so every widget there has data up to that day.
   It is per page so a stale source elsewhere does not hold the date back. It is derived from the
   data, uses the same datasource cache lifetime, and follows the refresh action. If any source
-  fails, no date is shown rather than one that overstates freshness.
+  fails or has no dated rows, no date is shown rather than one that overstates freshness.
 - Managed CSV uploads are converted to Parquet before registration. ClickHouse imports stream
   the inspected Parquet into one database per environment, with workspace-scoped tables. Production
   and previews use separate SQL users. Preview databases follow branch lifecycles. External tables on the managed ClickHouse host require

@@ -181,8 +181,8 @@ export async function queryWidget(
  * The day a dashboard page's data reaches, shown as "Data available through" in the header. Each
  * card filters one datasource by one date field; this reads the latest date of every such pair on
  * the page and returns the earliest of them, so every widget there has data up to that day. Scoped
- * to one page so a stale source elsewhere does not hold back the date. When any source fails the
- * date is unknown and `through` is null.
+ * to one page so a stale source elsewhere does not hold back the date. When any source fails or has
+ * no readable date, the date is unknown and `through` is null.
  */
 export async function getDataAvailability(
   dashboardId: string,
@@ -208,19 +208,22 @@ export async function getDataAvailability(
       latestFieldDate(access.document.workspaceId, pair.dataSourceId, pair.fieldId, refresh),
     ),
   );
-  const dates = results.flatMap((result) =>
-    result.status === 'fulfilled' && result.value ? [result.value] : [],
-  );
+  const dates = results.map((result) => (result.status === 'fulfilled' ? result.value : null));
   const failed = results.filter((result) => result.status === 'rejected').length;
-  if (failed)
+  const undated = dates.filter((date) => !date).length - failed;
+  if (failed || undated)
     console.warn('yresonance.data_availability', {
       dashboardId,
       pageId,
       sources: pairs.size,
       failed,
+      undated,
     });
-  // Leaving a failed source out could claim more recent data than its widgets have.
-  return { through: failed ? null : (dates.sort()[0] ?? null) };
+  // Leaving out a source without a readable date (failed, empty, or field removed) could claim
+  // more recent data than its widgets have, so the page date is unknown then.
+  return {
+    through: dates.every((date): date is string => !!date) ? (dates.sort()[0] ?? null) : null,
+  };
 }
 
 async function latestFieldDate(
