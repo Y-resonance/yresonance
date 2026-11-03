@@ -97,6 +97,11 @@ explain. Update it when a decision changes, not when an implementation detail do
   equality filter. Tables are excluded: they already show several dimensions with subtotals.
 - Comparison runs as a second query with a shifted date range.
 - Relative dates resolve in the dashboard's timezone, default `Europe/Berlin`.
+- Yesterday is the latest queryable day because the current day's data is incomplete. Every range is
+  cut off there when it resolves, and presets end there without saying so in their labels. Ranges
+  saved with a "today" end load as the matching yesterday presets.
+- A custom range can pair a fixed start with an end that stays on yesterday, so "campaign start to
+  yesterday" stays current. The start is not derived from data; editors enter it.
 - Rich text is stored as versioned JSON, never as HTML. Styling is an open object owned by each
   renderer.
 

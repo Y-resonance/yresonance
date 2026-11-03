@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dashboardDocumentSchema, defaultDateRange, widgetDefinitionSchema } from './schema';
+import { dateRangePresets, yesterday } from './dates';
 
 describe('dashboard document schema', () => {
   it('derives canvas rows for documents saved before the field existed', () => {
@@ -40,6 +41,52 @@ describe('dashboard document schema', () => {
       definitionHash: 'hash',
     });
     expect(dashboardDocumentSchema.parse(dashboard)).toEqual(dashboard);
+  });
+
+  it('loads date ranges saved with a today end as the matching yesterday presets', () => {
+    const today = {
+      relative: { amount: 0, unit: 'day', direction: 'past', anchor: 'startOfDay' },
+    } as const;
+    const lastSeven = dateRangePresets.find((item) => item.id === 'last-7-days')!.range;
+    const dashboard = dashboardDocumentSchema.parse({
+      id: 'dashboard',
+      workspaceId: 'workspace',
+      name: 'Saved before the cutoff',
+      schemaVersion: 3,
+      timezone: 'Europe/Berlin',
+      defaultDateRange: {
+        startDate: { relative: { ...today.relative, amount: 6 } },
+        endDate: today,
+      },
+      columns: 12,
+      pages: [
+        {
+          id: 'page',
+          name: 'Overview',
+          hidden: false,
+          canvasRows: 10,
+          widgets: [
+            {
+              id: 'date',
+              layout: { x: 0, y: 0, width: 4, height: 2 },
+              definition: {
+                type: 'dateControl',
+                defaultDateRange: { startDate: { fixed: '2026-08-01' }, endDate: today },
+              },
+              definitionHash: 'hash',
+            },
+          ],
+        },
+      ],
+      createdBy: 'user',
+      createdAt: '2026-08-01T00:00:00.000Z',
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    });
+
+    expect(dashboard.defaultDateRange).toEqual(lastSeven);
+    expect(dashboard.pages[0].widgets[0].definition).toMatchObject({
+      defaultDateRange: { startDate: { fixed: '2026-08-01' }, endDate: yesterday },
+    });
   });
 
   it('rejects a stored canvas that does not contain its widgets', () => {

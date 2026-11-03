@@ -8,38 +8,27 @@ export interface ResolvedDateRange {
 const invalidRangeMessage = 'The start date must not be after the end date.';
 export const unsupportedDateRangeMessage = 'The date range is outside the supported calendar.';
 
-const today = {
-  relative: { amount: 0, unit: 'day', direction: 'past', anchor: 'startOfDay' },
+// Data for the current day is never complete, so yesterday is the latest day a dashboard can query.
+// Every range is cut off there when it resolves, and presets end there.
+export const yesterday = {
+  relative: { amount: 1, unit: 'day', direction: 'past', anchor: 'startOfDay' },
 } as const;
 
-export const dateRangePresets = [
-  { id: 'today', label: 'Today', range: { startDate: today, endDate: today } },
-  {
-    id: 'yesterday',
-    label: 'Yesterday',
-    range: {
-      startDate: {
-        relative: { amount: 1, unit: 'day', direction: 'past', anchor: 'startOfDay' },
-      },
-      endDate: {
-        relative: { amount: 1, unit: 'day', direction: 'past', anchor: 'startOfDay' },
-      },
-    },
+const daysAgo = (amount: number) => ({
+  relative: {
+    amount,
+    unit: 'day' as const,
+    direction: 'past' as const,
+    anchor: 'startOfDay' as const,
   },
+});
+
+export const dateRangePresets = [
+  { id: 'yesterday', label: 'Yesterday', range: { startDate: yesterday, endDate: yesterday } },
   ...[7, 28, 30, 90].map((days) => ({
     id: `last-${days}-days`,
     label: `Last ${days} days`,
-    range: {
-      startDate: {
-        relative: {
-          amount: days - 1,
-          unit: 'day' as const,
-          direction: 'past' as const,
-          anchor: 'startOfDay' as const,
-        },
-      },
-      endDate: today,
-    },
+    range: { startDate: daysAgo(days), endDate: yesterday },
   })),
   {
     id: 'this-month',
@@ -48,7 +37,7 @@ export const dateRangePresets = [
       startDate: {
         relative: { amount: 0, unit: 'month', direction: 'past', anchor: 'startOfMonth' },
       },
-      endDate: today,
+      endDate: yesterday,
     },
   },
   {
@@ -70,7 +59,7 @@ export const dateRangePresets = [
       startDate: {
         relative: { amount: 0, unit: 'quarter', direction: 'past', anchor: 'startOfQuarter' },
       },
-      endDate: today,
+      endDate: yesterday,
     },
   },
   {
@@ -80,7 +69,7 @@ export const dateRangePresets = [
       startDate: {
         relative: { amount: 0, unit: 'year', direction: 'past', anchor: 'startOfYear' },
       },
-      endDate: today,
+      endDate: yesterday,
     },
   },
   {
@@ -101,14 +90,42 @@ export const yearToDateRange = dateRangePresets.find(
   (preset) => preset.id === 'year-to-date',
 )!.range;
 
+export const lastThirtyDaysRange = dateRangePresets.find(
+  (preset) => preset.id === 'last-30-days',
+)!.range;
+
 export function resolveDateRange(
   range: DateRange,
   timezone: string,
   now = new Date(),
 ): ResolvedDateRange {
+  const end = resolveDateValue(range.endDate, timezone, now);
+  const latest = resolveDateValue(yesterday, timezone, now);
   return {
     start: resolveDateValue(range.startDate, timezone, now),
-    end: resolveDateValue(range.endDate, timezone, now),
+    end: end > latest ? latest : end,
+  };
+}
+
+// Ranges saved before the yesterday cutoff ended today. Shift those by one day so "Last 7 days"
+// keeps seven days and matches the current presets again.
+export function withoutToday(range: DateRange): DateRange {
+  const { endDate, startDate } = range;
+  const endsToday =
+    'relative' in endDate &&
+    endDate.relative.amount === 0 &&
+    endDate.relative.unit === 'day' &&
+    endDate.relative.direction === 'past' &&
+    endDate.relative.anchor === 'startOfDay';
+  if (!endsToday) return range;
+  const startsDaysAgo =
+    'relative' in startDate &&
+    startDate.relative.unit === 'day' &&
+    startDate.relative.direction === 'past' &&
+    startDate.relative.anchor === 'startOfDay';
+  return {
+    startDate: startsDaysAgo ? daysAgo(startDate.relative.amount + 1) : startDate,
+    endDate: yesterday,
   };
 }
 

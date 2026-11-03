@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { lastThirtyDaysRange, withoutToday } from './dates';
 
 export const timezoneSchema = z
   .string()
@@ -410,10 +411,29 @@ const legacyDashboardSchema = z
     ],
   }));
 
-export const dashboardDocumentSchema = z.preprocess((input) => {
-  const legacy = legacyDashboardSchema.safeParse(input);
-  return legacy.success ? legacy.data : input;
-}, currentDashboardSchema);
+export const dashboardDocumentSchema = z
+  .preprocess((input) => {
+    const legacy = legacyDashboardSchema.safeParse(input);
+    return legacy.success ? legacy.data : input;
+  }, currentDashboardSchema)
+  .transform((document) => ({
+    ...document,
+    defaultDateRange: withoutToday(document.defaultDateRange),
+    pages: document.pages.map((page) => ({
+      ...page,
+      widgets: page.widgets.map((widget) =>
+        widget.definition.type === 'dateControl' && widget.definition.defaultDateRange
+          ? {
+              ...widget,
+              definition: {
+                ...widget.definition,
+                defaultDateRange: withoutToday(widget.definition.defaultDateRange),
+              },
+            }
+          : widget,
+      ),
+    })),
+  }));
 
 export function dashboardWidgets(document: DashboardDocument) {
   return document.pages.flatMap((page) => page.widgets);
@@ -492,7 +512,4 @@ export type DataSourceLocation = z.infer<typeof dataSourceLocationSchema>;
 export type TextStyle = z.infer<typeof textStyleSchema>;
 export type BarColorBy = z.infer<typeof barColorBySchema>;
 
-export const defaultDateRange: DateRange = {
-  startDate: { relative: { amount: 30, unit: 'day', direction: 'past', anchor: 'startOfDay' } },
-  endDate: { relative: { amount: 0, unit: 'day', direction: 'past', anchor: 'startOfDay' } },
-};
+export const defaultDateRange: DateRange = lastThirtyDaysRange;
