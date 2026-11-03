@@ -92,8 +92,9 @@ Branches without PRs need explicit cleanup after their builds stop:
 `CLOUDFLARE_WORKER_TAG`. For branches with a ClickHouse preview database, also supply
 `CLICKHOUSE_PREVIEW_URL`, `CLICKHOUSE_PREVIEW_USER`, `CLICKHOUSE_PREVIEW_PASSWORD`,
 `CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID`, and `CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET`.
-Without these variables, ClickHouse cleanup is skipped. A push after closure can recreate resources
-and require cleanup again.
+With no `CLICKHOUSE_PREVIEW_*` values set, ClickHouse cleanup is skipped. Partial configuration
+fails cleanup and leaves the ClickHouse database in place; supply all five values before retrying.
+A push after closure can recreate resources and require cleanup again.
 These operations delete preview data and require authorization for the target environment.
 
 ## Cloudflare deployment
