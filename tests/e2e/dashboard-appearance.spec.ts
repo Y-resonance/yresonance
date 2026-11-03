@@ -12,6 +12,10 @@ test('theme defaults restyle every widget, an override wins, and viewers see the
 }) => {
   test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
   const state = await mockYresonanceApi(page, { role: 'editor' });
+  const actions: unknown[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/yresonance')) actions.push(request.postDataJSON()?.action);
+  });
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
   const settings = page.getByRole('complementary');
@@ -35,6 +39,8 @@ test('theme defaults restyle every widget, an override wins, and viewers see the
   await expect.poll(() => radius(builderCard('w_spend'))).toBe('20px');
   await expect.poll(() => radius(builderCard('w_campaigns'))).toBe('0px');
   expect(state.dashboard.theme).toEqual({ widgetDefaults: { borderRadius: 0 } });
+  // Restyling keeps the saved result instead of previewing the widget with a fresh query.
+  expect(actions).not.toContain('previewWidget');
 
   const viewerCard = (title: string) =>
     page.locator('[data-slot="card"]').filter({ hasText: title });
@@ -45,4 +51,16 @@ test('theme defaults restyle every widget, an override wins, and viewers see the
   await page.goto('/share/token_demo');
   await expect.poll(() => radius(viewerCard('Media spend'))).toBe('20px');
   await expect.poll(() => radius(viewerCard('Campaigns'))).toBe('0px');
+});
+
+test('the mobile builder canvas uses the dashboard theme', async ({ page }) => {
+  test.skip(test.info().project.name !== 'mobile-ui', 'The stacked builder canvas is mobile only.');
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.dashboard.theme = { brandColor: '#7c3aed', chartPalette: 'brand' };
+  await page.goto('/dashboards/dash_demo');
+
+  const card = page.locator('[data-widget-id="w_spend"] [data-slot="card"]');
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element).getPropertyValue('--chart-1')))
+    .toMatch(/^oklch\(/);
 });

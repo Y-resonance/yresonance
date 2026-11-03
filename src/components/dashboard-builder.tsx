@@ -20,6 +20,7 @@ import {
 } from '#/domain/schema';
 import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { createSerialQueue } from '#/domain/serial-queue';
+import { stableStringify } from '#/domain/hash';
 import { type Layout, type LayoutItem } from 'react-grid-layout';
 import { sameDateRange } from '#/domain/date-range-search';
 import { useApi } from '#/api/query';
@@ -326,10 +327,16 @@ export function DashboardBuilder({
         item.id === widget.id ? { ...item, definition } : item,
       ),
     }));
-    setPendingWidgets((current) => ({
-      ...current,
-      [widget.id]: (current[widget.id] ?? 0) + 1,
-    }));
+    // A pending widget previews its unsaved definition with an uncached query. Restyling alone
+    // keeps the saved result, because appearance never changes what the query returns.
+    const queryChanged =
+      stableStringify({ ...widget.definition, appearance: undefined }) !==
+      stableStringify({ ...definition, appearance: undefined });
+    if (queryChanged)
+      setPendingWidgets((current) => ({
+        ...current,
+        [widget.id]: (current[widget.id] ?? 0) + 1,
+      }));
     startSaving();
     setError(undefined);
     try {
@@ -391,12 +398,13 @@ export function DashboardBuilder({
       if (revision === mutationRevisionRef.current) setError(message(caught));
       return false;
     } finally {
-      setPendingWidgets((current) => {
-        const next = (current[widget.id] ?? 1) - 1;
-        if (next > 0) return { ...current, [widget.id]: next };
-        const { [widget.id]: _removed, ...rest } = current;
-        return rest;
-      });
+      if (queryChanged)
+        setPendingWidgets((current) => {
+          const next = (current[widget.id] ?? 1) - 1;
+          if (next > 0) return { ...current, [widget.id]: next };
+          const { [widget.id]: _removed, ...rest } = current;
+          return rest;
+        });
       finishSaving();
     }
   }

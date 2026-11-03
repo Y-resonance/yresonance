@@ -378,7 +378,7 @@ export function BuilderCanvas({
         </div>
       ) : null}
       {desktop === false ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4" style={dashboardCanvasStyle(dashboard.theme)}>
           {pendingAddition ? (
             <div data-pending-widget-id={pendingAddition.id}>
               <PendingWidget widget={pendingAddition} />
@@ -390,7 +390,12 @@ export function BuilderCanvas({
               <div
                 key={widget.id}
                 data-widget-id={widget.id}
-                className="relative rounded-xl ring-1 ring-foreground/10 focus-within:ring-2 focus-within:ring-ring"
+                className={cn(
+                  'relative rounded-xl focus-within:ring-2 focus-within:ring-ring',
+                  // This frame does not clip, so a styled card shows its own border and shadow.
+                  !frames.get(widget.id)?.style && 'ring-1 ring-foreground/10',
+                )}
+                style={frames.get(widget.id)?.style}
               >
                 <div className="absolute top-2 right-2 z-10 flex gap-1">
                   <Button

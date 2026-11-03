@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { RotateCcwIcon } from 'lucide-react';
 import { type Appearance, type DashboardTheme, themeColorSchema } from '#/domain/schema';
 import { cssColor, defaultAppearance, type ResolvedAppearance } from '#/domain/appearance';
@@ -331,7 +331,10 @@ function Swatch({ color, theme }: { color: Color | undefined; theme: DashboardTh
   );
 }
 
-/** A native colour well next to a hex field. Commits valid hex on blur or Enter. */
+/**
+ * A native colour well next to a hex field. The hex commits on blur or Enter, the well once its
+ * picker closes: React's onChange fires on every drag step, which would save each one.
+ */
 function HexInput({
   label,
   value,
@@ -345,6 +348,14 @@ function HexInput({
 }) {
   const [input, setInput] = useState(value ?? '');
   useEffect(() => setInput(value ?? ''), [value]);
+  const well = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const element = well.current;
+    if (!element) return;
+    const commitWell = () => onChange(element.value);
+    element.addEventListener('change', commitWell);
+    return () => element.removeEventListener('change', commitWell);
+  }, [onChange]);
   const commit = () => {
     const hex = input.trim().startsWith('#') ? input.trim() : `#${input.trim()}`;
     if (/^#[0-9a-f]{6}$/i.test(hex)) onChange(hex.toLowerCase());
@@ -353,11 +364,12 @@ function HexInput({
   return (
     <div className="flex gap-1">
       <input
+        ref={well}
         type="color"
         aria-label={`${label} picker`}
         className="h-8 w-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
-        value={value ?? '#000000'}
-        onChange={(event) => onChange(event.target.value)}
+        value={/^#[0-9a-f]{6}$/i.test(input) ? input : (value ?? '#000000')}
+        onChange={(event) => setInput(event.target.value)}
       />
       <Input
         aria-label={label}
