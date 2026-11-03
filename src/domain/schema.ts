@@ -236,6 +236,15 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     content: z.object({ schemaVersion: z.string().min(1), document: z.unknown() }),
     textStyle: optionalTextStyle,
   }),
+  // An uploaded workspace image, such as a client logo. `assetId` comes from `listAssets`.
+  z.object({
+    type: z.literal('image'),
+    assetId: z.string().min(1),
+    alt: z.string().trim().min(1),
+    fit: z.enum(['contain', 'cover']).default('contain'),
+    // Clickable logos and creatives open in a new tab. Only https links are stored.
+    href: z.url({ protocol: /^https$/u }).optional(),
+  }),
   z.object({
     ...cardBase,
     type: z.literal('scorecard'),

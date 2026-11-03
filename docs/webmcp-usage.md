@@ -17,7 +17,7 @@ Tools by page, read-only first, then writes:
   `updateDashboard`, `duplicateDashboard`, `shareDashboard`, `deleteDashboard`.
 - Dashboard editor: `listDashboards`, `listLibraryMetrics`, `getDashboard`, `queryWidget`,
   `explainWidget`, `getControlOptions`, `getDataAvailability`, `describeDatasource`,
-  `previewWidget`. Writes:
+  `previewWidget`, `listAssets`. Writes:
   `updateDashboard`, `addPage`, `updatePage`, `removePage`, `addWidget`, `updateWidget`,
   `removeWidget`, `moveWidget`, `updateLayout`, `copyWidget`, `duplicateDashboard`,
   `upsertCalculatedField`, `updateFieldMetadata`, `upsertLibraryMetric`,
@@ -52,6 +52,11 @@ Page writes return the stored dashboard. `addWidget`, `copyWidget`, and `updateL
 placements. `updatePage` renames, changes draft status, or moves a page to a zero-based position.
 `removePage` requires `confirm: true` when it contains widgets and cannot remove the last page.
 View tools on shared links and viewer grants can read and query only published pages.
+
+Image widgets reference an uploaded workspace image: `{ type: "image", assetId, alt, fit, href }`.
+`listAssets` returns the workspace's images with ids, names, dimensions, sizes, and the upload
+limit. Agents place an existing image with `addWidget` or `updateWidget`; uploading stays a GUI
+action. `href` must be an `https:` URL and opens in a new tab.
 
 `registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an
 existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from

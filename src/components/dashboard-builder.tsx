@@ -1,4 +1,5 @@
-import { dashboardDateControlRange } from '#/components/dashboard-view';
+import { DashboardAssetsProvider, dashboardDateControlRange } from '#/components/dashboard-view';
+import type { ImageAsset } from '#/domain/image-assets';
 import {
   Select,
   SelectTrigger,
@@ -63,10 +64,23 @@ import {
   type PendingCanvasWidget,
 } from './dashboard-builder/canvas-layout';
 import { WidgetSettings } from './dashboard-builder/widget-inspector';
+import { ImageAssetPicker, imageWidgetDefinition } from './dashboard-builder/image-asset-picker';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
+/** The editor canvas, catalog and inspector. `assets` sizes image widgets (see getDashboard). */
 export function DashboardBuilder({
+  assets,
+  ...props
+}: Parameters<typeof Builder>[0] & { assets?: ImageAsset[] }) {
+  return (
+    <DashboardAssetsProvider assets={assets}>
+      <Builder {...props} />
+    </DashboardAssetsProvider>
+  );
+}
+
+function Builder({
   dashboard: initialDashboard,
   pageId,
   controlState,
@@ -93,6 +107,8 @@ export function DashboardBuilder({
   const [pendingWidgets, setPendingWidgets] = useState<Record<string, number>>({});
   const [removeTarget, setRemoveTarget] = useState<DashboardWidget>();
   const [catalogOpen, setCatalogOpen] = useState(false);
+  // Set while the editor picks the image for a new image widget, with its drop position if dragged.
+  const [imageDialog, setImageDialog] = useState<{ dropped?: LayoutItem }>();
   const [removing, setRemoving] = useState(false);
   const [desktop, setDesktop] = useState<boolean>();
   const dashboardRef = useRef(dashboard);
@@ -239,7 +255,11 @@ export function DashboardBuilder({
     }
   }
 
-  async function addWidget(type: BuilderType, dropped?: LayoutItem) {
+  async function addWidget(type: BuilderType, dropped?: LayoutItem, ready?: WidgetDefinition) {
+    if (type === 'image' && !ready) {
+      setImageDialog({ dropped });
+      return;
+    }
     const entry = catalog.find((item) => item.type === type)!;
     const pendingId = `pending_${crypto.randomUUID()}`;
     setPendingAddition({
@@ -258,7 +278,7 @@ export function DashboardBuilder({
     startSaving();
     setError(undefined);
     try {
-      const definition = await defaultDefinition(callApi, type, dataSources[0]);
+      const definition = ready ?? (await defaultDefinition(callApi, type, dataSources[0]));
       revision = ++mutationRevisionRef.current;
       const result = await enqueueMutation(() =>
         callApi<{ widget: DashboardWidget }>({
@@ -630,6 +650,27 @@ export function DashboardBuilder({
           </aside>
         ) : null}
       </div>
+      <Dialog
+        open={Boolean(imageDialog)}
+        onOpenChange={(open) => {
+          if (!open) setImageDialog(undefined);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add image</DialogTitle>
+            <DialogDescription>Upload an image or reuse one from this workspace.</DialogDescription>
+          </DialogHeader>
+          <ImageAssetPicker
+            dashboardId={dashboard.id}
+            onSelect={(asset) => {
+              const dropped = imageDialog?.dropped;
+              setImageDialog(undefined);
+              void addWidget('image', dropped, imageWidgetDefinition(asset));
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={Boolean(removeTarget)}
         onOpenChange={(open) => {

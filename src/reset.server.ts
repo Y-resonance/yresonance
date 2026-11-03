@@ -17,6 +17,7 @@ const applicationTables = [
   'datasource_uploads',
   'ingestion_tokens',
   'query_read_budgets',
+  'dashboard_assets',
   'workspaces',
 ] as const;
 

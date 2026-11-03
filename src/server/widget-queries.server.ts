@@ -27,6 +27,7 @@ import { alignDateComparisonRows } from '#/domain/widget-results';
 import { ApiError } from './errors';
 import { type DataSourceRecord } from '#/query/types';
 import { authorizeDashboard } from './dashboard-access.server';
+import { assertWorkspaceAsset } from './image-assets.server';
 import { widgetById } from './dashboard-records.server';
 import { connectorFor, normalize, datasourceOperation } from './datasource-operations.server';
 
@@ -396,6 +397,8 @@ export async function validateDefinition(
       'multiple_default_values_not_allowed',
       'A single-select filter accepts only one default value.',
     );
+  if (definition.type === 'image')
+    return assertWorkspaceAsset(dashboard.workspaceId, definition.assetId);
   if (!('dataSourceId' in definition)) return;
   const { dataSource, metadata } =
     context ?? (await loadQueryContext(definition.dataSourceId, dashboard.workspaceId));

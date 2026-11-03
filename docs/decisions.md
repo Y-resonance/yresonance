@@ -104,6 +104,11 @@ explain. Update it when a decision changes, not when an implementation detail do
 - Relative dates resolve in the dashboard's timezone, default `Europe/Berlin`.
 - Rich text is stored as versioned JSON, never as HTML. Styling is an open object owned by each
   renderer.
+- Images are resized with the Cloudflare Images binding and each variant is stored in R2, so it is
+  transformed and billed once. `cf.image` bills every viewed variant monthly, `/cdn-cgi/image/`
+  cannot read private R2 objects and caches publicly, and hosted Images caps uploads at 10 MB.
+  Asset responses are never `public`: Workers Cache ignores cookies, so it could serve an image
+  to a removed collaborator.
 
 ## Deferred
 

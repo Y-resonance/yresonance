@@ -70,6 +70,7 @@ function exportApiRequest({
     ...(input && 'dashboardId' in input ? { dashboard_id: input.dashboardId } : {}),
     ...(input && 'widgetId' in input ? { widget_id: input.widgetId } : {}),
     ...(input && 'dataSourceId' in input ? { datasource_id: input.dataSourceId } : {}),
+    ...(input && 'definition' in input ? { widget_type: input.definition.type } : {}),
     ...(input?.action === 'registerDatasource'
       ? { datasource_provider: input.provider ?? input.backend ?? 'duckdb-file' }
       : {}),

@@ -8,6 +8,7 @@ export function widgetLabel(widget: DashboardWidget) {
   if ('title' in widget.definition) return widget.definition.title;
   if (widget.definition.type === 'control') return widget.definition.userDefinedName ?? 'Filter';
   if (widget.definition.type === 'dateControl') return 'Date range';
+  if (widget.definition.type === 'image') return widget.definition.alt;
   return 'Text';
 }
 

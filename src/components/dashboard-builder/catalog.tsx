@@ -9,6 +9,7 @@ import {
   ListFilterIcon,
   CalendarDaysIcon,
   CaseUpperIcon,
+  ImageIcon,
   PlusIcon,
 } from 'lucide-react';
 import { Button } from '#/components/ui/button';
@@ -46,6 +47,8 @@ export const catalog: Array<{
     size: { width: 4, height: 1 },
   },
   { type: 'text', label: 'Text', icon: CaseUpperIcon, size: { width: 6, height: 2 } },
+  // Opens the image picker first, since an image widget needs an uploaded asset.
+  { type: 'image', label: 'Image', icon: ImageIcon, size: { width: 4, height: 3 } },
 ];
 
 export function WidgetCatalog({

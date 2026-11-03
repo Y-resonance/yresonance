@@ -17,6 +17,8 @@ export async function defaultDefinition(
   if (type === 'dateControl') return { type, defaultDateRange: yearToDateRange };
   if (type === 'text')
     return { type, content: { schemaVersion: 'plain-text-v1', document: 'Add text' } };
+  // Images start from an uploaded or picked asset, which the builder asks for first.
+  if (type === 'image') throw new Error('Choose an image before adding an image widget.');
   if (!source) throw new Error('Register a datasource before adding a data widget.');
   const description = await describeSource(callApi, source.id);
   const fields = [...description.fields, ...description.calculatedFields];

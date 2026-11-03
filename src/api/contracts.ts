@@ -162,6 +162,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     pageId: z.string().min(1).optional(),
     refresh: z.boolean().optional(),
   }),
+  z.object({ action: z.literal('listAssets'), dashboardId: z.string().min(1) }),
   z.object({ action: z.literal('listDataSources') }),
   z.object({ action: z.literal('listDatasourceProviders') }),
   z.object({

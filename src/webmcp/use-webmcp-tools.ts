@@ -161,7 +161,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. yresonance computes its coordinates.',
+                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. Image widgets take an assetId from listAssets, alt text, fit (contain or cover), and an optional https href. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
@@ -170,6 +170,13 @@ export function useWebMcpTools(options: WebMcpOptions) {
               description:
                 'Replace a widget definition on the open dashboard after reading it with getDashboard. Table metrics support ordered conditionalFormat threshold rules with semantic colors or a colorScale heatmap or in-cell bar (invert when lower is better), not both; showSubtotals groups by the first dimension, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle.',
               readOnly: false,
+              fixed,
+            },
+            {
+              action: 'listAssets',
+              description:
+                'List images uploaded to the active workspace, newest first. Returns ids, names, content types, pixel dimensions, byte sizes, and the upload limit. Place one with addWidget or updateWidget as { type: "image", assetId, alt }. Uploading stays a GUI action.',
+              readOnly: true,
               fixed,
             },
             {
@@ -447,6 +454,8 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
     override: ({ jsonSchema }) => {
       if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER) delete jsonSchema.maximum;
       if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;
+      // Likewise, `format: "date"` already names the shape; zod's long calendar regex adds nothing.
+      if (jsonSchema.format === 'date') delete jsonSchema.pattern;
     },
   });
   // The host already interprets this as a JSON Schema; omit the repeated dialect URI.

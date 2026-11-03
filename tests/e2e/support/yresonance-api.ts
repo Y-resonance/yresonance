@@ -1,6 +1,7 @@
 import { apiRequestSchema } from '#/api/contracts';
 import type { Page, Route } from '@playwright/test';
 import type { DatasourceDescription } from '#/domain/datasource-fields';
+import type { ImageAsset } from '#/domain/image-assets';
 import type { DatasourceCachePolicy, DashboardDocument, DashboardWidget } from '#/domain/schema';
 
 const fixedRange = {
@@ -175,6 +176,7 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
     sharing: { links: [] as { token: string; url: string }[], grants: [] },
     nextWidget: 0,
     duplicateRequests: [] as unknown[],
+    assets: [] as ImageAsset[],
   };
   const ok = (route: Route, data: unknown) =>
     route.fulfill({
@@ -261,6 +263,7 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
               : state.dashboard,
           role: options.role ?? 'editor',
           dataSources: [{ id: dataSourceId, name: state.source.name }],
+          assets: state.assets,
           // Matches the server: builder refreshes opt out of the sharing payload.
           ...(request.action === 'getDashboard' && request.includeSharing === false
             ? {}
@@ -443,6 +446,8 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         return ok(route, { ...state.dashboard, id: 'dash_copy', name: request.name });
       case 'listLibraryMetrics':
         return ok(route, []);
+      case 'listAssets':
+        return ok(route, { assets: state.assets, uploadLimitBytes: 20_000_000 });
       case 'listR2Objects':
         return ok(route, { objects: [] });
       // A blanket success would let a test pass against an action the mock never

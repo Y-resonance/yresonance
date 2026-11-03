@@ -8,5 +8,10 @@
     "event_name": "workspace_action",
     "event_description": "Records success or failure when creating, joining, selecting, or activating a workspace.",
     "file": "src/components/workspace-gate.tsx"
+  },
+  {
+    "event_name": "image_upload",
+    "event_description": "Records each dashboard image upload attempt: success, cancellation, failure, or rejection with its reason (svg, too_large, unsupported_format), plus content type and size.",
+    "file": "src/components/dashboard-builder/image-asset-picker.tsx"
   }
 ]

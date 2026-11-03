@@ -30,6 +30,19 @@ import's claim expires after one hour.
 
 More detail: [docs/decisions.md](./decisions.md).
 
+Dashboard images are uploaded by editors to `PUT /api/dashboards/:id/assets`, streamed to R2 at
+`ws/<workspaceId>/assets/<assetId>/original`, and recorded in `dashboard_assets` with the
+dimensions the Images binding (`IMAGES`) reads. The Worker checks the file signature and deletes
+rejected files again. `GET /api/dashboards/:id/assets/:assetId?w=` authorizes like the dashboard,
+including `share` tokens, and only serves images the visible dashboard shows. Widths from
+`IMAGE_WIDTHS` below the original's get an AVIF or WebP variant, made once and stored next to the
+original as `w<width>.<format>`. Other widths, AVIF sources, and transform errors (such as quota
+error 9422) get the original. Responses are `private, immutable` with `Vary: Accept`, and Workers
+Cache stays off for these routes. Locally, miniflare's sharp-based mock stands in for the binding
+and supports width, height, rotate and format only. The default upload limit is 20 MB, the binding's
+input cap; `IMAGE_UPLOAD_MAX_BYTES` can lower it per deployment. Unreferenced assets are not yet
+swept.
+
 Datasource providers separate setup from analytics execution. Their catalog supplies the two-step
 creation screen and `listDatasourceProviders`; their server implementations prepare registrations
 through `DatasourceProvider`. All backends implement `AnalyticsDataBackend`, including cache
