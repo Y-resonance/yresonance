@@ -6,6 +6,7 @@ import { datasourceAuthorizations } from '#/db/schema';
 import { completeGoogleConnection } from '#/data/google-oauth.server';
 import { executeBigquery } from '#/data/bigquery.server';
 import { signOut, removeClerkMembership, setClerkDirectory } from './doubles/clerk';
+import * as clerk from './doubles/clerk';
 import type { DatasourceCatalogPage } from '#/api/contracts';
 import type { DataSourceRecord } from '#/query/types';
 import {
@@ -763,3 +764,72 @@ test.each(['membership', 'revocation'] as const)(
     expect(await callService(query)).toMatchObject({ cache: 'miss' });
   },
 );
+
+test('temporary Google userinfo denial fails closed without deleting the grant and recovers without consent', async () => {
+  googleNetwork();
+  await signInToNewWorkspace();
+  await completeGoogleConnection(await begin());
+  const grant = (await connections()).connections[0]!;
+  const browse = { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id };
+  await callService(browse);
+  const db = createDatabase(env.DB);
+  const before = await db.query.datasourceAuthorizations.findFirst({
+    where: eq(datasourceAuthorizations.id, grant.id),
+  });
+  const original = globalThis.fetch;
+  let unavailable = true;
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (
+      unavailable &&
+      new URL(new Request(input as RequestInfo, init).url).hostname ===
+        'openidconnect.googleapis.com'
+    )
+      return Response.json({ error: 'rate_limit_exceeded' }, { status: 403 });
+    return original(input as RequestInfo, init);
+  });
+  await expectApiError(callService(browse), { status: 502, code: 'datasource_connector_failed' });
+  expect(
+    await db.query.datasourceAuthorizations.findFirst({
+      where: eq(datasourceAuthorizations.id, grant.id),
+    }),
+  ).toEqual(before);
+  unavailable = false;
+  expect(await callService(browse)).toMatchObject({ entries: [] });
+});
+
+test('a stalled membership lookup times out without deleting credentials or requiring consent', async () => {
+  googleNetwork();
+  await signInToNewWorkspace();
+  await completeGoogleConnection(await begin());
+  const grant = (await connections()).connections[0]!;
+  const browse = { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id };
+  const client = clerk.clerkClient();
+  let lookupStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    lookupStarted = resolve;
+  });
+  const lookup = vi.spyOn(clerk, 'clerkClient').mockReturnValue({
+    ...client,
+    organizations: {
+      getOrganizationMembershipList: () => {
+        lookupStarted();
+        return new Promise(() => {});
+      },
+    },
+  });
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    const rejected = expectApiError(callService(browse), {
+      status: 502,
+      code: 'datasource_connector_failed',
+    });
+    await started;
+    await vi.advanceTimersByTimeAsync(10_000);
+    await rejected;
+  } finally {
+    vi.useRealTimers();
+    lookup.mockRestore();
+  }
+  expect((await connections()).connections).toEqual([grant]);
+  expect(await callService(browse)).toMatchObject({ entries: [] });
+});

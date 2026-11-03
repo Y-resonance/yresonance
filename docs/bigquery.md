@@ -89,9 +89,11 @@ receiving that connection's ID or account and cannot manage it.
 Before returning query results, including cached results, the backend verifies that the owner is
 still a member of the workspace through Clerk and that Google still accepts the access token through
 its authenticated userinfo endpoint. These checks do not depend on the viewer's identity or an active
-owner session. Verification failures fail closed; temporary Clerk or Google outages do not erase the
-grant. Disconnecting clears credentials. Detected membership loss, revoked access tokens, or revoked
-refresh tokens clear credentials and require explicit reconnection by the owner. Rejoining alone
+owner session. Clerk membership checks and Google userinfo requests each have a 10-second caller
+timeout. Verification failures fail closed; temporary Clerk or Google outages, including userinfo
+HTTP 403 responses, do not erase the grant. Disconnecting clears credentials. Detected membership
+loss, revoked access tokens, or revoked refresh tokens clear credentials and require explicit
+reconnection by the owner. Rejoining alone
 does not restore a grant already marked for reconnection. Datasources never silently switch to
 another member's Google account. Reconnection preserves datasource references and changes their
 cache identity.

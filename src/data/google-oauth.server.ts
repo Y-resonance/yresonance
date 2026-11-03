@@ -406,12 +406,23 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
   const encryptedGrant = row.encryptedConfig;
   const revision = row.updatedAt;
   let isMember: boolean;
+  let membershipTimeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    const memberships = await clerkClient().organizations.getOrganizationMembershipList({
-      organizationId: workspace.clerkOrganizationId,
-      userId: [row.createdBy],
-      limit: 1,
-    });
+    // Clerk's SDK exposes no abort signal. Bound the caller's wait; a late read cannot
+    // authorize this request after the timeout or change the stored grant.
+    const memberships = await Promise.race([
+      clerkClient().organizations.getOrganizationMembershipList({
+        organizationId: workspace.clerkOrganizationId,
+        userId: [row.createdBy],
+        limit: 1,
+      }),
+      new Promise<never>((_, reject) => {
+        membershipTimeout = setTimeout(
+          () => reject(new Error('Membership lookup timed out.')),
+          10_000,
+        );
+      }),
+    ]);
     isMember = memberships.data.some(
       (membership) => membership.publicUserData?.userId === row.createdBy,
     );
@@ -422,6 +433,8 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
         'datasource_connector_failed',
         'Google connection membership could not be verified.',
       );
+  } finally {
+    clearTimeout(membershipTimeout);
   }
   async function revoke(expectedConfig = encryptedGrant): Promise<never> {
     await db
@@ -443,7 +456,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
       signal: AbortSignal.timeout(10_000),
       redirect: 'manual',
     });
-    if (response.status === 401 || response.status === 403) return revoke(expectedConfig);
+    if (response.status === 401) return revoke(expectedConfig);
     if (!response.ok)
       throw new DatasourceError(
         'datasource_connector_failed',
