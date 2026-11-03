@@ -15,11 +15,18 @@ interface DirectoryUser {
   id: string;
   emailAddress: string;
   firstName?: string;
+  lastName?: string;
+  username?: string;
   imageUrl?: string;
 }
 
 let activeSession: ActiveSession | null = null;
 let directory: DirectoryUser[] = [];
+const memberships = new Map<string, Set<string>>();
+
+export function removeClerkMembership(orgId: string, userId: string) {
+  memberships.get(orgId)?.delete(userId);
+}
 
 export function signInAs(session: {
   userId: string;
@@ -27,6 +34,11 @@ export function signInAs(session: {
   orgSlug?: string | null;
   isAdmin?: boolean;
 }) {
+  if (session.orgId) {
+    const members = memberships.get(session.orgId) ?? new Set<string>();
+    members.add(session.userId);
+    memberships.set(session.orgId, members);
+  }
   activeSession = {
     userId: session.userId,
     orgId: session.orgId ?? null,
@@ -46,6 +58,7 @@ export function setClerkDirectory(users: DirectoryUser[]) {
 export function resetClerk() {
   activeSession = null;
   directory = [];
+  memberships.clear();
 }
 
 export async function auth() {
@@ -56,6 +69,20 @@ export async function auth() {
 
 export function clerkClient() {
   return {
+    organizations: {
+      getOrganizationMembershipList: async ({
+        organizationId,
+        userId,
+      }: {
+        organizationId: string;
+        userId: string[];
+        limit?: number;
+      }) => ({
+        data: userId
+          .filter((id) => memberships.get(organizationId)?.has(id))
+          .map((id) => ({ publicUserData: { userId: id } })),
+      }),
+    },
     users: {
       getUserList: async ({
         emailAddress,
@@ -75,8 +102,8 @@ export function clerkClient() {
             id: user.id,
             firstName: user.firstName ?? null,
             imageUrl: user.imageUrl,
-            lastName: null,
-            username: null,
+            lastName: user.lastName ?? null,
+            username: user.username ?? null,
             primaryEmailAddress: { emailAddress: user.emailAddress },
             emailAddresses: [{ id: user.id, emailAddress: user.emailAddress }],
           })),

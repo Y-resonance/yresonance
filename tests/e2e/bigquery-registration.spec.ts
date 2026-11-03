@@ -210,7 +210,7 @@ test('Google consent enables browsing and registering a BigQuery table', async (
   await expect(page).toHaveURL(/\/datasources\/src_reporting$/);
 });
 
-test('an existing datasource reconnects its workspace account while keeping its ID', async ({
+test('an existing datasource reconnects its personal account while keeping its ID', async ({
   page,
 }) => {
   const state = await mockYresonanceApi(page);
@@ -295,4 +295,50 @@ test('BigQuery setup shows sign-in errors and hydrates in dark mode', async ({ p
   ).toBeDisabled();
   await expect(page.locator('html')).toHaveClass('dark');
   expect(hydrationErrors).toEqual([]);
+});
+
+test('another member cannot manage or substitute the saved Google connection', async ({ page }) => {
+  const state = await mockYresonanceApi(page);
+  await page.route('**/api/yresonance', async (route) => {
+    const request = route.request().postDataJSON();
+    if (request.action === 'describeDatasource')
+      return route.fulfill({
+        json: {
+          ok: true,
+          data: {
+            ...state.source,
+            connectorType: 'bigquery',
+            location: {
+              kind: 'bigquery',
+              project: 'customer-project',
+              dataset: 'reporting',
+              table: 'sales',
+              location: 'EU',
+              maximumBytesBilled: '1000000000',
+            },
+            defaultCacheTtlSeconds: 300,
+          },
+        },
+      });
+    if (request.action === 'listDatasourceConnections')
+      return route.fulfill({
+        json: {
+          ok: true,
+          data: {
+            configured: true,
+            canManageCurrentConnection: false,
+            currentConnectionOwnerName: 'Alice Smith',
+            connections: [{ id: 'auth_bob', account: 'bob@example.test', status: 'connected' }],
+          },
+        },
+      });
+    return route.fallback();
+  });
+  await page.goto('/datasources/src_reporting');
+  await expect(page.getByText('Connected by Alice Smith', { exact: true })).toBeVisible();
+  await expect(page.getByText('bob@example.test')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Google account actions' })).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: /Connect Google account|Reconnect Google account/ }),
+  ).toBeHidden();
 });

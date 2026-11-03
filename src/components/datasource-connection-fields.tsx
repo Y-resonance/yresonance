@@ -17,6 +17,8 @@ import { FieldDescription, FieldError, FieldLegend, FieldSet } from './ui/field'
 interface Connections {
   configured: boolean;
   currentConnectionId?: string;
+  canManageCurrentConnection?: boolean;
+  currentConnectionOwnerName?: string;
   connections: Array<{ id: string; account: string; status: string }>;
 }
 
@@ -100,6 +102,15 @@ export function DatasourceConnectionFields({
     }
   }
   const configured = Boolean(query.data?.configured);
+  if (dataSourceId && query.data?.canManageCurrentConnection === false)
+    return (
+      <FieldSet>
+        <FieldLegend variant={heading.variant}>{heading.text}</FieldLegend>
+        <FieldDescription>
+          Connected by {query.data.currentConnectionOwnerName ?? 'a workspace member'}
+        </FieldDescription>
+      </FieldSet>
+    );
   return (
     <FieldSet>
       <FieldLegend variant={heading.variant}>{heading.text}</FieldLegend>

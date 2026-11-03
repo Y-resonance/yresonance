@@ -1,8 +1,17 @@
 # BigQuery setup
 
 BigQuery is a Bring your own provider. Each datasource reads a single table or view. An editor
-connects a Google account once for the workspace, and all permitted dashboard viewers use that
-account's permissions, including viewers of unlisted links. Application sign-in stays with Clerk.
+connects a personal Google account within a workspace. Only that yresonance user can list, select,
+browse BigQuery with, register new datasources against, reconnect, or disconnect the connection.
+The server checks ownership from the authenticated session, including requests with a known
+connection ID, for both GUI and WebMCP actions. Inaccessible connection IDs return 404.
+
+Sharing a datasource deliberately shares the data it exposes through that account. Permitted
+dashboard viewers, including viewers of unlisted links, query through the datasource's saved
+connection. They cannot use that grant to browse BigQuery or create additional datasources.
+Execution resolves the stored reference after authorizing datasource/dashboard access; callers
+cannot override it. Token refresh and background fetching use encrypted server-side credentials
+and do not require the owner's browser session. Application sign-in stays with Clerk.
 Queries run and are billed in the project containing the selected source.
 
 ## Google configuration
@@ -57,7 +66,7 @@ Portable BigQuery formulas do not support the remainder operator `%`. Native exp
 against the selected table before saving. Native expressions cannot be reused with another dialect.
 
 Reconnect or disconnect from the datasource page. Disconnect affects every source using that
-workspace authorization. Reconnect preserves source IDs and makes old cached results unreachable.
+personal authorization. Only its owner can manage it. Reconnect preserves source IDs and makes old cached results unreachable.
 A revoked refresh token marks the connection as requiring reconnection. Losing table access
 produces an access error; restore permissions or connect an account with access.
 
@@ -69,3 +78,27 @@ Tokens never enter tool responses.
 For example, connect `customer-project.reporting.campaigns` after verifying its location, schema,
 partition requirements and query permissions through Google consent. This integration uses the
 connected Google account, not a service-account key.
+
+## Ownership and grant lifecycle
+
+Existing grants remain owned by their recorded `createdBy` user in the recorded workspace. No
+migration or replacement of datasource references is needed. Responses expose only connection ID,
+account, and status for the caller's own connections. On an existing datasource, other members
+see “Connected by” with the owner's yresonance profile name. They do not receive that connection's
+ID, Google account, or credentials and cannot manage it. Missing or unavailable profiles use the
+fallback “Connected by a workspace member”.
+
+Before returning query results, including cached results, the backend verifies that the owner is
+still a member of the workspace through Clerk and that Google still accepts the access token through
+its authenticated userinfo endpoint. These checks do not depend on the viewer's identity or an active
+owner session. Clerk membership checks and Google userinfo requests each have a 10-second caller
+timeout. Verification failures fail closed; temporary Clerk or Google outages, including userinfo
+HTTP 403 responses, do not erase the grant. Disconnecting clears credentials. Detected membership
+loss, revoked access tokens, or revoked refresh tokens clear credentials and require explicit
+reconnection by the owner. Rejoining alone
+does not restore a grant already marked for reconnection. Datasources never silently switch to
+another member's Google account. Reconnection preserves datasource references and changes their
+cache identity.
+
+This uses the existing Clerk backend key and Google OAuth scopes and endpoints. No additional
+secrets, Google configuration, Clerk webhooks, or manual deployment changes are required.

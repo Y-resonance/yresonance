@@ -130,7 +130,9 @@ breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.
 
 - Bring your own BigQuery uses one table or view and bills query jobs to that table's project.
   Editors authorize a Google Workspace account through an Internal OAuth app. The grant is
-  workspace-scoped and powers every permitted dashboard viewer, including unlisted links.
+  personal to the connecting yresonance user within a workspace and powers every permitted
+  dashboard viewer, including unlisted links. Only the owner can browse or manage the grant;
+  sharing a datasource shares its exposed data without sharing the grant for new sources.
   Google authorization is separate from Clerk login. The application only generates read queries.
 - Reusable OAuth grants live separately from datasource metadata. Access and refresh tokens are
   encrypted with workspace/authorization binding. Callbacks use expiring, single-use state bound to
