@@ -93,8 +93,10 @@ fresh environment.
 
 When initializing an older database that has not applied `0010_cascading-foreign-keys.sql`, run
 `scripts/check-d1-orphans.sql` against that database first. Once access to the target environment
-is authorized, use `cf d1 query <database-id> --sql "$(cat scripts/check-d1-orphans.sql)"` with the
-account from `wrangler.jsonc`. Every `orphan_count` must be zero. Resolve orphaned rows before
+is authorized, set `CLOUDFLARE_ACCOUNT_ID` to the `account_id` in `wrangler.jsonc`, then run
+`cf d1 query <database-id> --sql "$(cat scripts/check-d1-orphans.sql)"`. Use the `database_id`
+for the authorized production or preview environment. The `cf` CLI does not select the account
+from Wrangler configuration. Every `orphan_count` must be zero. Resolve orphaned rows before
 applying the migration; the migration refuses them rather than deleting them.
 
 D1 always enables foreign keys. The migration rebuilds parents before children because dropping
