@@ -1,9 +1,10 @@
 import { env } from 'cloudflare:workers';
+import { clerkClient } from '@clerk/tanstack-react-start/server';
 import { and, eq, lt, inArray } from 'drizzle-orm';
 import { z } from 'zod';
-import { datasourceAuthorizations } from '#/db/schema';
+import { datasourceAuthorizations, workspaces } from '#/db/schema';
 import { database } from '#/server/database.server';
-import { requireSession } from '#/server/auth.server';
+import { requireSession, type SessionContext } from '#/server/auth.server';
 import { loadDataSource } from '#/server/records.server';
 import { ApiError } from '#/server/errors';
 import { datasourceOperation } from '#/server/datasource-operations.server';
@@ -87,10 +88,33 @@ function oauthProvider(provider: string) {
     );
 }
 
+// Interactive setup always requires the caller's own grant. Execution resolves the saved
+// datasource reference instead, after authorizing access to that datasource/dashboard.
+export async function requireOwnedGoogleConnection(session: SessionContext, connectionId: string) {
+  const row = await database()
+    .select({ id: datasourceAuthorizations.id })
+    .from(datasourceAuthorizations)
+    .where(
+      and(
+        eq(datasourceAuthorizations.id, connectionId),
+        eq(datasourceAuthorizations.workspaceId, session.workspace.id),
+        eq(datasourceAuthorizations.createdBy, session.userId),
+        eq(datasourceAuthorizations.provider, 'bigquery'),
+        inArray(datasourceAuthorizations.status, [
+          'connected',
+          'reconnect_required',
+          'disconnected',
+        ]),
+      ),
+    )
+    .get();
+  if (!row) throw new ApiError(404, 'connection_not_found', 'Connection not found.');
+}
+
 export async function listDatasourceConnections(provider: string, dataSourceId?: string) {
   oauthProvider(provider);
   const session = await requireSession();
-  const currentConnectionId = dataSourceId
+  const savedConnectionId = dataSourceId
     ? (await currentAuthorizationReference(dataSourceId, session.workspace.id)).authorizationId
     : undefined;
   const rows = await database()
@@ -103,6 +127,7 @@ export async function listDatasourceConnections(provider: string, dataSourceId?:
     .where(
       and(
         eq(datasourceAuthorizations.workspaceId, session.workspace.id),
+        eq(datasourceAuthorizations.createdBy, session.userId),
         eq(datasourceAuthorizations.provider, provider),
         inArray(datasourceAuthorizations.status, [
           'connected',
@@ -114,7 +139,8 @@ export async function listDatasourceConnections(provider: string, dataSourceId?:
   return {
     configured: configured(),
     connections: rows,
-    currentConnectionId,
+    currentConnectionId: rows.find((row) => row.id === savedConnectionId)?.id,
+    canManageCurrentConnection: !dataSourceId || rows.some((row) => row.id === savedConnectionId),
   };
 }
 
@@ -123,28 +149,15 @@ export async function beginDatasourceConnection(
 ) {
   oauthProvider(request.provider);
   const session = await requireSession();
+  if (request.connectionId) await requireOwnedGoogleConnection(session, request.connectionId);
   const config = configuration();
   const db = database();
-  if (request.connectionId) {
-    const existing = await db.query.datasourceAuthorizations.findFirst({
-      where: and(
-        eq(datasourceAuthorizations.id, request.connectionId),
-        eq(datasourceAuthorizations.workspaceId, session.workspace.id),
-        eq(datasourceAuthorizations.provider, request.provider),
-        inArray(datasourceAuthorizations.status, [
-          'connected',
-          'reconnect_required',
-          'disconnected',
-        ]),
-      ),
-    });
-    if (!existing) throw new ApiError(404, 'connection_not_found', 'Connection not found.');
-  }
   if (request.dataSourceId) {
     const reference = await currentAuthorizationReference(
       request.dataSourceId,
       session.workspace.id,
     );
+    await requireOwnedGoogleConnection(session, reference.authorizationId);
     if (reference.authorizationId !== request.connectionId)
       throw new ApiError(400, 'invalid_connection', 'Reconnect the datasource connection.');
   }
@@ -247,6 +260,7 @@ export async function completeGoogleConnection(request: Request) {
       and(
         eq(datasourceAuthorizations.id, state.id),
         eq(datasourceAuthorizations.workspaceId, state.workspaceId),
+        eq(datasourceAuthorizations.createdBy, session.userId),
         eq(datasourceAuthorizations.status, 'pending'),
       ),
     )
@@ -323,6 +337,7 @@ export async function completeGoogleConnection(request: Request) {
         and(
           eq(datasourceAuthorizations.id, targetId),
           eq(datasourceAuthorizations.workspaceId, state.workspaceId),
+          eq(datasourceAuthorizations.createdBy, session.userId),
           inArray(
             datasourceAuthorizations.status,
             state.targetId ? ['connected', 'reconnect_required', 'disconnected'] : ['connecting'],
@@ -366,6 +381,8 @@ export async function disconnectDatasourceConnection(connectionId: string) {
       and(
         eq(datasourceAuthorizations.id, connectionId),
         eq(datasourceAuthorizations.workspaceId, session.workspace.id),
+        eq(datasourceAuthorizations.createdBy, session.userId),
+        eq(datasourceAuthorizations.provider, 'bigquery'),
       ),
     )
     .returning({ id: datasourceAuthorizations.id });
@@ -384,6 +401,56 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
     ),
   });
   if (!row?.encryptedConfig) throw reconnectError();
+  const workspace = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
+  if (!workspace) throw reconnectError();
+  const encryptedGrant = row.encryptedConfig;
+  const revision = row.updatedAt;
+  let isMember: boolean;
+  try {
+    const memberships = await clerkClient().organizations.getOrganizationMembershipList({
+      organizationId: workspace.clerkOrganizationId,
+      userId: [row.createdBy],
+      limit: 1,
+    });
+    isMember = memberships.data.some(
+      (membership) => membership.publicUserData?.userId === row.createdBy,
+    );
+  } catch (error) {
+    if (z.object({ status: z.literal(404) }).safeParse(error).success) isMember = false;
+    else
+      throw new DatasourceError(
+        'datasource_connector_failed',
+        'Google connection membership could not be verified.',
+      );
+  }
+  async function revoke(expectedConfig = encryptedGrant): Promise<never> {
+    await db
+      .update(datasourceAuthorizations)
+      .set({ status: 'reconnect_required', encryptedConfig: null })
+      .where(
+        and(
+          eq(datasourceAuthorizations.id, authorizationId),
+          eq(datasourceAuthorizations.encryptedConfig, expectedConfig),
+        ),
+      );
+    throw reconnectError();
+  }
+  if (!isMember) return revoke();
+  async function verifiedToken(accessToken: string, expectedConfig = encryptedGrant) {
+    // Check the grant even on cache hits: a revoked access token must not serve cached data.
+    const response = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(10_000),
+      redirect: 'manual',
+    });
+    if (response.status === 401 || response.status === 403) return revoke(expectedConfig);
+    if (!response.ok)
+      throw new DatasourceError(
+        'datasource_connector_failed',
+        'Google authorization is unavailable.',
+      );
+    return { accessToken, revision };
+  }
   const grant = grantSchema.parse(
     await openConnection(
       row.encryptedConfig,
@@ -392,8 +459,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
       'oauth',
     ),
   );
-  if (grant.expiresAt > Date.now() + 60_000)
-    return { accessToken: grant.accessToken, revision: row.updatedAt };
+  if (grant.expiresAt > Date.now() + 60_000) return verifiedToken(grant.accessToken);
   const config = configuration();
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -451,7 +517,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
     )
     .returning({ id: datasourceAuthorizations.id });
   if (!updated.length) return googleAccessToken(workspaceId, authorizationId);
-  return { accessToken: tokens.access_token, revision: row.updatedAt };
+  return verifiedToken(tokens.access_token, encryptedConfig);
 }
 
 function reconnectError() {

@@ -57,9 +57,9 @@ service requests continue using native fetch and Cloudflare bindings.
 
 BigQuery runs through the Worker's HTTPS client, without a query container or ingestion. Provider
 metadata describes table fields and OAuth setup; the GUI and WebMCP register the same source and
-workspace authorization reference. `datasource_authorizations` stores encrypted Google grants;
-`datasource_connections` stores their scoped references. The backend refreshes tokens as needed,
-compiles GoogleSQL, submits jobs with known IDs, polls and pages results within bounded limits,
+personal authorization reference within that workspace. `datasource_authorizations` stores encrypted
+Google grants owned by their recorded creator; `datasource_connections` stores their scoped
+references. The backend refreshes tokens as needed, compiles GoogleSQL, submits jobs with known IDs, polls and pages results within bounded limits,
 and records duration, scanned/billed bytes, slot time and cache hits without SQL, tokens or rows.
 
 ## Request and compilation limits

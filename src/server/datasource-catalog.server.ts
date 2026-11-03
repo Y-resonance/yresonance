@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { ApiRequest, DatasourceCatalogPage } from '#/api/contracts';
 import { bigqueryRequest } from '#/data/bigquery.server';
-import { googleAccessToken } from '#/data/google-oauth.server';
+import { googleAccessToken, requireOwnedGoogleConnection } from '#/data/google-oauth.server';
 import { requireSession } from './auth.server';
 import { datasourceOperation } from './datasource-operations.server';
 import { ApiError } from './errors';
@@ -45,6 +45,7 @@ export async function browseDatasource(
   request: Extract<ApiRequest, { action: 'browseDatasource' }>,
 ): Promise<DatasourceCatalogPage> {
   const session = await requireSession();
+  await requireOwnedGoogleConnection(session, request.connectionId);
   if (request.dataset && !request.project)
     throw new ApiError(400, 'invalid_datasource_location', 'Choose a project first.');
   return datasourceOperation(async () => {

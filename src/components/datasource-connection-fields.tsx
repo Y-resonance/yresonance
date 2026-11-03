@@ -17,6 +17,7 @@ import { FieldDescription, FieldError, FieldLegend, FieldSet } from './ui/field'
 interface Connections {
   configured: boolean;
   currentConnectionId?: string;
+  canManageCurrentConnection?: boolean;
   connections: Array<{ id: string; account: string; status: string }>;
 }
 
@@ -100,6 +101,16 @@ export function DatasourceConnectionFields({
     }
   }
   const configured = Boolean(query.data?.configured);
+  if (dataSourceId && query.data?.canManageCurrentConnection === false)
+    return (
+      <FieldSet>
+        <FieldLegend variant={heading.variant}>{heading.text}</FieldLegend>
+        <FieldDescription>
+          This datasource uses another workspace member's Google connection. Only its owner can
+          reconnect or disconnect it.
+        </FieldDescription>
+      </FieldSet>
+    );
   return (
     <FieldSet>
       <FieldLegend variant={heading.variant}>{heading.text}</FieldLegend>

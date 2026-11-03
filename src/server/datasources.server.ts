@@ -1,3 +1,7 @@
+import {
+  authorizationReferenceSchema,
+  requireOwnedGoogleConnection,
+} from '#/data/google-oauth.server';
 import { dashboardWidgets } from '#/domain/schema';
 import type { ManagedUploadImport } from '#/data/analytics-data-backend';
 import { requireSession, type SessionContext } from './auth.server';
@@ -240,7 +244,12 @@ export async function registerDatasource(
   request: Extract<ApiRequest, { action: 'registerDatasource' }>,
 ) {
   const session = await requireSession();
-  const prepared = registrationProvider(request).prepare(request, {
+  const provider = registrationProvider(request);
+  if (provider.definition.id === 'bigquery') {
+    const reference = authorizationReferenceSchema.parse(request.connection);
+    await requireOwnedGoogleConnection(session, reference.authorizationId);
+  }
+  const prepared = provider.prepare(request, {
     workspaceId: session.workspace.id,
     workspacePrefix: session.workspace.r2Prefix,
   });

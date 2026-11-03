@@ -64,11 +64,15 @@ contains datasource and field metadata, never credentials. Existing `backend` re
 supported for managed files and authorized managed-host ClickHouse tables.
 
 OAuth providers additionally expose `listDatasourceConnections`, `beginDatasourceConnection`, and
-`disconnectDatasourceConnection`. Listing returns workspace account/status metadata, never tokens.
+`disconnectDatasourceConnection`. Listing returns only the current user's personal account/status
+metadata within the workspace, never tokens. Other members' grants cannot be used for browsing, registration, reconnection, or
+disconnection, even with a known ID. A datasource's current connection ID is returned only to its
+owner; `canManageCurrentConnection: false` tells other members they cannot manage that grant.
+Permitted viewers still query shared datasources through their saved grant without an owner session.
 Beginning returns an `authorizationUrl` for a human to open and consent; tools do not perform Google
 sign-in. Registration references a completed grant with `connection: { authorizationId }`.
 Reconnect optionally takes `connectionId` and `dataSourceId` to return to the existing datasource.
-Disconnect stops queries for every source using that workspace grant, including shared dashboards.
+Disconnect stops queries for every source using that personal grant, including shared dashboards.
 
 `browseDatasource` reads connected provider metadata without running queries. For BigQuery, pass
 `provider: "bigquery"` and `connectionId`. Omit project and dataset to list projects, supply project

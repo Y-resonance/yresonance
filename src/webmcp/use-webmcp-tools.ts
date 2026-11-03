@@ -298,25 +298,25 @@ export function useWebMcpTools(options: WebMcpOptions) {
           {
             action: 'browseDatasource',
             description:
-              'Browse connected datasource metadata. For BigQuery, omit project and dataset to list projects, supply project to list datasets, and both to list tables and views. Returns entries and a pagination cursor. Dataset entries include location. No queries are run.',
+              'Browse metadata using your own connection. For BigQuery, omit project and dataset to list projects, supply project to list datasets, and both to list tables and views. Returns entries and a pagination cursor. Dataset entries include location. No queries are run.',
             readOnly: true,
           },
           {
             action: 'listDatasourceConnections',
             description:
-              'List workspace OAuth connections and their status. Tokens are never returned. Optional dataSourceId identifies its current connection.',
+              'List your personal OAuth connections in this workspace and their status. Tokens are never returned. Optional dataSourceId identifies its current connection only if you own it; canManageCurrentConnection is false otherwise.',
             readOnly: true,
           },
           {
             action: 'beginDatasourceConnection',
             description:
-              'Start or reconnect a workspace datasource authorization. Returns an authorizationUrl for the human to open and consent. All permitted dashboard viewers use this account.',
+              'Start or reconnect your personal datasource authorization in this workspace. Returns an authorizationUrl for the human to open and consent. All permitted dashboard viewers use this account.',
             readOnly: false,
           },
           {
             action: 'disconnectDatasourceConnection',
             description:
-              'Disconnect a workspace authorization. Queries stop for every datasource using it until it is reconnected.',
+              'Disconnect your personal authorization in this workspace. Queries stop for every datasource using it until it is reconnected.',
             readOnly: false,
           },
           {

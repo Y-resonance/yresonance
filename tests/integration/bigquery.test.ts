@@ -5,7 +5,7 @@ import { createDatabase } from '#/db/client';
 import { datasourceAuthorizations } from '#/db/schema';
 import { completeGoogleConnection } from '#/data/google-oauth.server';
 import { executeBigquery } from '#/data/bigquery.server';
-import { signOut } from './doubles/clerk';
+import { signOut, removeClerkMembership, setClerkDirectory } from './doubles/clerk';
 import type { DatasourceCatalogPage } from '#/api/contracts';
 import type { DataSourceRecord } from '#/query/types';
 import {
@@ -14,6 +14,9 @@ import {
   createDashboard,
   expectApiError,
   signInAsOwner,
+  signInAsColleague,
+  signInAsUser,
+  postApiRequest,
   signInToNewWorkspace,
 } from './fixtures';
 
@@ -305,7 +308,7 @@ test('Google consent is workspace-bound and single-use; queries refresh privatel
       location,
       connection: { authorizationId: grant.id },
     }),
-    { code: 'datasource_access_denied', status: 403 },
+    { code: 'connection_not_found', status: 404 },
   );
 });
 
@@ -401,7 +404,7 @@ test('catalog browsing follows pagination, reads source metadata without query j
   ).toBe(true);
   const before = requests.length;
   await signInToNewWorkspace();
-  await expectApiError(callService(browse), { status: 403, code: 'datasource_access_denied' });
+  await expectApiError(callService(browse), { status: 404, code: 'connection_not_found' });
   expect(requests).toHaveLength(before);
   signInAsOwner(owner);
   await callService({ action: 'disconnectDatasourceConnection', connectionId: grant.id });
@@ -581,3 +584,182 @@ test('native BigQuery formulas retain their dialect, validate through Google, an
     ]),
   );
 });
+
+test('personal Google grants reject known IDs from colleagues and other workspaces through GUI and WebMCP APIs', async () => {
+  const requests = googleNetwork();
+  const alice = await signInToNewWorkspace();
+  await completeGoogleConnection(await begin());
+  const grant = (await connections()).connections[0]!;
+  const source = (await callService({
+    action: 'registerDatasource',
+    provider: 'bigquery',
+    name: 'Alice sales',
+    location,
+    connection: { authorizationId: grant.id },
+  })) as DataSourceRecord;
+  const callback = await begin(grant.id);
+  signInAsColleague(alice);
+  await expectApiError(completeGoogleConnection(callback), {
+    status: 400,
+    code: 'invalid_oauth_state',
+  });
+  for (const crossWorkspace of [false, true]) {
+    if (crossWorkspace) await signInToNewWorkspace();
+    expect((await connections()).connections).toEqual([]);
+    if (!crossWorkspace) {
+      expect(
+        await callService({
+          action: 'listDatasourceConnections',
+          provider: 'bigquery',
+          dataSourceId: source.id,
+        }),
+      ).toEqual({
+        configured: true,
+        connections: [],
+        currentConnectionId: undefined,
+        canManageCurrentConnection: false,
+      });
+    }
+    const before = requests.length;
+    const forbidden = [
+      { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id },
+      {
+        action: 'browseDatasource',
+        provider: 'bigquery',
+        connectionId: grant.id,
+        project: 'customer-project',
+      },
+      {
+        action: 'browseDatasource',
+        provider: 'bigquery',
+        connectionId: grant.id,
+        project: 'customer-project',
+        dataset: 'reporting',
+      },
+      {
+        action: 'registerDatasource',
+        provider: 'bigquery',
+        name: 'Stolen',
+        location,
+        connection: { authorizationId: grant.id },
+      },
+      { action: 'beginDatasourceConnection', provider: 'bigquery', connectionId: grant.id },
+      { action: 'disconnectDatasourceConnection', connectionId: grant.id },
+    ];
+    // GUI and WebMCP both post to this shared API handler.
+    for (const request of forbidden) {
+      const response = await postApiRequest(request);
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({
+        ok: false,
+        error: { code: 'connection_not_found', message: 'Connection not found.' },
+      });
+    }
+    expect(requests).toHaveLength(before);
+  }
+  signInAsOwner(alice);
+  expect((await connections()).connections).toEqual([grant]);
+  expect(
+    await callService({
+      action: 'listDatasourceConnections',
+      provider: 'bigquery',
+      dataSourceId: source.id,
+    }),
+  ).toMatchObject({ currentConnectionId: grant.id, canManageCurrentConnection: true });
+  expect((await completeGoogleConnection(callback)).status).toBe(303);
+  const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+    where: eq(datasourceAuthorizations.id, grant.id),
+  });
+  const listing = await postApiRequest({
+    action: 'listDatasourceConnections',
+    provider: 'bigquery',
+  });
+  expect(await listing.json()).toEqual({
+    ok: true,
+    data: {
+      configured: true,
+      canManageCurrentConnection: true,
+      connections: [{ id: grant.id, account: 'owner@example.test', status: 'connected' }],
+    },
+  });
+  expect(stored?.createdBy).toBe(alice.userId);
+});
+
+test.each(['membership', 'revocation'] as const)(
+  'shared Google datasource stops serving cached results after owner %s loss until explicit reconnection',
+  async (loss) => {
+    const requests = googleNetwork();
+    const alice = await signInToNewWorkspace();
+    await completeGoogleConnection(await begin());
+    const grant = (await connections()).connections[0]!;
+    const source = (await callService({
+      action: 'registerDatasource',
+      provider: 'bigquery',
+      name: 'Shared sales',
+      location,
+      connection: { authorizationId: grant.id },
+    })) as DataSourceRecord & { fields: Array<{ id: string; columnName: string }> };
+    const dashboard = await createDashboard();
+    const widget = await addWidget(dashboard.id, {
+      type: 'scorecard',
+      title: 'Revenue',
+      dataSourceId: source.id,
+      dateRangeFieldId: source.fields.find((field) => field.columnName === 'day')!.id,
+      metric: {
+        source: {
+          kind: 'field',
+          fieldId: source.fields.find((field) => field.columnName === 'revenue')!.id,
+          aggregation: 'sum',
+        },
+        dataType: 'number',
+      },
+    });
+    const query = {
+      action: 'queryWidget',
+      dashboardId: dashboard.id,
+      widgetId: widget.id,
+      controlState: {},
+    };
+    const bob = signInAsColleague(alice);
+    await expectApiError(callService(query), { status: 403, code: 'dashboard_access_denied' });
+    signInAsOwner(alice);
+    setClerkDirectory([{ id: bob, emailAddress: 'bob@example.test' }]);
+    await callService({
+      action: 'shareDashboard',
+      dashboardId: dashboard.id,
+      operation: { kind: 'grant', userEmail: 'bob@example.test', role: 'viewer' },
+    });
+    signInAsUser(alice, bob);
+    expect(await callService(query)).toMatchObject({ cache: 'miss' });
+    expect(await callService(query)).toMatchObject({ cache: 'hit' });
+    // The grant is now refreshed and unexpired. Neither revocation check may rely on refresh.
+    if (loss === 'membership') removeClerkMembership(alice.orgId, alice.userId);
+    const original = globalThis.fetch;
+    let revoked = loss === 'revocation';
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (
+        revoked &&
+        new URL(new Request(input as RequestInfo, init).url).hostname ===
+          'openidconnect.googleapis.com'
+      )
+        return Response.json({ error: 'invalid_token' }, { status: 401 });
+      return original(input as RequestInfo, init);
+    });
+    const beforeJobs = requests.filter((entry) => entry.url.pathname.endsWith('/jobs')).length;
+    await expectApiError(callService(query), { status: 403, code: 'datasource_access_denied' });
+    expect(requests.filter((entry) => entry.url.pathname.endsWith('/jobs'))).toHaveLength(
+      beforeJobs,
+    );
+    const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+      where: eq(datasourceAuthorizations.id, grant.id),
+    });
+    expect(stored).toMatchObject({ status: 'reconnect_required', encryptedConfig: null });
+    // Rejoining alone cannot revive the old authorization or make the old cache reachable.
+    signInAsOwner(alice);
+    revoked = false;
+    await expectApiError(callService(query), { status: 403, code: 'datasource_access_denied' });
+    await completeGoogleConnection(await begin(grant.id));
+    signInAsUser(alice, bob);
+    expect(await callService(query)).toMatchObject({ cache: 'miss' });
+  },
+);
