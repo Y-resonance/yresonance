@@ -36,10 +36,19 @@ secrets as described in [ClickHouse setup](clickhouse.md). Keep credentials unav
 builds. Workers Builds reads Bun's version from `packageManager` in `package.json`; leave
 `BUN_VERSION` unset on build triggers.
 
+Preview builds execute branch-controlled scripts with the build credentials. Same-repository
+branches therefore share the trust boundary of those credentials; excluding forks does not
+protect against malicious same-repository code. Resource naming isolates application data, not
+API token permissions. Separating provisioning into a trusted workflow or a preview-only account
+is a separate infrastructure hardening task; this guide does not imply that isolation is in place.
+
 The GitHub cleanup workflow requires `CLOUDFLARE_WORKER_TAG` as a repository variable containing
 the parent Worker's script tag. Look it up again if the Worker is recreated. Its
 `CLOUDFLARE_API_TOKEN` secret needs Workers, containers, D1, KV, and R2 deletion permissions and
-Workers Builds read access.
+`Workers Builds Configuration: Edit` on a user-scoped API token, as required by the
+[Builds API](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/#create-an-api-token).
+Account-scoped tokens are unsupported by that API. Looking up the Worker tag additionally requires
+`Workers Scripts: Read`.
 
 ### Runtime secrets
 
@@ -68,8 +77,10 @@ On PR closure, `.github/workflows/preview.yml` checks repository ownership and r
 code from the default branch. Cleanup waits for that branch's running Cloudflare builds, then
 deletes its Preview, matching container apps, D1/KV/R2 resources, and ClickHouse database. It also
 handles legacy `pr-<number>` previews under both old Worker names. Retry the workflow with the
-closed PR number after a partial failure; exact resource names make retries safe. Confirm another
-branch's preview still works after cleanup.
+closed PR number after a partial failure only while the branch has not been pushed or reused
+since closure. Exact resource names do not distinguish the original Preview from one recreated
+by a later push; retrying can delete the new Preview and its data. Confirm another branch's preview
+still works after cleanup.
 
 Cloudflare can retain container apps after Preview deletion. If the Preview record is already
 gone, inspect `bunx wrangler containers list` and delete only verified leftovers matched to the

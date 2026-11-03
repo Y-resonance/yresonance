@@ -30,8 +30,10 @@ in a task-specific directory created with `mktemp -d` outside the checkout.
    verified and any limitations.
 3. Publish through `gh issue comment <number> --body-file <file>` or
    `gh pr comment <number> --body-file <file>`. Use `gh pr edit <number> --body-file <file>` when
-   updating the PR description, preserving the existing description. Write actual newlines to the
-   body file. Passing a local screenshot path to `gh` does not upload it.
+   updating the PR description. This replaces the entire body: read it first with
+   `gh pr view <number> --json body --jq .body`, merge the evidence into it, and write the complete
+   description to the body file. Write actual newlines. Passing a local screenshot path to `gh`
+   does not upload it.
 4. Verify the published comment or description contains working image links before reporting
    evidence as attached. If upload or publication fails, report the failure and retain the local
    captures outside the checkout for retry. If no issue or PR exists yet, return the uploaded URLs
