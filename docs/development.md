@@ -25,18 +25,19 @@ in a task-specific directory created with `mktemp -d` outside the checkout.
 1. Inspect the captures for the intended behavior and for private data before publishing. Use
    synthetic data; `dkwws` links are publicly readable. Recapture anything containing credentials
    or customer data.
-2. Check `gh pr comment --help` or `gh issue comment --help` for `--attach`. When supported, use
-   `gh pr comment <number> --body-file <file> --attach '<capture-path>#<description>'` (or
-   `gh issue comment`) to upload the image directly. Otherwise run `dkwws upload <file>` for each
-   capture and embed the returned URL with `![description](URL)`. Include a short account of what
-   was verified and any limitations.
-3. Publish through `gh issue comment <number> --body-file <file>` or
+2. Include a short account of what was verified and any limitations. Check
+   `gh pr comment --help` or `gh issue comment --help` for `--attach`. When supported, publish images
+   with `gh pr comment <number> --body-file <file> --attach '<image-path>#<description>'` (or
+   `gh issue comment`). Attach videos with `--attach '<video-path>'`, without an alt-text fragment.
+   This command publishes the evidence; continue directly to step 4.
+3. For other files or when `--attach` is unavailable, run `dkwws upload <file>` for each artifact.
+   Embed image URLs with `![description](URL)` and link videos or other files with `[description](URL)`.
+   Publish the body through `gh issue comment <number> --body-file <file>` or
    `gh pr comment <number> --body-file <file>`. Use `gh pr edit <number> --body-file <file>` when
    updating the PR description. This replaces the entire body: read it first with
    `gh pr view <number> --json body --jq .body`, merge the evidence into it, and write the complete
-   description to the body file. Write actual newlines. Passing a local screenshot path to `gh`
-   does not upload it unless it is explicitly passed with `--attach`.
-4. Verify the published comment or description contains working image links before reporting
+   description to the body file. Write actual newlines. Local file paths need `--attach` to upload.
+4. Verify the published comment or description contains working attachments or links before reporting
    evidence as attached. If upload or publication fails, report the failure and retain the local
    captures outside the checkout for retry. If no issue or PR exists yet, return the uploaded URLs
    and attach them when one is created.
