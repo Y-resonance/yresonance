@@ -4,7 +4,7 @@ import { Button } from '#/components/ui/button';
 import { Calendar } from '#/components/ui/calendar';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
 import { Popover, PopoverContent, PopoverTrigger } from '#/components/ui/popover';
-import type { DateRange } from '#/domain/schema';
+import { dateRangeSchema, type DateRange } from '#/domain/schema';
 import {
   dateRangePresets,
   latestQueryableDate,
@@ -39,13 +39,20 @@ export function DateRangePicker({
   const latest = latestQueryableDate(timezone);
   const activePreset = dateRangePresets.find((preset) => sameDateRange(preset.range, range));
   const isDefault = defaultRange ? sameDateRange(defaultRange, range) : false;
-  const committed = committedRange(draft, range, timezone, latest);
-  const committedResolved = tryResolveDateRange(committed, timezone);
-  // "This month" on the 1st starts today, after the latest complete day. It is valid and shows no
-  // rows, unlike a custom range whose start was picked after its end.
-  const noCompleteDays = committedResolved ? committedResolved.start > latest : false;
-  const reversed =
-    committedResolved && !noCompleteDays ? committedResolved.start > committedResolved.end : false;
+  // "This month" on the 1st starts today and stops at yesterday. It is valid and shows no rows,
+  // unlike a custom range whose start was picked after its end.
+  const noCompleteDays =
+    !!draftResolved &&
+    dateRangeSchema.safeParse(draft).success &&
+    draftResolved.start > latest &&
+    draftResolved.end === latest;
+  const reversed = !!draftResolved && !noCompleteDays && draftResolved.start > draftResolved.end;
+
+  // Each edit turns the draft into what Apply will commit, so the columns never show one range
+  // while Apply saves another.
+  function edit(next: DateRange) {
+    setDraft(shareableRange(next, timezone));
+  }
 
   function changeOpen(next: boolean) {
     if (next) setDraft(range);
@@ -58,7 +65,7 @@ export function DateRangePicker({
   }
 
   function apply() {
-    if (!sameDateRange(committed, range)) onChange(committed);
+    if (!sameDateRange(draft, range)) onChange(draft);
     setOpen(false);
   }
 
@@ -119,7 +126,7 @@ export function DateRangePicker({
                 resolved={draftResolved?.start}
                 latest={draftResolved && draftResolved.end < latest ? draftResolved.end : latest}
                 range={draftResolved}
-                onChange={(startDate) => setDraft({ ...draft, startDate })}
+                onChange={(startDate) => edit({ ...draft, startDate })}
               />
               <DateSide
                 label="End date"
@@ -129,7 +136,7 @@ export function DateRangePicker({
                 latest={latest}
                 range={draftResolved}
                 recommendYesterday
-                onChange={(endDate) => setDraft({ ...draft, endDate })}
+                onChange={(endDate) => edit({ ...draft, endDate })}
               />
             </div>
             <div className="flex items-center justify-end gap-2 px-3 pb-3">
@@ -141,7 +148,7 @@ export function DateRangePicker({
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button size="sm" disabled={!committedResolved || reversed} onClick={apply}>
+              <Button size="sm" disabled={!draftResolved || reversed} onClick={apply}>
                 Apply
               </Button>
             </div>
@@ -152,21 +159,18 @@ export function DateRangePicker({
   );
 }
 
-// The range Apply commits. Presets and untouched ranges stay as they are. Any other range keeps
-// only what the URL can share: a fixed start (never after yesterday) and a fixed or yesterday end.
-// A relative start such as "7 days ago" is pinned to the day it shows now.
-function committedRange(draft: DateRange, current: DateRange, timezone: string, latest: string) {
-  const resolved = tryResolveDateRange(draft, timezone);
-  const unchanged =
-    sameDateRange(draft, current) ||
-    dateRangePresets.some((preset) => sameDateRange(preset.range, draft));
-  if (unchanged || !resolved) return draft;
-  const pin = (value: string) => ({ fixed: value < latest ? value : latest });
+// Keeps only what the URL can share: a relative start such as "7 days ago", or a relative end other
+// than yesterday, becomes the day it shows now. A start after the end is left for the user to fix.
+function shareableRange(range: DateRange, timezone: string): DateRange {
+  const resolved = tryResolveDateRange(range, timezone);
+  if (!resolved) return range;
   return {
-    startDate: 'fixed' in draft.startDate ? draft.startDate : pin(resolved.start),
+    startDate: 'fixed' in range.startDate ? range.startDate : { fixed: resolved.start },
     endDate:
-      'fixed' in draft.endDate || isYesterday(draft.endDate) ? draft.endDate : pin(resolved.end),
-  } satisfies DateRange;
+      'fixed' in range.endDate || isYesterday(range.endDate)
+        ? range.endDate
+        : { fixed: resolved.end },
+  };
 }
 
 // One side of a custom range: what kind of date it is, the day it resolves to today, and a month
@@ -191,14 +195,16 @@ function DateSide({
   onChange: (value: DateValue) => void;
 }) {
   const mode: DateMode = 'fixed' in value ? 'fixed' : isYesterday(value) ? 'yesterday' : 'relative';
-  const selected = resolved ? parseCalendarDate(resolved) : undefined;
+  // A fixed date shows as stored, even a future campaign end that queries stop at yesterday for.
+  const shown = 'fixed' in value ? value.fixed : resolved;
+  const selected = shown ? parseCalendarDate(shown) : undefined;
   const latestDay = parseCalendarDate(latest);
 
   return (
     <section aria-label={label} className="flex w-64 flex-col gap-2 p-3">
       <h3 className="text-sm font-medium">{label}</h3>
       <p className="text-sm text-muted-foreground">
-        {resolved ? formatDay(resolved) : 'Unsupported date'}
+        {shown ? formatDay(shown) : 'Unsupported date'}
       </p>
       <NativeSelect
         aria-label={`${label} type`}

@@ -82,3 +82,25 @@ test('pinning the end of a preset keeps the whole range shareable through the UR
   await page.reload();
   await expect(dateRange).toContainText('Oct 27, 2026 to Nov 2, 2026');
 });
+
+test('fixing only the end of "This month" on the 1st asks for a new start', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'));
+  await mockYresonanceApi(page, { role: 'viewer' });
+  await page.goto('/dashboards/dash_demo?dateRange=this-month');
+  const { start, end } = await openPicker(page);
+
+  await end.getByLabel('End date type').selectOption('fixed');
+  // The start is pinned where it was instead of silently moving into October.
+  await expect(start.getByLabel('Start date type')).toHaveValue('fixed');
+  await expect(start.getByText('Sun, Nov 1, 2026')).toBeVisible();
+  await expect(page.getByText('Start is after end')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
+});
+
+test('a fixed campaign end in the future shows its own date', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T12:00:00Z'));
+  await mockYresonanceApi(page, { role: 'viewer' });
+  await page.goto('/dashboards/dash_demo?dateRange=2026-08-03..2026-12-31');
+  const { end } = await openPicker(page);
+  await expect(end.getByText('Thu, Dec 31, 2026')).toBeVisible();
+});

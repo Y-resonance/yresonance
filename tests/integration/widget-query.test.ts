@@ -95,15 +95,20 @@ describe('widget queries', () => {
       },
     });
 
-    await expectApiError(
-      callService({
-        action: 'queryWidget',
-        dashboardId,
-        widgetId,
-        controlState: { dateRange: { startDate: daysAgo(1), endDate: daysAgo(7) } },
-      }),
-      { status: 400, code: 'invalid_date_range' },
-    );
+    // Starting today is only "no complete days yet" when the range also reaches yesterday.
+    for (const [start, end] of [
+      [1, 7],
+      [0, 7],
+    ])
+      await expectApiError(
+        callService({
+          action: 'queryWidget',
+          dashboardId,
+          widgetId,
+          controlState: { dateRange: { startDate: daysAgo(start), endDate: daysAgo(end) } },
+        }),
+        { status: 400, code: 'invalid_date_range' },
+      );
     expect(queryEngine.queryCalls).toHaveLength(0);
   });
 

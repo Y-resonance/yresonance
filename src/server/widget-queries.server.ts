@@ -396,7 +396,8 @@ async function prepareWidgetQuery(
   const resolvedDateRange = resolveDateRange(dateRange, dashboard.timezone);
   // Ranges are cut off at yesterday, so "This month" on the 1st has no complete day yet. Such a
   // range returns no rows without asking the datasource. Any other reversed range is a bad request.
-  const noCompleteDays = resolvedDateRange.start > latestQueryableDate(dashboard.timezone);
+  const latest = latestQueryableDate(dashboard.timezone);
+  const noCompleteDays = resolvedDateRange.start > latest && resolvedDateRange.end === latest;
   if (!noCompleteDays && resolvedDateRange.start > resolvedDateRange.end)
     throw new ApiError(400, 'invalid_date_range', invalidRangeMessage);
   const bucketTarget = dateBucketTarget(width);
