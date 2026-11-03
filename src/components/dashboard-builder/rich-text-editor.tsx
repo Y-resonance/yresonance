@@ -8,6 +8,7 @@ import {
   type Editor,
 } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Paragraph } from '@tiptap/extension-paragraph';
 import { Markdown } from '@tiptap/markdown';
 import {
   BoldIcon,
@@ -61,6 +62,17 @@ function literalTokens(node: string, tokens: string[]) {
   );
 }
 
+// Tiptap's paragraph lifts a lone image out to the document, where an inline node is invalid.
+// Such a paragraph keeps the image inline instead; every other paragraph parses as usual.
+const paragraph = Paragraph.extend({
+  parseMarkdown(token, helpers) {
+    const tokens = token.tokens ?? [];
+    if (tokens.length === 1 && tokens[0]?.type === 'image')
+      return helpers.createNode('paragraph', undefined, helpers.parseInline(tokens));
+    return this.parent?.(token, helpers) ?? [];
+  },
+});
+
 const literalMarkdown = [
   literalNode('literalInline', true),
   literalNode('literalBlock', false),
@@ -93,6 +105,7 @@ export default function RichTextEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
+        paragraph: false,
         blockquote: false,
         code: false,
         codeBlock: false,
@@ -106,6 +119,7 @@ export default function RichTextEditor({
       }),
       // Single newlines are line breaks, matching the viewer, so plain text keeps its lines.
       Markdown.configure({ markedOptions: { breaks: true } }),
+      paragraph,
       ...literalMarkdown,
     ],
     content: value,

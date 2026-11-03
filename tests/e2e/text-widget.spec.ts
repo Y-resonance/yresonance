@@ -109,13 +109,20 @@ test('an agent adds a formatted text widget with links through addWidget', async
 
 test('editing keeps Markdown the editor has no button for', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
-  const original = 'Run `npm i` first.\n\n    indented line\n\n| a | b |\n| --- | --- |\n| 1 | 2 |';
+  const original = [
+    'Run `npm i` first.',
+    '    indented line',
+    '![Logo](https://example.com/logo.png)',
+    '| a | b |\n| --- | --- |\n| 1 | 2 |',
+  ].join('\n\n');
   state.dashboard.pages[0]!.widgets.push({
     id: 'w_notes',
     layout: { x: 0, y: 7, width: 6, height: 3 },
     definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: original } },
     definitionHash: 'hash_notes',
   });
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
   await page.locator('[data-widget-id="w_notes"]').click({ position: { x: 40, y: 20 } });
@@ -136,4 +143,5 @@ test('editing keeps Markdown the editor has no button for', async ({ page }) => 
   await editor.blur();
   const document: string = (await saved).postDataJSON().definition.content.document;
   expect(document).toBe(`First, ${original}`);
+  expect(errors).toEqual([]);
 });

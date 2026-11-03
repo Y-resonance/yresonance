@@ -26,6 +26,7 @@
         "@tanstack/react-start": "1.169.4",
         "@tanstack/react-table": "^9.2.4",
         "@tiptap/core": "^3.32.2",
+        "@tiptap/extension-paragraph": "^3.32.2",
         "@tiptap/markdown": "^3.32.2",
         "@tiptap/pm": "^3.32.2",
         "@tiptap/react": "^3.32.2",
