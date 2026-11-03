@@ -212,3 +212,53 @@ test('a catalog widget dropped onto an empty canvas lands where it was dropped',
   await expect.poll(() => state.dashboard.pages[0].widgets[0]?.layout.y).toBeGreaterThan(0);
   await expect.poll(() => state.dashboard.pages[0].widgets[0]?.layout.y).toBeLessThan(10);
 });
+
+test('a widget dragged over others can be layered behind them and stays selectable', async ({
+  page,
+}) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  const overview = state.dashboard.pages[0];
+  overview.canvasRows = 14;
+  overview.widgets.push({
+    id: 'w_band',
+    layout: { x: 0, y: 8, width: 12, height: 5 },
+    definition: { type: 'text', content: { schemaVersion: 'plain', document: 'Paid social' } },
+    definitionHash: 'hash_band',
+  });
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+
+  const band = page.locator('.react-grid-item[data-widget-id="w_band"]');
+  const handle = band.locator('.widget-drag-handle');
+  await band.hover();
+  await handle.click();
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  // Six rows up puts the band over Media spend and Campaigns.
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 6 * 64, { steps: 12 });
+  await page.mouse.up();
+  const layoutOf = (id: string) =>
+    state.dashboard.pages[0].widgets.find((widget) => widget.id === id)?.layout;
+  await expect.poll(() => layoutOf('w_band')?.y).toBe(2);
+  expect(layoutOf('w_spend')).toEqual({ x: 0, y: 2, width: 4, height: 3 });
+
+  const settings = page.getByRole('complementary');
+  await settings.getByRole('button', { name: 'Send to back' }).click();
+  await expect.poll(() => state.dashboard.pages[0].widgets[0]?.id).toBe('w_band');
+  await expect(settings.getByRole('button', { name: 'Send to back' })).toBeDisabled();
+
+  // The covered band stays reachable from the layer list of a widget on top of it.
+  await settings.getByRole('button', { name: 'Media spend' }).click();
+  await expect(settings.getByRole('heading', { name: 'Media spend' })).toBeVisible();
+
+  await page.getByRole('switch', { name: 'Viewer mode' }).click();
+  const spend = page.locator('[data-slot="card"]').filter({ hasText: 'Media spend' });
+  await expect(spend).toBeVisible();
+  const spendBox = (await spend.boundingBox())!;
+  const topmost = await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-slot="card"]')?.textContent,
+    { x: spendBox.x + spendBox.width / 2, y: spendBox.y + spendBox.height / 2 },
+  );
+  expect(topmost).toContain('Media spend');
+});

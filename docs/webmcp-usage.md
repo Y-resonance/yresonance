@@ -51,6 +51,9 @@ Page writes return the stored dashboard. `addWidget`, `copyWidget`, and `updateL
 `pageId`; `moveWidget` accepts one to move across pages. `updateLayout` replaces only that page's
 placements. `updatePage` renames, changes draft status, or moves a page to a zero-based position.
 `removePage` requires `confirm: true` when it contains widgets and cannot remove the last page.
+Placements may overlap; later widgets on a page paint on top. `moveWidget` and each `updateLayout`
+entry accept `stacking: 'front' | 'back'` to move a widget to the top or bottom of that order. A
+widget moved to another page lands on top.
 View tools on shared links and viewer grants can read and query only published pages.
 
 `registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an

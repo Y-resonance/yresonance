@@ -13,11 +13,16 @@ export const DASHBOARD_GRID = {
   margin: [8, 8] as [number, number],
 };
 
-/** Why a single placement was rejected, with the widget or grid bound that caused it. */
+/**
+ * Paint order is the order of `page.widgets`: later widgets sit on top of earlier ones where
+ * their placements overlap. `front` and `back` move one widget to either end of that order.
+ */
+export type WidgetStacking = 'front' | 'back';
+
+/** Why a single placement was rejected, with the grid bound that caused it. */
 export type PlacementCheck =
   | { ok: true }
-  | { ok: false; reason: 'out-of-grid'; placement: DashboardWidget['layout']; columns: number }
-  | { ok: false; reason: 'overlap'; widget: DashboardWidget };
+  | { ok: false; reason: 'out-of-grid'; placement: DashboardWidget['layout']; columns: number };
 
 /** Why a whole-layout write was rejected. Widgets are carried so messages can name them. */
 export type LayoutValidation =
@@ -29,8 +34,7 @@ export type LayoutValidation =
       widget: DashboardWidget;
       placement: DashboardWidget['layout'];
       columns: number;
-    }
-  | { ok: false; reason: 'overlap'; widget: DashboardWidget; other: DashboardWidget };
+    };
 
 export function occupiedRowCount(widgets: DashboardWidget[]) {
   return widgets.reduce(
@@ -136,22 +140,13 @@ export function rollbackFailedLayoutState(
 }
 
 /**
- * Checks a single placement against the grid width and the other widgets, naming what it collides
- * with so callers can explain the rejection instead of only reporting that something is wrong.
+ * Checks a single placement against the grid width. Overlapping other widgets is allowed; the
+ * paint order decides which one is on top.
  */
-export function checkPlacement(
-  widgets: DashboardWidget[],
-  candidate: DashboardWidget['layout'],
-  columns = 12,
-  ignoredWidgetId?: string,
-): PlacementCheck {
-  if (candidate.x + candidate.width > columns)
-    return { ok: false, reason: 'out-of-grid', placement: candidate, columns };
-  const collision = widgets.find((widget) => {
-    if (widget.id === ignoredWidgetId) return false;
-    return overlaps(candidate, widget.layout);
-  });
-  return collision ? { ok: false, reason: 'overlap', widget: collision } : { ok: true };
+export function checkPlacement(candidate: DashboardWidget['layout'], columns = 12): PlacementCheck {
+  return candidate.x + candidate.width > columns
+    ? { ok: false, reason: 'out-of-grid', placement: candidate, columns }
+    : { ok: true };
 }
 
 export function validateLayoutUpdate(
@@ -172,21 +167,30 @@ export function validateLayoutUpdate(
   const missing = [...expectedIds].filter((id) => !receivedIds.has(id));
   if (missing.length) return { ok: false, reason: 'missing', widgetIds: missing };
 
-  const placed = updates.map((update) => ({
-    ...widgets.find((widget) => widget.id === update.widgetId)!,
-    layout: update.placement,
-  }));
-  for (const widget of placed) {
-    const check = checkPlacement(placed, widget.layout, columns, widget.id);
+  for (const update of updates) {
+    const check = checkPlacement(update.placement, columns);
     if (!check.ok)
-      return check.reason === 'out-of-grid'
-        ? { ...check, widget }
-        : { ok: false, reason: 'overlap', widget, other: check.widget };
+      return { ...check, widget: widgets.find((widget) => widget.id === update.widgetId)! };
   }
   return { ok: true };
 }
 
-function overlaps(left: DashboardWidget['layout'], right: DashboardWidget['layout']) {
+/** Moves one widget to the top (`front`) or bottom (`back`) of the paint order. */
+export function restack<T extends { id: string }>(
+  widgets: T[],
+  widgetId: string,
+  stacking: WidgetStacking,
+) {
+  const widget = widgets.find((item) => item.id === widgetId);
+  if (!widget) return widgets;
+  const others = widgets.filter((item) => item !== widget);
+  return stacking === 'front' ? [...others, widget] : [widget, ...others];
+}
+
+export function placementsOverlap(
+  left: DashboardWidget['layout'],
+  right: DashboardWidget['layout'],
+) {
   return !(
     left.x + left.width <= right.x ||
     right.x + right.width <= left.x ||

@@ -10,9 +10,7 @@ export function placementMessage(
   check: Extract<PlacementCheck, { ok: false }>,
   movedLabel: string,
 ) {
-  if (check.reason === 'out-of-grid')
-    return `${quote(movedLabel)} runs past the ${check.columns}-column grid (x ${check.placement.x} + width ${check.placement.width}).`;
-  return `${quote(movedLabel)} overlaps ${quote(widgetLabel(check.widget))}.`;
+  return `${quote(movedLabel)} runs past the ${check.columns}-column grid (x ${check.placement.x} + width ${check.placement.width}).`;
 }
 
 /** Turns a rejected whole-layout write into copy that names the widgets responsible. */
@@ -37,8 +35,6 @@ export function layoutMessage(
         },
         widgetLabel(validation.widget),
       );
-    case 'overlap':
-      return `${quote(widgetLabel(validation.widget))} overlaps ${quote(widgetLabel(validation.other))}.`;
   }
 }
 
