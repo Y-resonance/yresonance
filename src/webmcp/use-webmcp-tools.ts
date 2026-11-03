@@ -304,7 +304,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
           {
             action: 'listDatasourceConnections',
             description:
-              'List your personal OAuth connections in this workspace and their status. Tokens are never returned. Optional dataSourceId identifies its current connection only if you own it; canManageCurrentConnection is false otherwise.',
+              'List your personal OAuth connections in this workspace and their status. Tokens are never returned. Optional dataSourceId identifies its current connection only if you own it; canManageCurrentConnection is false otherwise, with currentConnectionOwnerName showing their yresonance profile name when available.',
             readOnly: true,
           },
           {

@@ -68,6 +68,8 @@ OAuth providers additionally expose `listDatasourceConnections`, `beginDatasourc
 metadata within the workspace, never tokens. Other members' grants cannot be used for browsing, registration, reconnection, or
 disconnection, even with a known ID. A datasource's current connection ID is returned only to its
 owner; `canManageCurrentConnection: false` tells other members they cannot manage that grant.
+`currentConnectionOwnerName` supplies the owner’s yresonance display name for an existing datasource
+when another member owns its connection; it omits their Google account and connection ID.
 Permitted viewers still query shared datasources through their saved grant without an owner session.
 Beginning returns an `authorizationUrl` for a human to open and consent; tools do not perform Google
 sign-in. Registration references a completed grant with `connection: { authorizationId }`.

@@ -83,8 +83,10 @@ connected Google account, not a service-account key.
 
 Existing grants remain owned by their recorded `createdBy` user in the recorded workspace. No
 migration or replacement of datasource references is needed. Responses expose only connection ID,
-account, and status. Other members see that a datasource uses another member's connection without
-receiving that connection's ID or account and cannot manage it.
+account, and status for the caller's own connections. On an existing datasource, other members
+see “Connected by” with the owner's yresonance profile name. They do not receive that connection's
+ID, Google account, or credentials and cannot manage it. Missing or unavailable profiles use the
+fallback “Connected by a workspace member”.
 
 Before returning query results, including cached results, the backend verifies that the owner is
 still a member of the workspace through Clerk and that Google still accepts the access token through

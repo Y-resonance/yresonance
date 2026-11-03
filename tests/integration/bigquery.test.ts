@@ -598,6 +598,9 @@ test('personal Google grants reject known IDs from colleagues and other workspac
     location,
     connection: { authorizationId: grant.id },
   })) as DataSourceRecord;
+  setClerkDirectory([
+    { id: alice.userId, emailAddress: 'alice@app.test', firstName: 'Alice', lastName: 'Smith' },
+  ]);
   const callback = await begin(grant.id);
   signInAsColleague(alice);
   await expectApiError(completeGoogleConnection(callback), {
@@ -605,7 +608,17 @@ test('personal Google grants reject known IDs from colleagues and other workspac
     code: 'invalid_oauth_state',
   });
   for (const crossWorkspace of [false, true]) {
-    if (crossWorkspace) await signInToNewWorkspace();
+    if (crossWorkspace) {
+      await signInToNewWorkspace();
+      await expectApiError(
+        callService({
+          action: 'listDatasourceConnections',
+          provider: 'bigquery',
+          dataSourceId: source.id,
+        }),
+        { status: 404, code: 'datasource_not_found' },
+      );
+    }
     expect((await connections()).connections).toEqual([]);
     if (!crossWorkspace) {
       expect(
@@ -619,7 +632,16 @@ test('personal Google grants reject known IDs from colleagues and other workspac
         connections: [],
         currentConnectionId: undefined,
         canManageCurrentConnection: false,
+        currentConnectionOwnerName: 'Alice Smith',
       });
+      setClerkDirectory([]);
+      expect(
+        await callService({
+          action: 'listDatasourceConnections',
+          provider: 'bigquery',
+          dataSourceId: source.id,
+        }),
+      ).toMatchObject({ canManageCurrentConnection: false, currentConnectionOwnerName: undefined });
     }
     const before = requests.length;
     const forbidden = [

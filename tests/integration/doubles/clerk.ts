@@ -15,6 +15,8 @@ interface DirectoryUser {
   id: string;
   emailAddress: string;
   firstName?: string;
+  lastName?: string;
+  username?: string;
   imageUrl?: string;
 }
 
@@ -100,8 +102,8 @@ export function clerkClient() {
             id: user.id,
             firstName: user.firstName ?? null,
             imageUrl: user.imageUrl,
-            lastName: null,
-            username: null,
+            lastName: user.lastName ?? null,
+            username: user.username ?? null,
             primaryEmailAddress: { emailAddress: user.emailAddress },
             emailAddresses: [{ id: user.id, emailAddress: user.emailAddress }],
           })),

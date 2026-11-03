@@ -111,6 +111,48 @@ export async function requireOwnedGoogleConnection(session: SessionContext, conn
   if (!row) throw new ApiError(404, 'connection_not_found', 'Connection not found.');
 }
 
+// Clerk's SDK exposes no abort signal. Bound the wait for directory and membership reads.
+async function clerkLookup<T>(request: Promise<T>) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      request,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('Clerk lookup timed out.')), 10_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function connectionOwnerName(workspaceId: string, authorizationId: string) {
+  const owner = await database()
+    .select({ userId: datasourceAuthorizations.createdBy })
+    .from(datasourceAuthorizations)
+    .where(
+      and(
+        eq(datasourceAuthorizations.id, authorizationId),
+        eq(datasourceAuthorizations.workspaceId, workspaceId),
+        eq(datasourceAuthorizations.provider, 'bigquery'),
+      ),
+    )
+    .get();
+  if (!owner) return undefined;
+  try {
+    const users = await clerkLookup(
+      clerkClient().users.getUserList({ userId: [owner.userId], limit: 1 }),
+    );
+    const user = users.data.find((user) => user.id === owner.userId);
+    return (
+      [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username || undefined
+    );
+  } catch {
+    console.warn('yresonance.datasource_connection_owner', { workspaceId, result: 'unavailable' });
+    return undefined;
+  }
+}
+
 export async function listDatasourceConnections(provider: string, dataSourceId?: string) {
   oauthProvider(provider);
   const session = await requireSession();
@@ -136,11 +178,17 @@ export async function listDatasourceConnections(provider: string, dataSourceId?:
         ]),
       ),
     );
+  const currentConnectionId = rows.find((row) => row.id === savedConnectionId)?.id;
+  const canManageCurrentConnection = !dataSourceId || Boolean(currentConnectionId);
   return {
     configured: configured(),
     connections: rows,
-    currentConnectionId: rows.find((row) => row.id === savedConnectionId)?.id,
-    canManageCurrentConnection: !dataSourceId || rows.some((row) => row.id === savedConnectionId),
+    currentConnectionId,
+    canManageCurrentConnection,
+    currentConnectionOwnerName:
+      savedConnectionId && !canManageCurrentConnection
+        ? await connectionOwnerName(session.workspace.id, savedConnectionId)
+        : undefined,
   };
 }
 
@@ -406,23 +454,14 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
   const encryptedGrant = row.encryptedConfig;
   const revision = row.updatedAt;
   let isMember: boolean;
-  let membershipTimeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    // Clerk's SDK exposes no abort signal. Bound the caller's wait; a late read cannot
-    // authorize this request after the timeout or change the stored grant.
-    const memberships = await Promise.race([
+    const memberships = await clerkLookup(
       clerkClient().organizations.getOrganizationMembershipList({
         organizationId: workspace.clerkOrganizationId,
         userId: [row.createdBy],
         limit: 1,
       }),
-      new Promise<never>((_, reject) => {
-        membershipTimeout = setTimeout(
-          () => reject(new Error('Membership lookup timed out.')),
-          10_000,
-        );
-      }),
-    ]);
+    );
     isMember = memberships.data.some(
       (membership) => membership.publicUserData?.userId === row.createdBy,
     );
@@ -433,8 +472,6 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
         'datasource_connector_failed',
         'Google connection membership could not be verified.',
       );
-  } finally {
-    clearTimeout(membershipTimeout);
   }
   async function revoke(expectedConfig = encryptedGrant): Promise<never> {
     await db

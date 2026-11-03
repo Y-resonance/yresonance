@@ -327,6 +327,7 @@ test('another member cannot manage or substitute the saved Google connection', a
           data: {
             configured: true,
             canManageCurrentConnection: false,
+            currentConnectionOwnerName: 'Alice Smith',
             connections: [{ id: 'auth_bob', account: 'bob@example.test', status: 'connected' }],
           },
         },
@@ -334,11 +335,7 @@ test('another member cannot manage or substitute the saved Google connection', a
     return route.fallback();
   });
   await page.goto('/datasources/src_reporting');
-  await expect(
-    page.getByText("This datasource uses another workspace member's Google connection.", {
-      exact: false,
-    }),
-  ).toBeVisible();
+  await expect(page.getByText('Connected by Alice Smith', { exact: true })).toBeVisible();
   await expect(page.getByText('bob@example.test')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Google account actions' })).toBeHidden();
   await expect(

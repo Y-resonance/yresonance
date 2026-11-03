@@ -18,6 +18,7 @@ interface Connections {
   configured: boolean;
   currentConnectionId?: string;
   canManageCurrentConnection?: boolean;
+  currentConnectionOwnerName?: string;
   connections: Array<{ id: string; account: string; status: string }>;
 }
 
@@ -106,8 +107,7 @@ export function DatasourceConnectionFields({
       <FieldSet>
         <FieldLegend variant={heading.variant}>{heading.text}</FieldLegend>
         <FieldDescription>
-          This datasource uses another workspace member's Google connection. Only its owner can
-          reconnect or disconnect it.
+          Connected by {query.data.currentConnectionOwnerName ?? 'a workspace member'}
         </FieldDescription>
       </FieldSet>
     );
