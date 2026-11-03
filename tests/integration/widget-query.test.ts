@@ -15,6 +15,9 @@ import {
   type SeededDataSource,
   type TestWorkspace,
 } from './fixtures';
+import type { DashboardDocument } from '#/domain/schema';
+
+const engineMetrics = { queryDurationMs: 1, queueDurationMs: 0, resultBytes: 2 };
 
 interface QueryResult {
   rows: Array<Record<string, unknown>>;
@@ -751,6 +754,101 @@ describe('query engine failures', () => {
         height: 3,
       }),
       { status: 400, code: 'unknown_field' },
+    );
+  });
+
+  test('data availability is the earliest latest date among the shown page sources', async () => {
+    const workspace = await signInToNewWorkspace();
+    const [fresh, lagging, elsewhere] = await Promise.all([
+      seedDataSource(workspace),
+      seedDataSource(workspace),
+      seedDataSource(workspace),
+    ]);
+    const dashboard = await createDashboard();
+    await addWidget(dashboard.id, scorecardDefinition(fresh));
+    await addWidget(dashboard.id, scorecardDefinition(lagging));
+    const withSecondPage = (await callService({
+      action: 'addPage',
+      dashboardId: dashboard.id,
+      name: 'Archive',
+    })) as DashboardDocument;
+    const secondPageId = withSecondPage.pages.at(-1)!.id;
+    await callService({
+      action: 'addWidget',
+      dashboardId: dashboard.id,
+      pageId: secondPageId,
+      definition: scorecardDefinition(elsewhere),
+      width: 4,
+      height: 3,
+    });
+    const latest = new Map([
+      [fresh.name, '2026-10-30T08:15:00.000Z'],
+      [lagging.name, '2026-10-28'],
+      [elsewhere.name, '2026-01-01'],
+    ]);
+    queryEngine.answerWith((request) => {
+      const value =
+        request.operation === 'query'
+          ? [...latest].find(([name]) => request.sql.includes(name))?.[1]
+          : undefined;
+      return { body: { ok: true, data: value ? [{ value }] : [], metrics: engineMetrics } };
+    });
+
+    expect(await callService({ action: 'getDataAvailability', dashboardId: dashboard.id })).toEqual(
+      { through: '2026-10-28' },
+    );
+    expect(
+      await callService({
+        action: 'getDataAvailability',
+        dashboardId: dashboard.id,
+        pageId: secondPageId,
+      }),
+    ).toEqual({ through: '2026-01-01' });
+  });
+
+  test.each([
+    ['fails', { status: 400, body: { ok: false, error: 'Binder Error: column not found' } }],
+    ['has no dated rows', { body: { ok: true, data: [], metrics: engineMetrics } }],
+    [
+      'has only impossible dates',
+      { body: { ok: true, data: [{ value: '2026-02-30' }], metrics: engineMetrics } },
+    ],
+  ])('data availability is unknown when one of the page sources %s', async (_case, reply) => {
+    const workspace = await signInToNewWorkspace();
+    const [healthy, other] = await Promise.all([
+      seedDataSource(workspace),
+      seedDataSource(workspace),
+    ]);
+    const dashboard = await createDashboard();
+    await addWidget(dashboard.id, scorecardDefinition(healthy));
+    await addWidget(dashboard.id, scorecardDefinition(other));
+    queryEngine.answerWith((request) =>
+      request.operation === 'query' && request.sql.includes(other.name)
+        ? reply
+        : { body: { ok: true, data: [{ value: '2026-10-30' }], metrics: engineMetrics } },
+    );
+
+    expect(await callService({ action: 'getDataAvailability', dashboardId: dashboard.id })).toEqual(
+      { through: null },
+    );
+  });
+
+  test('data availability skips an impossible latest value for the next real day', async () => {
+    const workspace = await signInToNewWorkspace();
+    const source = await seedDataSource(workspace);
+    const dashboard = await createDashboard();
+    await addWidget(dashboard.id, scorecardDefinition(source));
+    queryEngine.answerWith((request) => ({
+      body: {
+        ok: true,
+        data:
+          request.operation === 'query' ? [{ value: '2026-02-30' }, { value: '2026-02-28' }] : [],
+        metrics: engineMetrics,
+      },
+    }));
+
+    expect(await callService({ action: 'getDataAvailability', dashboardId: dashboard.id })).toEqual(
+      { through: '2026-02-28' },
     );
   });
 });

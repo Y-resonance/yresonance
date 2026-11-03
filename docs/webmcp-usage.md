@@ -16,13 +16,14 @@ Tools by page, read-only first, then writes:
 - Dashboards list: `listDashboards`, `listLibraryMetrics`. Writes: `createDashboard`,
   `updateDashboard`, `duplicateDashboard`, `shareDashboard`, `deleteDashboard`.
 - Dashboard editor: `listDashboards`, `listLibraryMetrics`, `getDashboard`, `queryWidget`,
-  `explainWidget`, `getControlOptions`, `describeDatasource`, `previewWidget`. Writes:
+  `explainWidget`, `getControlOptions`, `getDataAvailability`, `describeDatasource`,
+  `previewWidget`. Writes:
   `updateDashboard`, `addPage`, `updatePage`, `removePage`, `addWidget`, `updateWidget`,
   `removeWidget`, `moveWidget`, `updateLayout`, `copyWidget`, `duplicateDashboard`,
   `upsertCalculatedField`, `updateFieldMetadata`, `upsertLibraryMetric`,
   `shareDashboard`, `createDashboard`.
 - Unlisted link: `getDashboard`, `queryWidget`, `explainWidget`, `getControlOptions`,
-  `describeDatasource`. No writes.
+  `getDataAvailability`, `describeDatasource`. No writes.
 - Datasources: `listDataSources`, `listR2Objects`. Writes: `registerDatasource`, `updateDatasource`.
 - Admins additionally get `updateFieldMetadata` and `upsertLibraryMetric` on the datasource and
   metrics pages.

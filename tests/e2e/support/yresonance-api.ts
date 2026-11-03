@@ -329,6 +329,8 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
       }
       case 'getControlOptions':
         return ok(route, { values: ['FB', 'IG', 'TikTok'] });
+      case 'getDataAvailability':
+        return ok(route, { through: '2026-10-28' });
       case 'queryWidget':
         return ok(route, {
           rows: [

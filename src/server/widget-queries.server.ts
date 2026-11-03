@@ -9,6 +9,7 @@ import {
   controlStateSchema,
 } from '#/domain/schema';
 import { drilledQuery, drillLevels } from '#/domain/drill-down';
+import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { recordProductMetric } from '#/observability';
 import {
   mergeControlState,
@@ -29,6 +30,7 @@ import { widgetDependencyState, queryCacheState } from '#/domain/cache';
 import { env } from 'cloudflare:workers';
 import { alignDateComparisonRows } from '#/domain/widget-results';
 import { ApiError } from './errors';
+import { type DataSourceRecord } from '#/query/types';
 import { authorizeDashboard } from './dashboard-access.server';
 import { widgetById } from './dashboard-records.server';
 import { connectorFor, normalize, datasourceOperation } from './datasource-operations.server';
@@ -94,13 +96,7 @@ export async function queryWidget(
       ? widget.definition.resultLimit.amount
       : undefined;
   const datasourceIdentity = await datasourceOperation(() => connector.cacheIdentity(dataSource));
-  const policy = dataSource.cachePolicy ?? { mode: 'default' };
-  const ttlSeconds =
-    policy.mode === 'disabled'
-      ? 0
-      : policy.mode === 'duration'
-        ? policy.ttlSeconds
-        : connector.defaultCacheTtlSeconds(dataSource);
+  const ttlSeconds = cacheTtlSeconds(dataSource);
   const cacheKey = await hashJson({
     workspaceId: dataSource.workspaceId,
     datasourceId: dataSource.id,
@@ -184,6 +180,128 @@ export async function queryWidget(
     }
   }
   return result;
+}
+
+/**
+ * The day a dashboard page's data reaches, shown as "Data available through" in the header. Each
+ * card filters one datasource by one date field; this reads the latest date of every such pair on
+ * the page and returns the earliest of them, so every widget there has data up to that day. Scoped
+ * to one page so a stale source elsewhere does not hold back the date. When any source fails or has
+ * no readable date, the date is unknown and `through` is null.
+ */
+export async function getDataAvailability(
+  dashboardId: string,
+  pageId?: string,
+  shareToken?: string,
+  refresh = false,
+) {
+  const access = await authorizeDashboard(dashboardId, 'viewer', shareToken);
+  const pairs = new Map(
+    (activeDashboardPage(access.document, pageId)?.widgets ?? []).flatMap(({ definition }) =>
+      'dateRangeFieldId' in definition
+        ? [
+            [
+              `${definition.dataSourceId}:${definition.dateRangeFieldId}`,
+              { dataSourceId: definition.dataSourceId, fieldId: definition.dateRangeFieldId },
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+  const results = await Promise.allSettled(
+    [...pairs.values()].map((pair) =>
+      latestFieldDate(access.document.workspaceId, pair.dataSourceId, pair.fieldId, refresh),
+    ),
+  );
+  const dates = results.map((result) => (result.status === 'fulfilled' ? result.value : null));
+  const failed = results.filter((result) => result.status === 'rejected').length;
+  const undated = dates.filter((date) => !date).length - failed;
+  if (failed || undated)
+    console.warn('yresonance.data_availability', {
+      dashboardId,
+      pageId,
+      sources: pairs.size,
+      failed,
+      undated,
+    });
+  // Leaving out a source without a readable date (failed, empty, or field removed) could claim
+  // more recent data than its widgets have, so the page date is unknown then.
+  return {
+    through: dates.every((date): date is string => !!date) ? (dates.sort()[0] ?? null) : null,
+  };
+}
+
+async function latestFieldDate(
+  workspaceId: string,
+  dataSourceId: string,
+  fieldId: string,
+  refresh: boolean,
+) {
+  const { dataSource, metadata } = await loadQueryContext(dataSourceId, workspaceId);
+  const field = [...metadata.fields, ...metadata.calculatedFields].find(
+    (candidate) => candidate.id === fieldId,
+  );
+  if (!field) return undefined;
+  const connector = connectorFor(dataSource);
+  const ttlSeconds = cacheTtlSeconds(dataSource);
+  const cacheKey = await hashJson({
+    kind: 'latestFieldDate',
+    workspaceId,
+    datasourceId: dataSource.id,
+    datasourceIdentity: await datasourceOperation(() => connector.cacheIdentity(dataSource)),
+    dataSourceVersion: dataSource.version,
+    cacheTtlSeconds: ttlSeconds,
+    field,
+  });
+  const cached =
+    ttlSeconds > 0 && !refresh
+      ? await env.QUERY_CACHE.get<{ cachedAt: number; date: string | null }>(cacheKey, 'json')
+      : null;
+  if (cached && Date.now() - cached.cachedAt < ttlSeconds * 1000) return cached.date;
+  // Filter options sorted descending put the latest non-empty dates first on every backend. The
+  // first real calendar day wins, so a stray impossible value does not hide the rest.
+  const rows = await datasourceOperation(() =>
+    connector.executeQuery<{ value: unknown }>(dataSource, {
+      kind: 'controlOptions',
+      field,
+      metadata,
+      direction: 'DESC',
+    }),
+  );
+  const date =
+    rows
+      .map((row) => normalize(row.value))
+      .map((value) => (typeof value === 'string' ? calendarDay(value) : null))
+      .find((day) => day !== null) ?? null;
+  if (ttlSeconds > 0)
+    await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), date }), {
+      expirationTtl: Math.max(60, ttlSeconds),
+    }).catch((error: unknown) =>
+      console.warn('yresonance.query_cache_write', {
+        kind: 'latestFieldDate',
+        outcome: 'failed',
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  return date;
+}
+
+// The leading YYYY-MM-DD of a date or timestamp, or null when it is not a real calendar day. A text
+// column marked as a date can hold values like 2026-02-30, which Date would roll into March.
+function calendarDay(value: string) {
+  const day = /^\d{4}-\d{2}-\d{2}/u.exec(value)?.[0];
+  if (!day) return null;
+  const parsed = new Date(`${day}T00:00:00Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().startsWith(day) ? day : null;
+}
+
+function cacheTtlSeconds(dataSource: DataSourceRecord) {
+  const policy = dataSource.cachePolicy ?? { mode: 'default' };
+  return policy.mode === 'disabled'
+    ? 0
+    : policy.mode === 'duration'
+      ? policy.ttlSeconds
+      : connectorFor(dataSource).defaultCacheTtlSeconds(dataSource);
 }
 
 export async function explainWidget(dashboardId: string, widgetId: string, shareToken?: string) {

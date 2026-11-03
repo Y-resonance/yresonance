@@ -3,6 +3,7 @@ import {
   DashboardRefreshButton,
 } from '#/components/dashboard-query-refresh';
 import { DashboardPages } from '#/components/dashboard-pages';
+import { DataAvailability } from '#/components/data-availability';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
@@ -52,14 +53,23 @@ function SharedDashboard() {
   return (
     <DashboardQueryRefresh key={token}>
       <main className="mx-auto min-h-screen w-full max-w-[100rem] px-4 py-6 sm:px-6">
-        <header className="mb-6 flex items-start justify-between gap-4">
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">yresonance</p>
             <h1 className="text-3xl font-semibold tracking-tight">
               {dashboard?.name ?? 'Shared dashboard'}
             </h1>
           </div>
-          {dashboard ? <DashboardRefreshButton /> : null}
+          {dashboard ? (
+            <div className="flex max-w-full flex-wrap items-center gap-3">
+              <DataAvailability
+                dashboardId={dashboard.id}
+                pageId={activeDashboardPage(dashboard, search.page)?.id}
+                shareToken={token}
+              />
+              <DashboardRefreshButton />
+            </div>
+          ) : null}
         </header>
         {error ? (
           <ErrorState error={error} />
