@@ -66,3 +66,19 @@ test('fixing "This month" on the 1st pins yesterday instead of a day without dat
   await page.getByRole('button', { name: 'Apply' }).click();
   await expect(page).toHaveURL(/dateRange=2026-10-31\.\.2026-10-31/u);
 });
+
+test('pinning the end of a preset keeps the whole range shareable through the URL', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T12:00:00Z'));
+  await mockYresonanceApi(page, { role: 'viewer' });
+  await page.goto('/dashboards/dash_demo?dateRange=last-7-days');
+  const { dateRange, end } = await openPicker(page);
+
+  await end.getByLabel('End date type').selectOption('fixed');
+  await page.getByRole('button', { name: 'Apply' }).click();
+  // The preset's relative start is pinned too, because the URL cannot carry it.
+  await expect(page).toHaveURL(/dateRange=2026-10-27\.\.2026-11-02/u);
+  await page.reload();
+  await expect(dateRange).toContainText('Oct 27, 2026 to Nov 2, 2026');
+});

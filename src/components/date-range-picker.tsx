@@ -39,11 +39,13 @@ export function DateRangePicker({
   const latest = latestQueryableDate(timezone);
   const activePreset = dateRangePresets.find((preset) => sameDateRange(preset.range, range));
   const isDefault = defaultRange ? sameDateRange(defaultRange, range) : false;
+  const committed = committedRange(draft, range, timezone, latest);
+  const committedResolved = tryResolveDateRange(committed, timezone);
   // "This month" on the 1st starts today, after the latest complete day. It is valid and shows no
   // rows, unlike a custom range whose start was picked after its end.
-  const noCompleteDays = draftResolved ? draftResolved.start > latest : false;
+  const noCompleteDays = committedResolved ? committedResolved.start > latest : false;
   const reversed =
-    draftResolved && !noCompleteDays ? draftResolved.start > draftResolved.end : false;
+    committedResolved && !noCompleteDays ? committedResolved.start > committedResolved.end : false;
 
   function changeOpen(next: boolean) {
     if (next) setDraft(range);
@@ -56,7 +58,7 @@ export function DateRangePicker({
   }
 
   function apply() {
-    onChange(draft);
+    if (!sameDateRange(committed, range)) onChange(committed);
     setOpen(false);
   }
 
@@ -139,7 +141,7 @@ export function DateRangePicker({
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button size="sm" disabled={!draftResolved || reversed} onClick={apply}>
+              <Button size="sm" disabled={!committedResolved || reversed} onClick={apply}>
                 Apply
               </Button>
             </div>
@@ -148,6 +150,23 @@ export function DateRangePicker({
       </PopoverContent>
     </Popover>
   );
+}
+
+// The range Apply commits. Presets and untouched ranges stay as they are. Any other range keeps
+// only what the URL can share: a fixed start (never after yesterday) and a fixed or yesterday end.
+// A relative start such as "7 days ago" is pinned to the day it shows now.
+function committedRange(draft: DateRange, current: DateRange, timezone: string, latest: string) {
+  const resolved = tryResolveDateRange(draft, timezone);
+  const unchanged =
+    sameDateRange(draft, current) ||
+    dateRangePresets.some((preset) => sameDateRange(preset.range, draft));
+  if (unchanged || !resolved) return draft;
+  const pin = (value: string) => ({ fixed: value < latest ? value : latest });
+  return {
+    startDate: 'fixed' in draft.startDate ? draft.startDate : pin(resolved.start),
+    endDate:
+      'fixed' in draft.endDate || isYesterday(draft.endDate) ? draft.endDate : pin(resolved.end),
+  } satisfies DateRange;
 }
 
 // One side of a custom range: what kind of date it is, the day it resolves to today, and a month
