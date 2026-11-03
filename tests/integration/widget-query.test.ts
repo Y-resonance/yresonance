@@ -758,7 +758,7 @@ describe('query engine failures', () => {
     ['fails', { status: 400, body: { ok: false, error: 'Binder Error: column not found' } }],
     ['has no dated rows', { body: { ok: true, data: [], metrics: engineMetrics } }],
     [
-      'has an impossible date',
+      'has only impossible dates',
       { body: { ok: true, data: [{ value: '2026-02-30' }], metrics: engineMetrics } },
     ],
   ])('data availability is unknown when one of the page sources %s', async (_case, reply) => {
@@ -778,6 +778,25 @@ describe('query engine failures', () => {
 
     expect(await callService({ action: 'getDataAvailability', dashboardId: dashboard.id })).toEqual(
       { through: null },
+    );
+  });
+
+  test('data availability skips an impossible latest value for the next real day', async () => {
+    const workspace = await signInToNewWorkspace();
+    const source = await seedDataSource(workspace);
+    const dashboard = await createDashboard();
+    await addWidget(dashboard.id, scorecardDefinition(source));
+    queryEngine.answerWith((request) => ({
+      body: {
+        ok: true,
+        data:
+          request.operation === 'query' ? [{ value: '2026-02-30' }, { value: '2026-02-28' }] : [],
+        metrics: engineMetrics,
+      },
+    }));
+
+    expect(await callService({ action: 'getDataAvailability', dashboardId: dashboard.id })).toEqual(
+      { through: '2026-02-28' },
     );
   });
 });

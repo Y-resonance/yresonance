@@ -253,8 +253,9 @@ async function latestFieldDate(
       ? await env.QUERY_CACHE.get<{ cachedAt: number; date: string | null }>(cacheKey, 'json')
       : null;
   if (cached && Date.now() - cached.cachedAt < ttlSeconds * 1000) return cached.date;
-  // Filter options sorted descending put the latest non-empty date first on every backend.
-  const [row] = await datasourceOperation(() =>
+  // Filter options sorted descending put the latest non-empty dates first on every backend. The
+  // first real calendar day wins, so a stray impossible value does not hide the rest.
+  const rows = await datasourceOperation(() =>
     connector.executeQuery<{ value: unknown }>(dataSource, {
       kind: 'controlOptions',
       field,
@@ -262,8 +263,11 @@ async function latestFieldDate(
       direction: 'DESC',
     }),
   );
-  const value = normalize(row?.value);
-  const date = typeof value === 'string' ? calendarDay(value) : null;
+  const date =
+    rows
+      .map((row) => normalize(row.value))
+      .map((value) => (typeof value === 'string' ? calendarDay(value) : null))
+      .find((day) => day !== null) ?? null;
   if (ttlSeconds > 0)
     await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), date }), {
       expirationTtl: Math.max(60, ttlSeconds),
