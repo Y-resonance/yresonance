@@ -1,5 +1,8 @@
 # Uncached query performance in the branch preview
 
+Historical measurements from 2026-10-05. See the [documentation index](../index.md)
+for current guides; timings below describe the recorded commits and environment.
+
 DuckDB is noticeably slower on this preview. Four widgets loading together take a median
 3.84 seconds on 100,000 rows and 5.96 seconds on one million rows. ClickHouse takes
 0.32 and 0.58 seconds respectively. The DuckDB container's serialized query queue amplifies
