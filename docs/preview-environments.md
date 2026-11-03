@@ -75,8 +75,9 @@ verify container support.
 
 On PR closure, `.github/workflows/preview.yml` checks repository ownership and runs trusted
 code from the default branch. Cleanup waits for that branch's running Cloudflare builds, then
-deletes its Preview, matching container apps, D1/KV/R2 resources, and ClickHouse database. It also
-handles legacy `pr-<number>` previews under both old Worker names. Retry the workflow with the
+deletes its Preview, matching container apps, D1/KV/R2 resources, and ClickHouse database.
+Legacy `pr-<number>` previews under both old Worker names are deleted after native cleanup succeeds.
+Retry the workflow with the
 closed PR number after a partial failure only while the branch has not been pushed or reused
 since closure. Exact resource names do not distinguish the original Preview from one recreated
 by a later push; retrying can delete the new Preview and its data. Confirm another branch's preview
@@ -88,7 +89,11 @@ recorded Preview slug. Never delete by the parent Worker prefix.
 
 Branches without PRs need explicit cleanup after their builds stop:
 `bun run scripts/preview-resources.ts cleanup <branch>`, using the same account, API token, and
-`CLOUDFLARE_WORKER_TAG`. A push after closure can recreate resources and require cleanup again.
+`CLOUDFLARE_WORKER_TAG`. For branches with a ClickHouse preview database, also supply
+`CLICKHOUSE_PREVIEW_URL`, `CLICKHOUSE_PREVIEW_USER`, `CLICKHOUSE_PREVIEW_PASSWORD`,
+`CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID`, and `CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET`.
+Without these variables, ClickHouse cleanup is skipped. A push after closure can recreate resources
+and require cleanup again.
 These operations delete preview data and require authorization for the target environment.
 
 ## Cloudflare deployment
