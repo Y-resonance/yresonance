@@ -686,8 +686,8 @@ test('personal Google grants reject known IDs from colleagues and other workspac
   expect(stored?.createdBy).toBe(alice.userId);
 });
 
-test.each(['membership', 'revocation'] as const)(
-  'shared Google datasource stops serving cached results after owner %s loss until explicit reconnection',
+test.each(['membership', 'revocation', 'disconnect_during_verification'] as const)(
+  'shared Google datasource blocks cached results after %s until explicit reconnection',
   async (loss) => {
     const requests = googleNetwork();
     const alice = await signInToNewWorkspace();
@@ -737,7 +737,18 @@ test.each(['membership', 'revocation'] as const)(
     if (loss === 'membership') removeClerkMembership(alice.orgId, alice.userId);
     const original = globalThis.fetch;
     let revoked = loss === 'revocation';
+    let disconnectOnVerify = loss === 'disconnect_during_verification';
     vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (
+        disconnectOnVerify &&
+        new URL(new Request(input as RequestInfo, init).url).hostname ===
+          'openidconnect.googleapis.com'
+      ) {
+        disconnectOnVerify = false;
+        signInAsOwner(alice);
+        await callService({ action: 'disconnectDatasourceConnection', connectionId: grant.id });
+        signInAsUser(alice, bob);
+      }
       if (
         revoked &&
         new URL(new Request(input as RequestInfo, init).url).hostname ===
@@ -754,7 +765,10 @@ test.each(['membership', 'revocation'] as const)(
     const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
     });
-    expect(stored).toMatchObject({ status: 'reconnect_required', encryptedConfig: null });
+    expect(stored).toMatchObject({
+      status: loss === 'disconnect_during_verification' ? 'disconnected' : 'reconnect_required',
+      encryptedConfig: null,
+    });
     // Rejoining alone cannot revive the old authorization or make the old cache reachable.
     signInAsOwner(alice);
     revoked = false;
@@ -765,37 +779,45 @@ test.each(['membership', 'revocation'] as const)(
   },
 );
 
-test('temporary Google userinfo denial fails closed without deleting the grant and recovers without consent', async () => {
-  googleNetwork();
-  await signInToNewWorkspace();
-  await completeGoogleConnection(await begin());
-  const grant = (await connections()).connections[0]!;
-  const browse = { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id };
-  await callService(browse);
-  const db = createDatabase(env.DB);
-  const before = await db.query.datasourceAuthorizations.findFirst({
-    where: eq(datasourceAuthorizations.id, grant.id),
-  });
-  const original = globalThis.fetch;
-  let unavailable = true;
-  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
-    if (
-      unavailable &&
-      new URL(new Request(input as RequestInfo, init).url).hostname ===
-        'openidconnect.googleapis.com'
-    )
-      return Response.json({ error: 'rate_limit_exceeded' }, { status: 403 });
-    return original(input as RequestInfo, init);
-  });
-  await expectApiError(callService(browse), { status: 502, code: 'datasource_connector_failed' });
-  expect(
-    await db.query.datasourceAuthorizations.findFirst({
+test.each(['http403', 'network', 'timeout'] as const)(
+  'temporary Google userinfo %s failure preserves the grant and recovers without consent',
+  async (failure) => {
+    googleNetwork();
+    await signInToNewWorkspace();
+    await completeGoogleConnection(await begin());
+    const grant = (await connections()).connections[0]!;
+    const browse = { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id };
+    await callService(browse);
+    const db = createDatabase(env.DB);
+    const before = await db.query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
-    }),
-  ).toEqual(before);
-  unavailable = false;
-  expect(await callService(browse)).toMatchObject({ entries: [] });
-});
+    });
+    const original = globalThis.fetch;
+    let unavailable = true;
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (
+        unavailable &&
+        new URL(new Request(input as RequestInfo, init).url).hostname ===
+          'openidconnect.googleapis.com'
+      ) {
+        if (failure === 'http403')
+          return Response.json({ error: 'rate_limit_exceeded' }, { status: 403 });
+        if (failure === 'timeout')
+          throw new DOMException('Google request timed out.', 'TimeoutError');
+        throw new TypeError('Google network unavailable.');
+      }
+      return original(input as RequestInfo, init);
+    });
+    await expectApiError(callService(browse), { status: 502, code: 'datasource_connector_failed' });
+    expect(
+      await db.query.datasourceAuthorizations.findFirst({
+        where: eq(datasourceAuthorizations.id, grant.id),
+      }),
+    ).toEqual(before);
+    unavailable = false;
+    expect(await callService(browse)).toMatchObject({ entries: [] });
+  },
+);
 
 test('a stalled membership lookup times out without deleting credentials or requiring consent', async () => {
   googleNetwork();

@@ -455,6 +455,11 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
       headers: { Authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(10_000),
       redirect: 'manual',
+    }).catch(() => {
+      throw new DatasourceError(
+        'datasource_connector_failed',
+        'Google authorization is unavailable.',
+      );
     });
     if (response.status === 401) return revoke(expectedConfig);
     if (!response.ok)
@@ -462,6 +467,22 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
         'datasource_connector_failed',
         'Google authorization is unavailable.',
       );
+    // Disconnect or reconnect may have completed while the external checks were pending.
+    const current = await db
+      .select({ id: datasourceAuthorizations.id })
+      .from(datasourceAuthorizations)
+      .where(
+        and(
+          eq(datasourceAuthorizations.id, authorizationId),
+          eq(datasourceAuthorizations.workspaceId, workspaceId),
+          eq(datasourceAuthorizations.provider, 'bigquery'),
+          eq(datasourceAuthorizations.status, 'connected'),
+          eq(datasourceAuthorizations.encryptedConfig, expectedConfig),
+          eq(datasourceAuthorizations.updatedAt, revision),
+        ),
+      )
+      .get();
+    if (!current) throw reconnectError();
     return { accessToken, revision };
   }
   const grant = grantSchema.parse(
