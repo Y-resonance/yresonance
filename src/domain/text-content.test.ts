@@ -30,7 +30,7 @@ describe('stored text widgets', () => {
     expect(definition).toMatchObject({
       content: {
         schemaVersion: 'markdown-v1',
-        document: expect.stringContaining('Campaign notes'),
+        document: 'Campaign notes',
       },
     });
   });

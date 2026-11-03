@@ -2,13 +2,18 @@ import { z } from 'zod';
 
 /**
  * Flattens a legacy structured text document (any JSON shape) into plain text. Strings pass
- * through unchanged, so plain-text documents keep their exact wording.
+ * through unchanged, so plain-text documents keep their exact wording. Node `type` names are
+ * structure, not text, so they are left out.
  */
 export function textDocument(value: unknown): string {
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) return value.map(textDocument).filter(Boolean).join('\n');
   if (value && typeof value === 'object')
-    return Object.values(value).map(textDocument).filter(Boolean).join(' ');
+    return Object.entries(value)
+      .filter(([key]) => key !== 'type')
+      .map(([, child]) => textDocument(child))
+      .filter(Boolean)
+      .join(' ');
   return '';
 }
 

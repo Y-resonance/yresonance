@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
+import {
+  EditorContent,
+  Extension,
+  Node as TiptapNode,
+  useEditor,
+  useEditorState,
+  type Editor,
+} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Markdown } from '@tiptap/markdown';
 import {
@@ -15,6 +22,51 @@ import { Input } from '#/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '#/components/ui/popover';
 import { richTextClasses, safeLinkUrl } from '#/components/rich-text';
 import { cn } from '#/lib/utils';
+
+// Markdown outside the supported subset (code, tables, images) has no editor node, so Tiptap would
+// drop it on load and the next save would delete text viewers still see. These read-only nodes
+// hold such source verbatim and write it back unchanged; editors can still delete them.
+function literalNode(name: string, inline: boolean) {
+  return TiptapNode.create({
+    name,
+    inline,
+    group: inline ? 'inline' : 'block',
+    atom: true,
+    addAttributes: () => ({ markdown: { default: '' } }),
+    parseHTML: () => [
+      { tag: `[data-${name}]`, getAttrs: (element) => ({ markdown: element.textContent }) },
+    ],
+    renderHTML: ({ node }) => [
+      inline ? 'code' : 'pre',
+      {
+        [`data-${name}`]: '',
+        class: 'font-mono text-[0.9em] whitespace-pre-wrap text-muted-foreground',
+      },
+      String(node.attrs.markdown),
+    ],
+    renderMarkdown: (node) => String(node.attrs?.markdown ?? ''),
+  });
+}
+
+function literalTokens(node: string, tokens: string[]) {
+  return tokens.map((token) =>
+    Extension.create({
+      name: `${node}-${token}`,
+      markdownTokenName: token,
+      parseMarkdown: ({ raw = '' }) => ({
+        type: node,
+        attrs: { markdown: raw.replace(/\n+$/, '') },
+      }),
+    }),
+  );
+}
+
+const literalMarkdown = [
+  literalNode('literalInline', true),
+  literalNode('literalBlock', false),
+  ...literalTokens('literalInline', ['codespan', 'image']),
+  ...literalTokens('literalBlock', ['code', 'table']),
+];
 
 /**
  * WYSIWYG Markdown editor for text widgets in the inspector. It is the default export so the
@@ -54,6 +106,7 @@ export default function RichTextEditor({
       }),
       // Single newlines are line breaks, matching the viewer, so plain text keeps its lines.
       Markdown.configure({ markedOptions: { breaks: true } }),
+      ...literalMarkdown,
     ],
     content: value,
     contentType: 'markdown',
@@ -189,9 +242,8 @@ function LinkButton({
 
   function apply() {
     // Bare domains are common when pasting, so they default to https.
-    const href = safeLinkUrl(
-      /^[a-z][a-z\d+.-]*:/i.test(url) ? url.trim() : `https://${url.trim()}`,
-    );
+    const trimmed = url.trim();
+    const href = safeLinkUrl(/^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`);
     if (!href) {
       setError('Use an https:// or mailto: link.');
       return;
