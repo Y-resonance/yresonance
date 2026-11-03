@@ -16,6 +16,47 @@ mkdir -p dev-data
 cp reporting_example.csv dev-data/
 ```
 
+## Review evidence
+
+For UI changes, exercise the affected flow and capture the relevant before/after states, including
+mobile or theme variants when affected. Store screenshots, recordings, and other review artifacts
+in a task-specific directory created with `mktemp -d` outside the checkout.
+
+1. Inspect the captures for the intended behavior and for private data before publishing. Use
+   synthetic data; `dkwws` links are publicly readable. Recapture anything containing credentials
+   or customer data.
+2. Include a short account of what was verified and any limitations. Check
+   `gh pr comment --help` or `gh issue comment --help` for `--attach`. When supported, publish images
+   with `gh pr comment <number> --body-file <file> --attach '<image-path>#<description>'` (or
+   `gh issue comment`). Attach videos with `--attach '<video-path>'`, without an alt-text fragment.
+   This command publishes the evidence; continue directly to step 4.
+3. For other files or when `--attach` is unavailable, run `dkwws upload <file>` for each artifact.
+   Embed image URLs with `![description](URL)` and link videos or other files with `[description](URL)`.
+   Publish the body through `gh issue comment <number> --body-file <file>` or
+   `gh pr comment <number> --body-file <file>`. Use `gh pr edit <number> --body-file <file>` when
+   updating the PR description. This replaces the entire body: read it first with
+   `gh pr view <number> --json body --jq .body`, merge the evidence into it, and write the complete
+   description to the body file. Write actual newlines. Local file paths need `--attach` to upload.
+4. Verify the published comment or description contains working attachments or links before reporting
+   evidence as attached. If upload or publication fails, report the failure and retain the local
+   captures outside the checkout for retry. If no issue or PR exists yet, return the uploaded URLs
+   and attach them when one is created.
+
+Example for an existing PR. Replace `123` with the PR number and describe the verified flow:
+
+```sh
+pr_number=123
+evidence_dir=$(mktemp -d "${TMPDIR:-/tmp}/yresonance-evidence.XXXXXX")
+# Save the browser capture to "$evidence_dir/after.png" before continuing.
+after_url=$(dkwws upload "$evidence_dir/after.png") || exit 1
+printf 'Verified: <flow and result>.\n\n![After](%s)\n' "$after_url" > "$evidence_dir/comment.md"
+gh pr comment "$pr_number" --body-file "$evidence_dir/comment.md"
+```
+
+Review evidence is not a repository asset. The landing page images below are product assets and
+remain versioned. Keep durable findings and reproduction instructions in docs; publish new raw
+benchmark output with the issue or PR evidence.
+
 ## Landing page screenshots
 
 `src/assets/landing/*.png` are captured from the running app, not drawn by hand:
@@ -47,6 +88,27 @@ Development and preview delete yresonance's D1 rows, R2 objects, and query-cache
 and organizations are outside these bindings and remain untouched. Production always returns the
 exact deletion plan and performs no deletion. Apply the committed D1 migrations before using a
 fresh environment.
+
+## D1 foreign key preflight
+
+When initializing an older database that has not applied `0010_cascading-foreign-keys.sql`, run
+`scripts/check-d1-orphans.sql` against that database first. Once access to the target environment
+is authorized, set `CLOUDFLARE_ACCOUNT_ID` to the `account_id` in `wrangler.jsonc`, then run
+`cf d1 query <database-id> --sql "$(cat scripts/check-d1-orphans.sql)"`. Use the `database_id`
+for the authorized production or preview environment. The `cf` CLI does not select the account
+from Wrangler configuration. Every `orphan_count` must be zero. Resolve orphaned rows before
+applying the migration; the migration refuses them rather than deleting them.
+
+D1 always enables foreign keys. The migration rebuilds parents before children because dropping
+an old parent can cascade even with `PRAGMA defer_foreign_keys`. Foreign keys enforce parent
+existence; workspace filters and validation of references inside dashboard JSON remain necessary.
+
+## Query container HTTP checks
+
+`bunx vitest --run container/httpfs.test.ts` checks DuckDB's HEAD requests, byte-range responses,
+redirects, overlapping reads, and explicit multi-file Parquet URL lists against a local HTTP server.
+A smoke test in an isolated deployed preview is still needed for changes to Cloudflare's outbound
+interception, which the local test runner does not emulate.
 
 ## PostHog
 

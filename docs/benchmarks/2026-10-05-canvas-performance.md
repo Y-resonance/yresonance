@@ -1,5 +1,8 @@
 # Canvas and query performance after request optimizations
 
+Historical measurements from 2026-10-05. See the [documentation index](../index.md)
+for current guides; timings below describe the recorded commits and environment.
+
 New widgets now show a pending placeholder before metadata or creation requests complete.
 Saved widgets keep their running queries across layout saves and dashboard refreshes.
 In the branch preview, median time from drop to first data fell from 5.06 to 1.62 seconds
