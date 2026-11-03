@@ -103,6 +103,13 @@ export function useWebMcpTools(options: WebMcpOptions) {
               fixed,
             },
             {
+              action: 'getDataAvailability',
+              description:
+                'Get the latest day a page of the open dashboard has data for: the earliest of the latest dates in the date fields its widgets filter by. Defaults to the first page. Returns through as YYYY-MM-DD, or null when the page has no dated data or when any source fails or has no readable date, meaning availability is unknown. Set refresh to bypass cached dates.',
+              readOnly: true,
+              fixed,
+            },
+            {
               action: 'describeDatasource',
               description:
                 'Describe a datasource used by the open dashboard. Returns visible fields, semantics, samples, calculated fields, and applicable library metrics.',

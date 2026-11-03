@@ -22,6 +22,7 @@ import {
   dashboardDateControlRange,
   initialControlState,
 } from '#/components/dashboard-view';
+import { DataAvailability } from '#/components/data-availability';
 import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { ErrorState, LoadingState } from '#/components/request-state';
 import { Label } from '#/components/ui/label';
@@ -169,7 +170,12 @@ function DashboardContent() {
               <h1 className="text-3xl font-semibold tracking-tight">{payload.dashboard.name}</h1>
               {/* The editor controls stay put in both modes so the switch never moves under the
                 cursor, even though a real viewer sees neither of them. */}
-              <div className="flex max-w-full items-start gap-3 sm:items-center">
+              <div className="flex max-w-full flex-wrap items-start gap-3 sm:items-center">
+                <DataAvailability
+                  dashboardId={dashboardId}
+                  pageId={activePage?.id}
+                  version={payload.dashboard.updatedAt}
+                />
                 <DashboardRefreshButton />
                 {canEdit ? (
                   <div className="flex min-w-0 flex-wrap items-center gap-3">
