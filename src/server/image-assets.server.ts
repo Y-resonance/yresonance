@@ -282,7 +282,12 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
   const stored = await env.DATA.get(variantKey);
   if (stored) {
     const storedType = stored.httpMetadata?.contentType ?? variantHeaders['content-type'];
-    log({ variant: 'stored', bytes: stored.size, format: storedType, width });
+    log({
+      variant: 'stored',
+      bytes: stored.size,
+      format: imageFormatFromContentType(storedType) ?? storedType,
+      width,
+    });
     return new Response(stored.body, {
       headers: {
         ...variantHeaders,
@@ -308,7 +313,12 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
   } catch (error) {
     return serveOriginal('transform_failed', imagesErrorCode(error));
   }
-  log({ variant: 'created', bytes: bytes.byteLength, format: contentType, width });
+  log({
+    variant: 'created',
+    bytes: bytes.byteLength,
+    format: imageFormatFromContentType(contentType) ?? contentType,
+    width,
+  });
   return new Response(bytes, {
     headers: {
       ...variantHeaders,

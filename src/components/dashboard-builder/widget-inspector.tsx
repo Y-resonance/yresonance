@@ -235,6 +235,7 @@ export function WidgetSettings({
       ) : null}
       {definition.type === 'image' ? (
         <ImageSettings
+          key={widget.id}
           widgetId={widget.id}
           dashboardId={dashboardId}
           definition={definition}
