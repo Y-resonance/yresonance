@@ -192,10 +192,15 @@ test.describe('signed-in dashboard flow', () => {
     await expect(line.getByText('No rows for this date range.')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Choose date range' }).click();
-    const rangeStart = page.getByRole('button', { name: /January 6th, 2026/u });
-    await rangeStart.click();
-    await expect(rangeStart).toHaveAttribute('data-selected-single', 'true');
-    await page.getByRole('button', { name: /January 7th, 2026/u }).click();
+    await page
+      .getByRole('region', { name: 'Start date' })
+      .getByRole('button', { name: /January 6th, 2026/u })
+      .click();
+    await page
+      .getByRole('region', { name: 'End date' })
+      .getByRole('button', { name: /January 7th, 2026/u })
+      .click();
+    await page.getByRole('button', { name: 'Apply' }).click();
     await expect(scorecard.getByText(NARROWED_IMPRESSIONS, { exact: true })).toBeVisible();
     await line.scrollIntoViewIfNeeded();
     await expect(line.getByText('Jan 6', { exact: true })).toBeVisible({ timeout: 45_000 });
