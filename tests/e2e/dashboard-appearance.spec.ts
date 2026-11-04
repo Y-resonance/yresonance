@@ -193,21 +193,15 @@ test.describe('desktop', () => {
 
     const refreshStarted = Promise.withResolvers<void>();
     const releaseRefresh = Promise.withResolvers<void>();
-    const savedThemes: unknown[] = [];
     await page.route('**/api/yresonance', async (route) => {
-      const { action, theme } = route.request().postDataJSON();
-      if (action === 'getDashboard') {
-        refreshStarted.resolve();
-        await releaseRefresh.promise;
-        return route.fallback().catch(() => undefined);
-      }
-      if (action !== 'updateDashboard') return route.fallback();
-      // The mock's document keeps the old theme, like a read that started before this save.
-      savedThemes.push(theme);
-      await route.fulfill({
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true, data: state.dashboard }),
-      });
+      if (route.request().postDataJSON().action !== 'getDashboard') return route.fallback();
+      refreshStarted.resolve();
+      // A read answers with the document as it was when it started.
+      const dashboard = structuredClone(state.dashboard);
+      await releaseRefresh.promise;
+      await route
+        .fulfill({ json: { ok: true, data: { dashboard, role: 'editor', dataSources: [] } } })
+        .catch(() => undefined);
     });
     await page.clock.fastForward(31_000);
     await page.getByRole('link', { name: 'Settings' }).click();
@@ -215,7 +209,7 @@ test.describe('desktop', () => {
 
     const shadow = page.getByRole('switch', { name: 'Style: shadow' });
     await shadow.click();
-    await expect.poll(() => savedThemes).toEqual([{ widgetDefaults: { shadow: true } }]);
+    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { shadow: true } });
     releaseRefresh.resolve();
     // Nothing visible marks a dropped response, so give an applied one time to render.
     await page.waitForTimeout(300);
@@ -225,8 +219,54 @@ test.describe('desktop', () => {
     await weight.fill('6');
     await weight.blur();
     await expect
-      .poll(() => savedThemes.at(-1))
+      .poll(() => state.dashboard.theme)
       .toEqual({ widgetDefaults: { shadow: true, borderWidth: 6 } });
+  });
+
+  // A tool write finishing during a save asks for a refresh, which could answer from before the save.
+  test('a tool write during a theme save neither undoes the edit nor goes unseen', async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    type Tool = { name: string; execute: (input: Record<string, unknown>) => Promise<unknown> };
+    await page.addInitScript(() => {
+      const tools = new Map<string, Tool>();
+      Object.defineProperty(document, 'modelContext', {
+        value: {
+          tools,
+          registerTool: async (tool: Tool, options: { signal: AbortSignal }) => {
+            tools.set(tool.name, tool);
+            options.signal.addEventListener('abort', () => tools.delete(tool.name), { once: true });
+          },
+        },
+      });
+    });
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const shadow = page.getByRole('switch', { name: 'Style: shadow' });
+    await expect(shadow).toBeVisible();
+
+    const releaseSave = Promise.withResolvers<void>();
+    await page.route('**/api/yresonance', async (route) => {
+      const { action, theme } = route.request().postDataJSON();
+      if (action === 'updateDashboard' && theme) await releaseSave.promise;
+      await route.fallback();
+    });
+
+    await shadow.click();
+    await page.evaluate(() =>
+      (document.modelContext as unknown as { tools: Map<string, Tool> }).tools
+        .get('updateDashboard')!
+        .execute({ name: 'Renamed by agent' }),
+    );
+    // The server doesn't have the theme yet, so a read now would flip the switch back.
+    await page.waitForTimeout(300);
+    await expect(shadow).toBeChecked();
+
+    releaseSave.resolve();
+    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { shadow: true } });
+    await expect(page.getByRole('link', { name: 'Renamed by agent' })).toBeVisible();
+    await expect(shadow).toBeChecked();
   });
 
   test('a theme save that fails shows why and restores the field', async ({ page }) => {
