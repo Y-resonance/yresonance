@@ -152,7 +152,7 @@ function DashboardContent() {
   return (
     <DashboardQueryRefresh key={dashboardId} inputsRevision={queryInputsRevision}>
       <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
-        {error || dashboardQuery.error ? (
+        {error || (dashboardQuery.error && !payload) ? (
           <ErrorState
             error={error ?? dashboardQuery.error?.message ?? 'Failed to load dashboard.'}
           />

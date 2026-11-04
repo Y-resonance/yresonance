@@ -1,9 +1,31 @@
 import { test } from './support/ui-test';
-import { expect, type Locator } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { mockYresonanceApi } from './support/yresonance-api';
 
 const radius = (card: Locator) =>
   card.evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
+
+const conflict = {
+  status: 409,
+  contentType: 'application/json',
+  body: JSON.stringify({
+    ok: false,
+    error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
+  }),
+};
+const outage = {
+  status: 500,
+  contentType: 'application/json',
+  body: JSON.stringify({ ok: false, error: { code: 'internal', message: 'Service unavailable.' } }),
+};
+
+// The refresh after the last save would repair the form, so leave it unanswered to see what the
+// page does by itself.
+const leaveReadsUnanswered = (page: Page) =>
+  page.route('**/api/yresonance', async (route) => {
+    if (route.request().postDataJSON().action !== 'getDashboard') return route.fallback();
+    await new Promise(() => undefined);
+  });
 
 test.describe('desktop', () => {
   // The project's mobile device settings would otherwise apply; the mobile test below keeps them.
@@ -193,8 +215,15 @@ test.describe('desktop', () => {
 
     const refreshStarted = Promise.withResolvers<void>();
     const releaseRefresh = Promise.withResolvers<void>();
+    const saveStarted = Promise.withResolvers<void>();
+    const releaseSave = Promise.withResolvers<void>();
     await page.route('**/api/yresonance', async (route) => {
-      if (route.request().postDataJSON().action !== 'getDashboard') return route.fallback();
+      const { action } = route.request().postDataJSON();
+      if (action === 'updateDashboard') {
+        saveStarted.resolve();
+        await releaseSave.promise;
+      }
+      if (action !== 'getDashboard') return route.fallback();
       refreshStarted.resolve();
       // A read answers with the document as it was when it started.
       const dashboard = structuredClone(state.dashboard);
@@ -209,12 +238,14 @@ test.describe('desktop', () => {
 
     const shadow = page.getByRole('switch', { name: 'Style: shadow' });
     await shadow.click();
-    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { shadow: true } });
+    await saveStarted.promise;
     releaseRefresh.resolve();
     // Nothing visible marks a dropped response, so give an applied one time to render.
     await page.waitForTimeout(300);
     await expect(shadow).toBeChecked();
 
+    releaseSave.resolve();
+    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { shadow: true } });
     const weight = page.getByLabel('Style: border weight');
     await weight.fill('6');
     await weight.blur();
@@ -272,20 +303,15 @@ test.describe('desktop', () => {
   test('a theme save that fails shows why and restores the field', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
     await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
+    await leaveReadsUnanswered(page);
     await page.route('**/api/yresonance', async (route) => {
       if (route.request().postDataJSON().action !== 'updateDashboard') return route.fallback();
-      await route.fulfill({
-        status: 409,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ok: false,
-          error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
-        }),
-      });
+      await route.fulfill(conflict);
     });
-    await page.goto('/dashboards/dash_demo/settings');
 
-    const weight = page.getByLabel('Style: border weight');
     await weight.fill('6');
     await weight.blur();
     await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
@@ -300,20 +326,14 @@ test.describe('desktop', () => {
     await page.goto('/dashboards/dash_demo/settings');
     const weight = page.getByLabel('Style: border weight');
     await expect(weight).toHaveValue('2');
+    await leaveReadsUnanswered(page);
 
     const releaseFirstSave = Promise.withResolvers<void>();
     let saves = 0;
     await page.route('**/api/yresonance', async (route) => {
       if (route.request().postDataJSON().action !== 'updateDashboard') return route.fallback();
       if (++saves === 1) await releaseFirstSave.promise;
-      await route.fulfill({
-        status: 409,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ok: false,
-          error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
-        }),
-      });
+      await route.fulfill(conflict);
     });
 
     await weight.fill('6');
@@ -326,6 +346,91 @@ test.describe('desktop', () => {
     await expect(page.getByRole('status', { name: 'Changes could not be saved' })).toBeVisible();
     await expect(weight).toHaveValue('2');
     await expect(corner).toHaveValue('');
+  });
+
+  test('a failed theme save keeps an earlier edit that saved', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
+    await leaveReadsUnanswered(page);
+    const releaseFirstSave = Promise.withResolvers<void>();
+    let saves = 0;
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action !== 'updateDashboard') return route.fallback();
+      if (++saves > 1) return route.fulfill(conflict);
+      await releaseFirstSave.promise;
+      await route.fallback();
+    });
+
+    await weight.fill('6');
+    await weight.blur();
+    const corner = page.getByLabel('Style: border radius');
+    await corner.fill('20');
+    await corner.blur();
+    releaseFirstSave.resolve();
+
+    await expect(page.getByRole('status', { name: 'Changes could not be saved' })).toBeVisible();
+    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { borderWidth: 6 } });
+    await expect(weight).toHaveValue('6');
+    await expect(corner).toHaveValue('');
+  });
+
+  test('an outage during a theme save keeps the form and says the save failed', async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
+    await page.route('**/api/yresonance', async (route) => {
+      const { action } = route.request().postDataJSON();
+      if (action !== 'updateDashboard' && action !== 'getDashboard') return route.fallback();
+      await route.fulfill(outage);
+    });
+
+    const failedRefresh = page.waitForResponse(
+      (response) => response.request().postDataJSON()?.action === 'getDashboard',
+    );
+    await weight.fill('6');
+    await weight.blur();
+    await failedRefresh;
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('status', { name: 'Changes could not be saved' })).toBeVisible();
+    await expect(weight).toHaveValue('');
+  });
+
+  test('leaving settings while a save runs survives a failed refresh', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
+
+    const releaseSave = Promise.withResolvers<void>();
+    let saved = false;
+    await page.route('**/api/yresonance', async (route) => {
+      const { action } = route.request().postDataJSON();
+      if (action === 'updateDashboard') {
+        await releaseSave.promise;
+        saved = true;
+      }
+      if (action === 'getDashboard' && saved) return route.fulfill(outage);
+      await route.fallback();
+    });
+
+    await weight.fill('6');
+    await weight.blur();
+    await page.getByRole('link', { name: state.dashboard.name }).click();
+    await expect(page.getByRole('heading', { name: state.dashboard.name })).toBeVisible();
+
+    const failedRefresh = page.waitForResponse((response) => response.status() === 500);
+    releaseSave.resolve();
+    await failedRefresh;
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('heading', { name: state.dashboard.name })).toBeVisible();
   });
 
   test('a later theme save clears the error of an earlier one', async ({ page }) => {
@@ -341,14 +446,7 @@ test.describe('desktop', () => {
       if (route.request().postDataJSON().action !== 'updateDashboard') return route.fallback();
       if (++saves > 1) return route.fallback();
       await releaseFirstSave.promise;
-      await route.fulfill({
-        status: 409,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ok: false,
-          error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
-        }),
-      });
+      await route.fulfill(conflict);
     });
 
     await weight.fill('6');

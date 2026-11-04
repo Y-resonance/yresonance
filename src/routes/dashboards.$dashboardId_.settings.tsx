@@ -94,8 +94,13 @@ function DashboardSettingsContent() {
     }
   }
 
-  if (dashboardQuery.error) return <ErrorState error={dashboardQuery.error.message} />;
-  if (!payload) return <LoadingState />;
+  // A failed background refresh must not take the form away, only a load with nothing to show.
+  if (!payload)
+    return dashboardQuery.error ? (
+      <ErrorState error={dashboardQuery.error.message} />
+    ) : (
+      <LoadingState />
+    );
   if (!canEdit) return <Navigate to="/dashboards/$dashboardId" params={{ dashboardId }} replace />;
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-8 sm:px-6">
