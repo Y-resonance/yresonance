@@ -18,7 +18,12 @@ import {
 } from '#/domain/control-state';
 import { loadQueryMetadata, loadQueryContext } from './records.server';
 import { queryResultColumns } from '#/domain/query-result';
-import { resolveDateRange, comparisonDateRange } from '#/domain/dates';
+import {
+  comparisonDateRange,
+  invalidRangeMessage,
+  latestQueryableDate,
+  resolveDateRange,
+} from '#/domain/dates';
 import { dateBucketTarget, resolveDateGranularity } from '#/domain/date-granularity';
 import { hashJson } from '#/domain/hash';
 import { widgetDependencyState, queryCacheState } from '#/domain/cache';
@@ -510,6 +515,12 @@ async function prepareWidgetQuery(
   ];
   const dateRange = controlState.dateRange ?? dashboard.defaultDateRange;
   const resolvedDateRange = resolveDateRange(dateRange, dashboard.timezone);
+  // Ranges are cut off at yesterday, so "This month" on the 1st has no complete day yet. Such a
+  // range returns no rows without asking the datasource. Any other reversed range is a bad request.
+  const latest = latestQueryableDate(dashboard.timezone);
+  const noCompleteDays = resolvedDateRange.start > latest && resolvedDateRange.end === latest;
+  if (!noCompleteDays && resolvedDateRange.start > resolvedDateRange.end)
+    throw new ApiError(400, 'invalid_date_range', invalidRangeMessage);
   const bucketTarget = dateBucketTarget(width);
   const comparisonGranularity = resolvedWidgetDateGranularity(
     definition,
@@ -539,6 +550,7 @@ async function prepareWidgetQuery(
       bucketTarget,
       comparisonGranularity,
       resolvedControlState,
+      noCompleteDays,
     },
   };
 }
@@ -559,7 +571,10 @@ async function executeWidgetQuery(
     bucketTarget,
     comparisonGranularity,
     resolvedControlState,
+    noCompleteDays,
   } = query;
+  const comparison = widgetComparison(definition);
+  if (noCompleteDays) return { rows: [], comparisonRows: comparison ? [] : undefined };
   const run = (queryControlState: ControlState) =>
     datasourceOperation(() =>
       connector.executeQuery<Record<string, unknown>>(dataSource, {
@@ -573,7 +588,6 @@ async function executeWidgetQuery(
         dateBucketTarget: bucketTarget,
       }),
     );
-  const comparison = widgetComparison(definition);
   const [rows, comparisonRows] = await Promise.all([
     run(resolvedControlState),
     comparison
@@ -604,7 +618,11 @@ async function colorScaleBounds(
   query: NonNullable<Awaited<ReturnType<typeof prepareWidgetQuery>>['query']>,
 ) {
   const { definition, dataSource, connector } = query;
-  if (definition.type !== 'table' || !definition.metrics.some((metric) => metric.colorScale))
+  if (
+    query.noCompleteDays ||
+    definition.type !== 'table' ||
+    !definition.metrics.some((metric) => metric.colorScale)
+  )
     return undefined;
   const [bounds] = await datasourceOperation(() =>
     connector.executeQuery<Record<string, unknown>>(dataSource, {

@@ -3,6 +3,7 @@ import {
   comparisonDateRange,
   dateRangePresets,
   dateRangeOrderError,
+  withoutToday,
   resolveDateRange,
   tryResolveDateRange,
   updateDateRangeBoundary,
@@ -14,16 +15,16 @@ describe('date range resolution', () => {
       resolveDateRange(
         {
           startDate: {
-            relative: { amount: 1, unit: 'day', direction: 'past', anchor: 'startOfDay' },
+            relative: { amount: 2, unit: 'day', direction: 'past', anchor: 'startOfDay' },
           },
           endDate: {
-            relative: { amount: 0, unit: 'day', direction: 'past', anchor: 'startOfDay' },
+            relative: { amount: 1, unit: 'day', direction: 'past', anchor: 'startOfDay' },
           },
         },
         'Europe/Berlin',
         new Date('2026-08-29T23:30:00Z'),
       ),
-    ).toEqual({ start: '2026-08-29', end: '2026-08-30' });
+    ).toEqual({ start: '2026-08-28', end: '2026-08-29' });
   });
 
   it('honors week anchors before applying the relative offset', () => {
@@ -48,11 +49,11 @@ describe('date range resolution', () => {
     const preset = (id: string) => dateRangePresets.find((item) => item.id === id)!.range;
     expect(resolveDateRange(preset('this-quarter'), 'UTC', now)).toEqual({
       start: '2026-07-01',
-      end: '2026-08-29',
+      end: '2026-08-28',
     });
     expect(resolveDateRange(preset('year-to-date'), 'UTC', now)).toEqual({
       start: '2026-01-01',
-      end: '2026-08-29',
+      end: '2026-08-28',
     });
     expect(resolveDateRange(preset('last-year'), 'UTC', now)).toEqual({
       start: '2025-01-01',
@@ -60,12 +61,54 @@ describe('date range resolution', () => {
     });
   });
 
-  it('counts trailing-day presets inclusively', () => {
+  it('counts trailing-day presets inclusively up to yesterday', () => {
     const lastSeven = dateRangePresets.find((item) => item.id === 'last-7-days')!.range;
     expect(resolveDateRange(lastSeven, 'UTC', new Date('2026-08-29T12:00:00Z'))).toEqual({
-      start: '2026-08-23',
-      end: '2026-08-29',
+      start: '2026-08-22',
+      end: '2026-08-28',
     });
+  });
+
+  it('never resolves past yesterday in the dashboard timezone', () => {
+    const sinceLaunch = { startDate: { fixed: '2026-08-01' }, endDate: { fixed: '2026-12-31' } };
+    expect(
+      resolveDateRange(sinceLaunch, 'Europe/Berlin', new Date('2026-08-29T12:00:00Z')),
+    ).toEqual({ start: '2026-08-01', end: '2026-08-28' });
+    // 23:30 UTC is already the next day in Berlin.
+    expect(
+      resolveDateRange(sinceLaunch, 'Europe/Berlin', new Date('2026-08-29T23:30:00Z')),
+    ).toEqual({ start: '2026-08-01', end: '2026-08-29' });
+  });
+
+  it('moves ranges saved with a today end back by one day', () => {
+    const preset = (id: string) => dateRangePresets.find((item) => item.id === id)!.range;
+    const daysAgo = (amount: number) => ({
+      relative: {
+        amount,
+        unit: 'day' as const,
+        direction: 'past' as const,
+        anchor: 'startOfDay' as const,
+      },
+    });
+    expect(withoutToday({ startDate: daysAgo(6), endDate: daysAgo(0) })).toEqual(
+      preset('last-7-days'),
+    );
+    expect(withoutToday({ startDate: daysAgo(0), endDate: daysAgo(0) })).toEqual(
+      preset('yesterday'),
+    );
+    const thisMonth = {
+      startDate: {
+        relative: {
+          amount: 0,
+          unit: 'month' as const,
+          direction: 'past' as const,
+          anchor: 'startOfMonth' as const,
+        },
+      },
+      endDate: daysAgo(0),
+    };
+    expect(withoutToday(thisMonth)).toEqual(preset('this-month'));
+    expect(withoutToday(preset('last-month'))).toEqual(preset('last-month'));
   });
 
   it.each([
