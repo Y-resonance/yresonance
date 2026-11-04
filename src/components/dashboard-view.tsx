@@ -108,7 +108,10 @@ export function DashboardView({
     if (!defaultDateRange) return;
     setControlState((current) => ({ ...current, dateRange: dateRange ?? defaultDateRange }));
   }, [dateRange, defaultDateRange]);
-  const ordered = [...(activeDashboardPage(dashboard, pageId)?.widgets ?? [])].sort(
+  const widgets = activeDashboardPage(dashboard, pageId)?.widgets ?? [];
+  // DOM order follows reading order for the stacked phone layout and screen readers. On larger
+  // screens overlapping widgets paint in stored order instead, so later widgets sit on top.
+  const ordered = [...widgets].sort(
     (left, right) => left.layout.y - right.layout.y || left.layout.x - right.layout.x,
   );
   const controls = ordered.filter((widget) => isControlWidget(widget));
@@ -116,11 +119,12 @@ export function DashboardView({
   const renderWidget = (widget: DashboardWidget) => (
     <div
       key={widget.id}
-      className="min-w-0 md:[grid-column:var(--grid-column)] md:[grid-row:var(--grid-row)] [&>[data-slot=card]]:h-full"
+      className="min-w-0 md:z-(--grid-layer) md:[grid-column:var(--grid-column)] md:[grid-row:var(--grid-row)] [&>[data-slot=card]]:h-full"
       style={
         {
           '--grid-column': `${widget.layout.x + 1} / span ${Math.min(widget.layout.width, 12)}`,
           '--grid-row': `${widget.layout.y + 1} / span ${widget.layout.height}`,
+          '--grid-layer': widgets.indexOf(widget),
         } as CSSProperties
       }
     >
@@ -138,7 +142,7 @@ export function DashboardView({
   );
   return (
     <div
-      className="grid grid-cols-1 gap-4 md:auto-rows-[var(--grid-row-height)] md:grid-cols-12 md:gap-[var(--grid-gap)] md:p-[var(--grid-gap)]"
+      className="grid grid-cols-1 gap-4 md:isolate md:auto-rows-[var(--grid-row-height)] md:grid-cols-12 md:gap-[var(--grid-gap)] md:p-[var(--grid-gap)]"
       style={
         {
           '--grid-row-height': `${DASHBOARD_GRID.rowHeight}px`,
