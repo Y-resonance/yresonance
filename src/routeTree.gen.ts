@@ -24,6 +24,7 @@ import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiConnectorFileTokenRouteImport } from './routes/api.connector-file.$token'
 import { Route as ApiDatasourceUploadTokenRouteImport } from './routes/api.datasource-upload.$token'
+import { Route as DashboardsDashboardIdSettingsRouteImport } from './routes/dashboards.$dashboardId_.settings'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -102,6 +103,12 @@ const ApiDatasourceUploadTokenRoute =
     path: '/api/datasource-upload/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardsDashboardIdSettingsRoute =
+  DashboardsDashboardIdSettingsRouteImport.update({
+    id: '/dashboards/$dashboardId_/settings',
+    path: '/dashboards/$dashboardId/settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiOauthGoogleCallbackRoute = ApiOauthGoogleCallbackRouteImport.update({
   id: '/api/oauth/google/callback',
   path: '/api/oauth/google/callback',
@@ -124,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/dashboards/$dashboardId/settings': typeof DashboardsDashboardIdSettingsRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -142,6 +150,7 @@ export interface FileRoutesByTo {
   '/datasources': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/dashboards/$dashboardId/settings': typeof DashboardsDashboardIdSettingsRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
 }
 export interface FileRoutesById {
@@ -161,6 +170,7 @@ export interface FileRoutesById {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/dashboards/$dashboardId_/settings': typeof DashboardsDashboardIdSettingsRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/dashboards/$dashboardId/settings'
     | '/api/oauth/google/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/datasources'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/dashboards/$dashboardId/settings'
     | '/api/oauth/google/callback'
   id:
     | '__root__'
@@ -217,6 +229,7 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/dashboards/$dashboardId_/settings'
     | '/api/oauth/google/callback'
   fileRoutesById: FileRoutesById
 }
@@ -236,6 +249,7 @@ export interface RootRouteChildren {
   DatasourcesIndexRoute: typeof DatasourcesIndexRoute
   ApiConnectorFileTokenRoute: typeof ApiConnectorFileTokenRoute
   ApiDatasourceUploadTokenRoute: typeof ApiDatasourceUploadTokenRoute
+  DashboardsDashboardIdSettingsRoute: typeof DashboardsDashboardIdSettingsRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
 }
 
@@ -346,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDatasourceUploadTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboards/$dashboardId_/settings': {
+      id: '/dashboards/$dashboardId_/settings'
+      path: '/dashboards/$dashboardId/settings'
+      fullPath: '/dashboards/$dashboardId/settings'
+      preLoaderRoute: typeof DashboardsDashboardIdSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/oauth/google/callback': {
       id: '/api/oauth/google/callback'
       path: '/api/oauth/google/callback'
@@ -372,6 +393,7 @@ const rootRouteChildren: RootRouteChildren = {
   DatasourcesIndexRoute: DatasourcesIndexRoute,
   ApiConnectorFileTokenRoute: ApiConnectorFileTokenRoute,
   ApiDatasourceUploadTokenRoute: ApiDatasourceUploadTokenRoute,
+  DashboardsDashboardIdSettingsRoute: DashboardsDashboardIdSettingsRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport

@@ -20,17 +20,15 @@ const themeColorLabels: Record<(typeof themeColorSchema.options)[number], string
 };
 
 /**
- * "Background and border" for one widget or for the theme's widget defaults. Unset fields show the
- * value they inherit in muted text and have no reset, so it is visible where a value comes from.
+ * The style of one widget or the theme's widget defaults. Unset fields show the value they inherit
+ * in muted text and have no reset, so it is visible where a value comes from.
  */
 export function AppearanceSettings({
-  legend,
   value,
   inherited,
   theme,
   onChange,
 }: {
-  legend: string;
   value: Appearance | undefined;
   /** What every unset field falls back to: the theme's widget defaults, then the app default. */
   inherited: ResolvedAppearance;
@@ -53,13 +51,13 @@ export function AppearanceSettings({
   );
   return (
     <Field>
-      <FieldLabel>{legend}</FieldLabel>
+      <FieldLabel>Style</FieldLabel>
       <div className="grid grid-cols-2 gap-2">
         {row(
           'background',
           'Background',
           <ColorPicker
-            label={`${legend}: background`}
+            label={`Style: background`}
             value={value?.background}
             inherited={inherited.background}
             theme={theme}
@@ -70,7 +68,7 @@ export function AppearanceSettings({
           'backgroundOpacity',
           'Opacity %',
           <NumberSetting
-            label={`${legend}: background opacity`}
+            label={`Style: background opacity`}
             value={value?.backgroundOpacity}
             inherited={inherited.backgroundOpacity}
             max={100}
@@ -81,7 +79,7 @@ export function AppearanceSettings({
           'borderColor',
           'Border color',
           <ColorPicker
-            label={`${legend}: border color`}
+            label={`Style: border color`}
             value={value?.borderColor}
             inherited={inherited.borderColor}
             theme={theme}
@@ -92,7 +90,7 @@ export function AppearanceSettings({
           'borderWidth',
           'Border weight',
           <NumberSetting
-            label={`${legend}: border weight`}
+            label={`Style: border weight`}
             value={value?.borderWidth}
             inherited={inherited.borderWidth}
             max={16}
@@ -103,7 +101,7 @@ export function AppearanceSettings({
           'borderStyle',
           'Border style',
           <NativeSelect
-            aria-label={`${legend}: border style`}
+            aria-label={`Style: border style`}
             className={cn('w-full', value?.borderStyle === undefined && 'text-muted-foreground')}
             value={value?.borderStyle ?? inherited.borderStyle}
             onChange={(event) =>
@@ -124,7 +122,7 @@ export function AppearanceSettings({
           'borderRadius',
           'Radius',
           <NumberSetting
-            label={`${legend}: border radius`}
+            label={`Style: border radius`}
             value={value?.borderRadius}
             inherited={inherited.borderRadius}
             max={32}
@@ -136,7 +134,7 @@ export function AppearanceSettings({
           'Shadow',
           <div className="flex h-8 items-center">
             <Switch
-              aria-label={`${legend}: shadow`}
+              aria-label={`Style: shadow`}
               className={cn(value?.shadow === undefined && 'opacity-60')}
               checked={value?.shadow ?? inherited.shadow}
               onCheckedChange={(shadow) => update('shadow', shadow)}
@@ -211,7 +209,6 @@ export function ThemeSettings({
         </SettingRow>
       </div>
       <AppearanceSettings
-        legend="Widget defaults"
         value={theme?.widgetDefaults}
         inherited={defaultAppearance}
         theme={theme}

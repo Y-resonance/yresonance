@@ -41,6 +41,7 @@ import {
   SelectItem,
 } from '#/components/ui/select';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
+import { Separator } from '#/components/ui/separator';
 import {
   patchFilterCondition,
   filterInputValue,
@@ -338,8 +339,8 @@ export function WidgetSettings({
           ) : null}
         </>
       ) : null}
+      <Separator />
       <AppearanceSettings
-        legend="Background and border"
         value={definition.appearance}
         inherited={resolveAppearance(theme, undefined)}
         theme={theme}
@@ -708,7 +709,7 @@ function TextStyleSettings({
                   <span
                     aria-hidden="true"
                     className={cn(
-                      'size-2.5 shrink-0 rounded-full',
+                      'size-2.5 shrink-0 self-center rounded-full',
                       swatches[option] ?? 'bg-transparent',
                     )}
                   />

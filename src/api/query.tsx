@@ -94,7 +94,7 @@ export function useApiQuery<T>(
   const key = options.revision === undefined ? base.queryKey : [...base.queryKey, options.revision];
   const keyString = JSON.stringify(key);
   const setData = useCallback(
-    (updater: (current: T | undefined) => T) =>
+    (updater: (current: T | undefined) => T | undefined) =>
       client.setQueryData<T>(JSON.parse(keyString), updater),
     [client, keyString],
   );

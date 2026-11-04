@@ -97,6 +97,8 @@ explain. Update it when a decision changes, not when an implementation detail do
   brand chart palette leaves semantic colours alone. Themes belong to the dashboard; a later
   workspace theme should be copied into new dashboards, never inherited live, so finished client
   reports never restyle silently.
+- Dashboard-wide settings live on their own page, `/dashboards/:id/settings`, opened next to Share.
+  The builder's inspector only edits the selected widget.
 - `updateWidget` takes a full definition. No deep patches, because patches on arrays such as
   `metrics` are ambiguous.
 - `addWidget` accepts only width and height and appends at the bottom. Agents do not compute

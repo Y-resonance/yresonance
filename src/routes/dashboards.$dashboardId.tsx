@@ -5,18 +5,15 @@ import {
 import { DashboardPages } from '#/components/dashboard-pages';
 import { dashboardWidgets } from '#/domain/schema';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
-import { createFileRoute } from '@tanstack/react-router';
-import { CloudAlertIcon, CloudCheckIcon, LoaderCircleIcon } from 'lucide-react';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { SettingsIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
-import { useApi, useApiQuery } from '#/api/query';
+import { useApi } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
-import {
-  DashboardBuilder,
-  type BuilderDataSource,
-  type DashboardSaveStatus,
-} from '#/components/dashboard-builder';
-import { DashboardSharing, type SharingState } from '#/components/dashboard-sharing';
+import { DashboardBuilder, type DashboardSaveStatus } from '#/components/dashboard-builder';
+import { type DashboardPayload, useDashboardPayload } from '#/components/dashboard-payload';
+import { DashboardSharing } from '#/components/dashboard-sharing';
 import {
   DashboardView,
   dashboardDateControlRange,
@@ -25,6 +22,8 @@ import {
 import { DataAvailability } from '#/components/data-availability';
 import { DuplicateDashboard } from '#/components/duplicate-dashboard';
 import { ErrorState, LoadingState } from '#/components/request-state';
+import { SaveStatusIndicator } from '#/components/save-status-indicator';
+import { buttonVariants } from '#/components/ui/button';
 import { Label } from '#/components/ui/label';
 import { Switch } from '#/components/ui/switch';
 import {
@@ -37,8 +36,9 @@ import {
   initialAgentModeState,
   selectAgentMode,
 } from '#/domain/agent-mode';
-import type { ControlState, DashboardDocument } from '#/domain/schema';
+import type { ControlState } from '#/domain/schema';
 import { pageTitle, usePageTitle } from '#/lib/page-title';
+import { cn } from '#/lib/utils';
 import { useWebMcpTools } from '#/webmcp/use-webmcp-tools';
 
 export const Route = createFileRoute('/dashboards/$dashboardId')({
@@ -62,13 +62,6 @@ export const Route = createFileRoute('/dashboards/$dashboardId')({
   }),
 });
 
-interface DashboardPayload {
-  dashboard: DashboardDocument;
-  role: 'admin' | 'editor' | 'viewer';
-  dataSources: BuilderDataSource[];
-  sharing?: SharingState;
-}
-
 function DashboardPage() {
   return (
     <AppShell requireWorkspace>
@@ -82,11 +75,7 @@ function DashboardContent() {
   const { dashboardId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const dashboardQuery = useApiQuery<DashboardPayload>({
-    action: 'getDashboard',
-    dashboardId,
-    includeSharing: true,
-  });
+  const dashboardQuery = useDashboardPayload(dashboardId);
   const payload = dashboardQuery.data;
   const [builderControlState, setBuilderControlState] = useState<ControlState>({});
   const controlDashboardIdRef = useRef<string>(undefined);
@@ -232,6 +221,16 @@ function DashboardContent() {
                       sharing={payload.sharing ?? { links: [], grants: [] }}
                       refresh={refreshSharing}
                     />
+                    <Link
+                      className={cn(buttonVariants({ variant: 'outline', size: 'icon' }))}
+                      aria-label="Settings"
+                      title="Settings"
+                      to="/dashboards/$dashboardId/settings"
+                      params={{ dashboardId }}
+                      search={{ page: search.page }}
+                    >
+                      <SettingsIcon />
+                    </Link>
                   </div>
                 ) : null}
               </div>
@@ -282,31 +281,5 @@ function DashboardContent() {
         )}
       </main>
     </DashboardQueryRefresh>
-  );
-}
-
-function SaveStatusIndicator({ status }: { status: DashboardSaveStatus }) {
-  const label =
-    status === 'saving'
-      ? 'Saving changes'
-      : status === 'error'
-        ? 'Changes could not be saved'
-        : 'Changes saved';
-
-  return (
-    <span
-      className="grid size-8 place-items-center text-muted-foreground"
-      role="status"
-      aria-label={label}
-      title={label}
-    >
-      {status === 'saving' ? (
-        <LoaderCircleIcon className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />
-      ) : status === 'error' ? (
-        <CloudAlertIcon className="size-4 text-destructive" aria-hidden />
-      ) : (
-        <CloudCheckIcon className="size-4" aria-hidden />
-      )}
-    </span>
   );
 }

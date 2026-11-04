@@ -1,18 +1,8 @@
 import { dashboardDateControlRange } from '#/components/dashboard-view';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from './ui/select';
-import { Field, FieldLabel } from './ui/field';
 import { dashboardCanvas, type DashboardCanvas } from '#/domain/dashboard-pages';
 import { dashboardControlWidgets, dashboardWidgets } from '#/domain/schema';
 import {
   type DashboardDocument,
-  type DashboardTheme,
   type ControlState,
   type DashboardWidget,
   type DateRange,
@@ -65,7 +55,6 @@ import {
   type PendingCanvasWidget,
 } from './dashboard-builder/canvas-layout';
 import { WidgetSettings } from './dashboard-builder/widget-inspector';
-import { ThemeSettings } from './dashboard-builder/appearance-settings';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
@@ -107,9 +96,9 @@ export function DashboardBuilder({
   );
   const draggedType = useRef<BuilderType | undefined>(undefined);
   const saving = pendingOperations > 0;
-  // Theme and appearance fields save on blur, so locking the inspector for those saves would take
-  // focus from the next field and drop what is typed there. Their saves are queued and never
-  // change a query, so only other saves lock it.
+  // Appearance fields save on blur, so locking the inspector for those saves would take focus from
+  // the next field and drop what is typed there. Their saves are queued and never change a query,
+  // so only other saves lock it.
   const inspectorLocked = pendingOperations > pendingRestyles;
   useEffect(() => {
     setControlState((current) => reconcileDashboardControls(dashboard, current));
@@ -416,33 +405,6 @@ export function DashboardBuilder({
     }
   }
 
-  async function updateTheme(theme: DashboardTheme) {
-    const revision = ++mutationRevisionRef.current;
-    const previous = dashboardRef.current.theme;
-    updateDashboard((current) => ({ ...current, theme }));
-    startSaving(true);
-    setError(undefined);
-    try {
-      try {
-        await enqueueMutation(() =>
-          callApi({ action: 'updateDashboard', dashboardId: dashboardRef.current.id, theme }),
-        );
-      } catch (caught) {
-        // Only undo when no later theme edit has replaced this one in the meantime.
-        updateDashboard((current) =>
-          current.theme === theme ? { ...current, theme: previous } : current,
-        );
-        throw caught;
-      }
-      if (revision === mutationRevisionRef.current)
-        await refresh(() => revision === mutationRevisionRef.current);
-    } catch (caught) {
-      setError(message(caught));
-    } finally {
-      finishSaving(true);
-    }
-  }
-
   async function removeWidget(widget: DashboardWidget) {
     const revision = ++mutationRevisionRef.current;
     startSaving();
@@ -483,35 +445,6 @@ export function DashboardBuilder({
     }
   }
 
-  async function moveToPage(widget: DashboardWidget, targetPageId: string) {
-    const target = dashboardRef.current.pages.find((page) => page.id === targetPageId);
-    if (!target) return;
-    startSaving();
-    setError(undefined);
-    try {
-      await enqueueMutation(() =>
-        callApi({
-          action: 'moveWidget',
-          dashboardId: dashboardRef.current.id,
-          widgetId: widget.id,
-          pageId: target.id,
-          placement: appendPlacement(
-            target.widgets,
-            widget.layout.width,
-            widget.layout.height,
-            dashboardRef.current.columns,
-          ),
-        }),
-      );
-      setSelectedId(undefined);
-      await refresh();
-    } catch (caught) {
-      setError(message(caught));
-    } finally {
-      finishSaving();
-    }
-  }
-
   function saveRowInsertion(cut: number) {
     const next = insertRow(dashboardRef.current.widgets, dashboardRef.current.canvasRows, cut);
     if (!next) return;
@@ -524,71 +457,37 @@ export function DashboardBuilder({
     void saveLayout(layoutFor(next.widgets), next.canvasRows);
   }
 
-  const themePanel = (
-    <ThemeSettings theme={dashboard.theme} onChange={(theme) => void updateTheme(theme)} />
-  );
   const inspectorPanel = (
     <fieldset disabled={inspectorLocked} className="min-w-0 border-0 p-0">
       {selected ? (
-        <>
-          <WidgetSettings
-            dashboardId={dashboard.id}
-            dashboardDefaultDateRange={dashboard.defaultDateRange}
-            theme={dashboard.theme}
-            timezone={dashboard.timezone}
-            widget={selected}
-            dataSources={dataSources}
-            onClose={() => setSelectedId(undefined)}
-            onChange={(definition, libraryMetric) =>
-              updateWidget(selected, definition, libraryMetric)
-            }
-            onRemoveEmptyRowAbove={
-              dashboard.canvasRows > 10 &&
-              selected.layout.y > 0 &&
-              isRowEmpty(dashboard.widgets, selected.layout.y - 1)
-                ? () => saveRowRemoval(selected.layout.y - 1)
-                : undefined
-            }
-            onRemoveEmptyRowBelow={
-              dashboard.canvasRows > 10 &&
-              selected.layout.y + selected.layout.height < dashboard.canvasRows &&
-              isRowEmpty(dashboard.widgets, selected.layout.y + selected.layout.height)
-                ? () => saveRowRemoval(selected.layout.y + selected.layout.height)
-                : undefined
-            }
-          />
-          {dashboard.pages.length > 1 ? (
-            <Field className="mt-4">
-              <FieldLabel htmlFor="move-widget-page">Move to page</FieldLabel>
-              <Select
-                value={null}
-                onValueChange={(value) => {
-                  if (value) void moveToPage(selected, value);
-                }}
-              >
-                <SelectTrigger id="move-widget-page">
-                  <SelectValue placeholder="Choose page" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {dashboard.pages
-                      .filter((page) => page.id !== pageId)
-                      .map((page) => (
-                        <SelectItem key={page.id} value={page.id}>
-                          {page.name}
-                        </SelectItem>
-                      ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-          ) : null}
-        </>
+        <WidgetSettings
+          dashboardId={dashboard.id}
+          dashboardDefaultDateRange={dashboard.defaultDateRange}
+          theme={dashboard.theme}
+          timezone={dashboard.timezone}
+          widget={selected}
+          dataSources={dataSources}
+          onClose={() => setSelectedId(undefined)}
+          onChange={(definition, libraryMetric) =>
+            updateWidget(selected, definition, libraryMetric)
+          }
+          onRemoveEmptyRowAbove={
+            dashboard.canvasRows > 10 &&
+            selected.layout.y > 0 &&
+            isRowEmpty(dashboard.widgets, selected.layout.y - 1)
+              ? () => saveRowRemoval(selected.layout.y - 1)
+              : undefined
+          }
+          onRemoveEmptyRowBelow={
+            dashboard.canvasRows > 10 &&
+            selected.layout.y + selected.layout.height < dashboard.canvasRows &&
+            isRowEmpty(dashboard.widgets, selected.layout.y + selected.layout.height)
+              ? () => saveRowRemoval(selected.layout.y + selected.layout.height)
+              : undefined
+          }
+        />
       ) : (
-        <div className="flex flex-col gap-5">
-          <p className="text-sm text-muted-foreground">Select a widget to edit it.</p>
-          {themePanel}
-        </div>
+        <p className="text-sm text-muted-foreground">Select a widget to edit it.</p>
       )}
     </fieldset>
   );
@@ -628,18 +527,7 @@ export function DashboardBuilder({
                   Every builder action is available without drag and resize.
                 </SheetDescription>
               </SheetHeader>
-              <div className="px-4 pb-6">
-                {selected ? (
-                  inspectorPanel
-                ) : (
-                  <div className="flex flex-col gap-6">
-                    {catalogPanel}
-                    <fieldset disabled={inspectorLocked} className="min-w-0 border-0 p-0">
-                      {themePanel}
-                    </fieldset>
-                  </div>
-                )}
-              </div>
+              <div className="px-4 pb-6">{selected ? inspectorPanel : catalogPanel}</div>
             </SheetContent>
           </Sheet>
         </div>

@@ -11,7 +11,8 @@ GUI go through one validated path. Ids the page already knows, like the open das
 filled in by the page and removed from the schema the agent sees. The registered action,
 dashboard ID, and share context are fixed by the page even when tool arguments contain those keys.
 
-Tools by page, read-only first, then writes:
+Tools by page, read-only first, then writes. Dashboard settings registers the same tools as the
+dashboard editor, so an agent can set the theme from either page:
 
 - Dashboards list: `listDashboards`, `listLibraryMetrics`. Writes: `createDashboard`,
   `updateDashboard`, `duplicateDashboard`, `shareDashboard`, `deleteDashboard`.

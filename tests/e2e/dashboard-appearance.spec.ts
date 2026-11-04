@@ -24,15 +24,26 @@ test.describe('desktop', () => {
     const builderCard = (widgetId: string) =>
       page.locator(`[data-widget-id="${widgetId}"] [data-slot="card"]`);
 
-    const themeRadius = settings.getByLabel('Widget defaults: border radius');
+    // The link is a real anchor styled as a button, so it has to match the Share button beside it.
+    const settingsLink = page.getByRole('link', { name: 'Settings' });
+    const borderColor = (locator: Locator) =>
+      locator.evaluate((element) => getComputedStyle(element).borderTopColor);
+    expect(await borderColor(settingsLink)).toBe(
+      await borderColor(page.getByRole('button', { name: 'Share' })),
+    );
+    await settingsLink.click();
+    await expect(page).toHaveURL(/\/dashboards\/dash_demo\/settings/);
+    const themeRadius = page.getByLabel('Style: border radius');
     await themeRadius.fill('0');
     await themeRadius.press('Enter');
-    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { borderRadius: 0 } });
+    await page.getByRole('link', { name: state.dashboard.name }).click();
+    await expect(page).toHaveURL(/\/dashboards\/dash_demo(\?|$)/);
     await expect.poll(() => radius(builderCard('w_spend'))).toBe('0px');
     await expect.poll(() => radius(builderCard('w_campaigns'))).toBe('0px');
 
     await page.getByRole('button', { name: 'Edit Media spend' }).click();
-    const widgetRadius = settings.getByLabel('Background and border: border radius');
+    const widgetRadius = settings.getByLabel('Style: border radius');
     // Unset, the field shows what it inherits from the theme.
     await expect(widgetRadius).toHaveAttribute('placeholder', '0');
     await widgetRadius.fill('20');
@@ -58,10 +69,8 @@ test.describe('desktop', () => {
   test('a value above the limit snaps to it instead of being discarded', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
     const state = await mockYresonanceApi(page, { role: 'editor' });
-    await page.goto('/dashboards/dash_demo');
-    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
-
-    const weight = page.getByRole('complementary').getByLabel('Widget defaults: border weight');
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByLabel('Style: border weight');
     await weight.fill('99');
     await weight.blur();
     await expect(weight).toHaveValue('16');
@@ -73,70 +82,136 @@ test.describe('desktop', () => {
     await expect(weight).toHaveValue('16');
   });
 
-  for (const scope of [
-    { name: 'theme', legend: 'Widget defaults', selectWidget: false },
-    { name: 'widget', legend: 'Background and border', selectWidget: true },
-  ]) {
-    // Saving the first field must neither take focus from the second one nor let the refresh that
-    // follows the first save overwrite the second edit.
-    test(`${scope.name} fields keep edits made one after the other`, async ({ page }) => {
-      test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
-      const state = await mockYresonanceApi(page, { role: 'editor' });
-      await page.goto('/dashboards/dash_demo');
-      await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
-      if (scope.selectWidget) await page.getByRole('button', { name: 'Edit Media spend' }).click();
+  // Saving the first field must neither take focus from the second one nor let the refresh that
+  // follows the first save overwrite the second edit.
+  test('widget fields keep edits made one after the other', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
 
-      const secondSaveSent = Promise.withResolvers<void>();
-      const releaseRefresh = Promise.withResolvers<void>();
-      const releaseSecondSave = Promise.withResolvers<void>();
-      let saves = 0;
-      await page.route('**/api/yresonance', async (route) => {
-        const { action } = route.request().postDataJSON();
-        if (action === 'getDashboard' && saves === 1) await releaseRefresh.promise;
-        if (action === 'updateDashboard' || action === 'updateWidget') {
-          saves += 1;
-          if (saves === 2) {
-            secondSaveSent.resolve();
-            await releaseSecondSave.promise;
-          }
+    const secondSaveSent = Promise.withResolvers<void>();
+    const releaseRefresh = Promise.withResolvers<void>();
+    const releaseSecondSave = Promise.withResolvers<void>();
+    let saves = 0;
+    await page.route('**/api/yresonance', async (route) => {
+      const { action } = route.request().postDataJSON();
+      if (action === 'getDashboard' && saves === 1) await releaseRefresh.promise;
+      if (action === 'updateWidget') {
+        saves += 1;
+        if (saves === 2) {
+          secondSaveSent.resolve();
+          await releaseSecondSave.promise;
         }
-        await route.fallback();
-      });
-
-      const settings = page.getByRole('complementary');
-      const weight = settings.getByRole('spinbutton', { name: `${scope.legend}: border weight` });
-      const corner = settings.getByRole('spinbutton', { name: `${scope.legend}: border radius` });
-      await weight.click();
-      await page.keyboard.type('6');
-      await corner.click();
-      await page.keyboard.type('20');
-      await expect(corner).toBeFocused();
-      await page.mouse.click(5, 5);
-      await secondSaveSent.promise;
-
-      // The refresh answers with only the first edit, while the second one is still saving.
-      const staleRefresh = page.waitForResponse(
-        (response) => response.request().postDataJSON()?.action === 'getDashboard',
-      );
-      releaseRefresh.resolve();
-      await staleRefresh;
-      // Nothing visible marks a dropped response, so give an applied one time to render.
-      await page.waitForTimeout(300);
-      await expect(corner).toHaveValue('20');
-      await expect(weight).toHaveValue('6');
-
-      releaseSecondSave.resolve();
-      const stored = () =>
-        scope.selectWidget
-          ? state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.definition
-              .appearance
-          : state.dashboard.theme?.widgetDefaults;
-      await expect.poll(stored).toEqual({ borderWidth: 6, borderRadius: 20 });
-      await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
-      await expect(corner).toHaveValue('20');
-      await expect(weight).toHaveValue('6');
+      }
+      await route.fallback();
     });
-  }
+
+    const settings = page.getByRole('complementary');
+    const weight = settings.getByRole('spinbutton', {
+      name: 'Style: border weight',
+    });
+    const corner = settings.getByRole('spinbutton', {
+      name: 'Style: border radius',
+    });
+    await weight.click();
+    await page.keyboard.type('6');
+    await corner.click();
+    await page.keyboard.type('20');
+    await expect(corner).toBeFocused();
+    await page.mouse.click(5, 5);
+    await secondSaveSent.promise;
+
+    // The refresh answers with only the first edit, while the second one is still saving.
+    const staleRefresh = page.waitForResponse(
+      (response) => response.request().postDataJSON()?.action === 'getDashboard',
+    );
+    releaseRefresh.resolve();
+    await staleRefresh;
+    // Nothing visible marks a dropped response, so give an applied one time to render.
+    await page.waitForTimeout(300);
+    await expect(corner).toHaveValue('20');
+    await expect(weight).toHaveValue('6');
+
+    releaseSecondSave.resolve();
+    await expect
+      .poll(
+        () =>
+          state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.definition
+            .appearance,
+      )
+      .toEqual({ borderWidth: 6, borderRadius: 20 });
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await expect(corner).toHaveValue('20');
+    await expect(weight).toHaveValue('6');
+  });
+
+  test('settings fields keep edits made while an earlier one is saving', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByRole('spinbutton', { name: 'Style: border weight' });
+    const corner = page.getByRole('spinbutton', { name: 'Style: border radius' });
+    await expect(weight).toBeVisible();
+
+    const releaseFirstSave = Promise.withResolvers<void>();
+    let saves = 0;
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action === 'updateDashboard' && ++saves === 1)
+        await releaseFirstSave.promise;
+      await route.fallback();
+    });
+
+    await weight.click();
+    await page.keyboard.type('6');
+    await corner.click();
+    await page.keyboard.type('20');
+    await expect(corner).toBeFocused();
+    await page.mouse.click(5, 5);
+    await expect(page.getByRole('status', { name: 'Saving changes' })).toBeVisible();
+
+    releaseFirstSave.resolve();
+    await expect
+      .poll(() => state.dashboard.theme?.widgetDefaults)
+      .toEqual({ borderWidth: 6, borderRadius: 20 });
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await expect(weight).toHaveValue('6');
+    await expect(corner).toHaveValue('20');
+  });
+
+  test('a theme save that fails shows why and restores the field', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    await mockYresonanceApi(page, { role: 'editor' });
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action !== 'updateDashboard') return route.fallback();
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: false,
+          error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
+        }),
+      });
+    });
+    await page.goto('/dashboards/dash_demo/settings');
+
+    const weight = page.getByLabel('Style: border weight');
+    await weight.fill('6');
+    await weight.blur();
+    await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
+    await expect(page.getByRole('status', { name: 'Changes could not be saved' })).toBeVisible();
+    await expect(weight).toHaveValue('');
+  });
+
+  test('viewers have no settings and are sent back to the dashboard', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The route behaves the same on mobile.');
+    await mockYresonanceApi(page, { role: 'viewer' });
+    await page.goto('/dashboards/dash_demo/settings');
+    await expect(page).toHaveURL(/\/dashboards\/dash_demo(\?|$)/);
+    await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+  });
 });
 
 test('the mobile builder canvas uses the dashboard theme', async ({ page }) => {
