@@ -105,6 +105,12 @@ Deployments run one at a time and skip commits that are no longer the head of `m
 
 Query containers are constrained to Western Europe (`WEUR`) in production and previews.
 
+The `IMAGES` binding resizes dashboard images. It is declared at the top level, in `env.preview`,
+and in the `previews` template that `scripts/preview-resources.ts` copies, because bindings are not
+inherited. The account's 5,000 free unique transformations per month are shared by production and
+every preview; past that, the free plan fails transformations with 9422 and the Worker serves the
+original image.
+
 Workers Builds handles automatic branch-preview deployment. Its production build settings exclude
 all paths (`path_excludes: ["*"]`) to prevent independent production deployments on push.
 GitHub Actions runs checks, deploys production, and deletes closed PR resources; it does not deploy previews.

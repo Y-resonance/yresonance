@@ -1,4 +1,5 @@
-import { dashboardDateControlRange } from '#/components/dashboard-view';
+import { DashboardAssetsProvider, dashboardDateControlRange } from '#/components/dashboard-view';
+import type { ImageAsset } from '#/domain/image-assets';
 import {
   Select,
   SelectTrigger,
@@ -68,7 +69,19 @@ import { LayerSettings } from './dashboard-builder/layer-settings';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
+/** The editor canvas, catalog and inspector. `assets` sizes image widgets (see getDashboard). */
 export function DashboardBuilder({
+  assets,
+  ...props
+}: Parameters<typeof Builder>[0] & { assets?: ImageAsset[] }) {
+  return (
+    <DashboardAssetsProvider assets={assets}>
+      <Builder {...props} />
+    </DashboardAssetsProvider>
+  );
+}
+
+function Builder({
   dashboard: initialDashboard,
   pageId,
   controlState,

@@ -38,6 +38,7 @@ import {
   selectAgentMode,
 } from '#/domain/agent-mode';
 import type { ControlState, DashboardDocument } from '#/domain/schema';
+import type { ImageAsset } from '#/domain/image-assets';
 import { pageTitle, usePageTitle } from '#/lib/page-title';
 import { useWebMcpTools } from '#/webmcp/use-webmcp-tools';
 
@@ -66,6 +67,7 @@ interface DashboardPayload {
   dashboard: DashboardDocument;
   role: 'admin' | 'editor' | 'viewer';
   dataSources: BuilderDataSource[];
+  assets?: ImageAsset[];
   sharing?: SharingState;
 }
 
@@ -250,6 +252,7 @@ function DashboardContent() {
                   dashboard={payload.dashboard}
                   pageId={activePage.id}
                   dataSources={payload.dataSources}
+                  assets={payload.assets}
                   refresh={refresh}
                   onSaveStatusChange={setSaveStatus}
                 />
@@ -257,6 +260,7 @@ function DashboardContent() {
                 <DashboardView
                   dashboard={displayedDashboard!}
                   pageId={activePage.id}
+                  assets={payload.assets}
                   dateRange={parseDateRangeSearch(search.dateRange)}
                   onDateRangeChange={(range) => {
                     const defaultRange = dashboardDateControlRange(payload.dashboard);

@@ -51,6 +51,7 @@ import {
 } from './formulas.server';
 import { authorizeDashboard } from './dashboard-access.server';
 import { shareDashboard } from './sharing.server';
+import { listAssets } from './image-assets.server';
 import {
   listDatasourceConnections,
   beginDatasourceConnection,
@@ -165,6 +166,8 @@ async function dispatchRequest(request: ApiRequest): Promise<unknown> {
       );
     case 'listDatasourceProviders':
       return listDatasourceProviders();
+    case 'listAssets':
+      return listAssets(request.dashboardId);
     case 'listDataSources':
       return listDataSources();
     case 'listLibraryMetrics':

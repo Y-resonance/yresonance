@@ -16,6 +16,7 @@ import {
   sameDateRange,
 } from '#/domain/date-range-search';
 import type { DashboardDocument } from '#/domain/schema';
+import type { ImageAsset } from '#/domain/image-assets';
 import { pageTitle, usePageTitle } from '#/lib/page-title';
 import { useWebMcpTools } from '#/webmcp/use-webmcp-tools';
 
@@ -40,7 +41,10 @@ function SharedDashboard() {
   const { token } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data, error: queryError } = useApiQuery<{ dashboard: DashboardDocument }>({
+  const { data, error: queryError } = useApiQuery<{
+    dashboard: DashboardDocument;
+    assets?: ImageAsset[];
+  }>({
     action: 'getSharedDashboard',
     shareToken: token,
   });
@@ -88,6 +92,7 @@ function SharedDashboard() {
             <DashboardView
               pageId={activeDashboardPage(dashboard, search.page)?.id}
               dashboard={dashboard}
+              assets={data?.assets}
               shareToken={token}
               dateRange={parseDateRangeSearch(search.dateRange)}
               onDateRangeChange={(range) => {

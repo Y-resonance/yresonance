@@ -17,7 +17,7 @@ Tools by page, read-only first, then writes:
   `updateDashboard`, `duplicateDashboard`, `shareDashboard`, `deleteDashboard`.
 - Dashboard editor: `listDashboards`, `listLibraryMetrics`, `getDashboard`, `queryWidget`,
   `explainWidget`, `getControlOptions`, `getDataAvailability`, `describeDatasource`,
-  `previewWidget`. Writes:
+  `previewWidget`, `listAssets`. Writes:
   `updateDashboard`, `addPage`, `updatePage`, `removePage`, `addWidget`, `updateWidget`,
   `removeWidget`, `moveWidget`, `updateLayout`, `copyWidget`, `duplicateDashboard`,
   `upsertCalculatedField`, `updateFieldMetadata`, `upsertLibraryMetric`,
@@ -55,6 +55,13 @@ Placements may overlap; later widgets on a page paint on top. `moveWidget` and e
 entry accept `stacking: 'front' | 'back'` to move a widget to the top or bottom of that order. A
 widget moved to another page lands on top.
 View tools on shared links and viewer grants can read and query only published pages.
+
+Image widgets reference an uploaded workspace image:
+`{ type: "image", assetId, alt, fit, href, title }`. `listAssets` returns the
+workspace's images with ids, names, dimensions, sizes, and the upload limit. Agents place an existing
+image with `addWidget` or `updateWidget`; uploading stays a GUI action. `href` must be an `https:`
+URL and opens in a new tab. `alt` is required with an `assetId`. Without an `assetId` the widget is a
+placeholder that editors fill in later and viewers do not see.
 
 `registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an
 existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from

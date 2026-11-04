@@ -42,6 +42,7 @@ import {
 import { sharingState, dashboardCollaborators } from './sharing.server';
 import { persistDashboard, widgetById, nextDashboardTimestamp } from './dashboard-records.server';
 import { validateLibraryMetricInput, newLibraryMetricValues } from './formulas.server';
+import { dashboardImageAssets } from './image-assets.server';
 
 export async function bootstrap() {
   const session = await requireSession();
@@ -99,6 +100,7 @@ export async function getDashboard(id: string, shareToken?: string, includeShari
     dashboard: access.document,
     role: access.role,
     dataSources: sources,
+    assets: await dashboardImageAssets(access.document),
     controlState: defaultControlState(access.document),
     ...(includeSharing && (access.role === 'admin' || access.role === 'editor')
       ? { sharing: await sharingState(access.document.id) }

@@ -135,6 +135,7 @@ async function manageResources(workerName: string) {
       kv_namespaces: [{ binding: 'QUERY_CACHE', id: kv.id }],
       r2_buckets: [{ binding: 'DATA', bucket_name: resourceName }],
       analytics_engine_datasets: template.analytics_engine_datasets,
+      images: template.images,
       containers: template.containers,
       durable_objects: template.durable_objects,
     };

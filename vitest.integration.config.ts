@@ -24,6 +24,7 @@ export default defineConfig({
         d1Databases: ['DB'],
         kvNamespaces: ['QUERY_CACHE'],
         r2Buckets: ['DATA'],
+        images: { binding: 'IMAGES' },
         bindings: {
           TEST_MIGRATIONS: migrations,
           CLOUDFLARE_ACCOUNT_ID: 'test-account',

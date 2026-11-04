@@ -55,6 +55,7 @@ import {
   EditFormulaButton,
 } from './field-picker';
 import { MetricSettings } from './metric-settings';
+import { ImageSettings } from './image-asset-picker';
 
 export function WidgetSettings({
   dashboardId,
@@ -175,7 +176,7 @@ export function WidgetSettings({
           <AlertDescription>{settingsError ?? sourceQuery.error?.message}</AlertDescription>
         </Alert>
       ) : null}
-      {'title' in definition ? (
+      {'title' in definition && definition.type !== 'image' ? (
         <>
           <Field>
             <FieldLabel htmlFor={`title-${widget.id}`}>Title</FieldLabel>
@@ -231,6 +232,15 @@ export function WidgetSettings({
             hasFreeHeight
           />
         </>
+      ) : null}
+      {definition.type === 'image' ? (
+        <ImageSettings
+          key={widget.id}
+          widgetId={widget.id}
+          dashboardId={dashboardId}
+          definition={definition}
+          commit={commit}
+        />
       ) : null}
       {definition.type === 'dateControl' ? (
         <Field>
