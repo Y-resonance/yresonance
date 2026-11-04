@@ -66,6 +66,8 @@ function exportApiRequest({
     duration_ms: durationMs,
     error_code: errorCode,
     source: request.headers.get('X-YRESONANCE-SOURCE') === 'webmcp' ? 'webmcp' : 'gui',
+    // Autosaves would otherwise inflate `updateWidget` counts as if each were a deliberate edit.
+    ...(request.headers.get('X-YRESONANCE-TRIGGER') === 'autosave' ? { trigger: 'autosave' } : {}),
     environment: config.environment,
     workspace_id: orgId ?? undefined,
     $session_id: sessionId,

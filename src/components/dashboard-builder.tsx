@@ -323,6 +323,7 @@ function Builder({
     widget: DashboardWidget,
     definition: WidgetDefinition,
     libraryMetric?: LibraryMetricDraft,
+    trigger?: 'autosave',
   ) {
     const revision = ++mutationRevisionRef.current;
     const previous = widget;
@@ -347,13 +348,16 @@ function Builder({
     setError(undefined);
     try {
       const result = await enqueueMutation(() =>
-        callApi<{ widget: DashboardWidget }>({
-          action: 'updateWidget',
-          dashboardId: dashboardRef.current.id,
-          widgetId: widget.id,
-          definition,
-          libraryMetric,
-        }),
+        callApi<{ widget: DashboardWidget }>(
+          {
+            action: 'updateWidget',
+            dashboardId: dashboardRef.current.id,
+            widgetId: widget.id,
+            definition,
+            libraryMetric,
+          },
+          { trigger },
+        ),
       );
       updateDashboard((current) => ({
         ...current,
@@ -520,7 +524,11 @@ function Builder({
   }
 
   const inspectorPanel = (
-    <fieldset disabled={saving} className="min-w-0 border-0 p-0">
+    // Text autosaves while the editor is in use, which would otherwise keep graying out its toolbar.
+    <fieldset
+      disabled={saving && selected?.definition.type !== 'text'}
+      className="min-w-0 border-0 p-0"
+    >
       {selected ? (
         <>
           <WidgetSettings
@@ -530,8 +538,8 @@ function Builder({
             widget={selected}
             dataSources={dataSources}
             onClose={() => setSelectedId(undefined)}
-            onChange={(definition, libraryMetric) =>
-              updateWidget(selected, definition, libraryMetric)
+            onChange={(definition, libraryMetric, trigger) =>
+              updateWidget(selected, definition, libraryMetric, trigger)
             }
             onRemoveEmptyRowAbove={
               dashboard.canvasRows > 10 &&

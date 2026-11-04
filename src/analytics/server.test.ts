@@ -171,6 +171,21 @@ describe('server analytics delivery', () => {
     expect(JSON.stringify(requests)).not.toContain('secret plan');
   });
 
+  it('marks saves made while typing as autosaves', async () => {
+    trackApiRequest({
+      request: new Request('https://yresonance.com/api/yresonance', {
+        headers: { 'X-YRESONANCE-TRIGGER': 'autosave' },
+      }),
+      userId: 'user_authenticated',
+      status: 200,
+      durationMs: 1,
+    });
+    await Promise.all(state.pending);
+
+    const body = requests.find((request) => request.url.startsWith('/batch/'))!.body;
+    expect(JSON.parse(body).batch[0].properties).toMatchObject({ trigger: 'autosave' });
+  });
+
   it('does not send telemetry when disabled', async () => {
     state.env.POSTHOG_ENABLED = 'false';
     trackApiRequest({

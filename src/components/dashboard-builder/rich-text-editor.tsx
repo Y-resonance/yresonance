@@ -17,8 +17,10 @@ import {
   LinkIcon,
   ListIcon,
   ListOrderedIcon,
+  Maximize2Icon,
 } from 'lucide-react';
 import { Button } from '#/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog';
 import { Input } from '#/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '#/components/ui/popover';
 import { richTextClasses, safeLinkUrl } from '#/components/rich-text';
@@ -84,10 +86,16 @@ const literalMarkdown = [
   ...literalTokens('literalBlock', ['code', 'table']),
 ];
 
+// Long text shouldn't depend on leaving the field to be saved. Pausing saves it, and so does
+// typing without a pause for long enough.
+const SAVE_AFTER_PAUSE_MS = 2_000;
+const SAVE_WHILE_TYPING_MS = 10_000;
+
 /**
- * WYSIWYG Markdown editor for text widgets in the inspector. It is the default export so the
- * inspector can lazy-load it: viewers and share links never download Tiptap. Like the other
- * inspector fields it commits on blur, and only when the user actually changed the text.
+ * WYSIWYG Markdown editor for text widgets in the inspector, which can pop out into a large dialog.
+ * It is the default export so the inspector can lazy-load it: viewers and share links never
+ * download Tiptap. It saves shortly after typing, on blur and when it closes, and only when the
+ * user actually changed the text. `onCommit` resolves to whether the save worked.
  */
 export default function RichTextEditor({
   label,
@@ -96,15 +104,35 @@ export default function RichTextEditor({
 }: {
   label: string;
   value: string;
-  onCommit: (markdown: string) => void;
+  onCommit: (markdown: string, trigger?: 'autosave') => Promise<boolean>;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [pendingSaves, setPendingSaves] = useState(0);
   // Only user edits mark the document dirty; loading `value` does not, so focusing and leaving
   // an untouched (possibly legacy) document never saves it.
   const dirty = useRef(false);
+  const pauseTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const commitRef = useRef(onCommit);
   useEffect(() => {
     commitRef.current = onCommit;
   });
+
+  async function save(editor: Editor, trigger?: 'autosave') {
+    clearTimeout(pauseTimer.current);
+    clearTimeout(typingTimer.current);
+    typingTimer.current = undefined;
+    if (!dirty.current) return;
+    dirty.current = false;
+    setPendingSaves((count) => count + 1);
+    // Leading spaces can mark an indented code block, so only the end is trimmed.
+    const saved = await commitRef.current(editor.getMarkdown().trimEnd(), trigger);
+    // The builder rolls a failed save back. Staying dirty keeps the text on screen, and the next
+    // edit, blur or close retries it.
+    if (!saved) dirty.current = true;
+    setPendingSaves((count) => count - 1);
+  }
+
   // Editing a link moves focus into its popover. That is still editing, so it does not commit.
   const linkPopover = useRef<HTMLDivElement>(null);
   const editor = useEditor({
@@ -138,39 +166,104 @@ export default function RichTextEditor({
         class: cn(richTextClasses, 'min-h-24 px-2.5 py-2 text-sm outline-none'),
       },
     },
-    onUpdate: () => {
+    onUpdate: ({ editor }) => {
       dirty.current = true;
+      clearTimeout(pauseTimer.current);
+      pauseTimer.current = setTimeout(() => void save(editor, 'autosave'), SAVE_AFTER_PAUSE_MS);
+      typingTimer.current ??= setTimeout(() => void save(editor, 'autosave'), SAVE_WHILE_TYPING_MS);
     },
     onBlur: ({ editor, event }) => {
       const target = event.relatedTarget;
-      if (!dirty.current || (target instanceof Node && linkPopover.current?.contains(target)))
-        return;
-      dirty.current = false;
-      // Leading spaces can mark an indented code block, so only the end is trimmed.
-      commitRef.current(editor.getMarkdown().trimEnd());
+      if (target instanceof Node && linkPopover.current?.contains(target)) return;
+      void save(editor);
     },
   });
 
   // Follow outside changes, such as an agent updating the widget, unless the user is mid-edit.
+  // A refresh from an earlier save can land while a newer one is running, so wait for those too.
   useEffect(() => {
-    if (!editor || dirty.current || editor.getMarkdown().trimEnd() === value.trimEnd()) return;
+    if (
+      !editor ||
+      dirty.current ||
+      pendingSaves > 0 ||
+      editor.getMarkdown().trimEnd() === value.trimEnd()
+    )
+      return;
     editor.commands.setContent(value, { contentType: 'markdown', emitUpdate: false });
-  }, [editor, value]);
+  }, [editor, value, pendingSaves]);
 
-  return (
-    <div className="rounded-lg border border-input transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
-      {editor ? <Toolbar editor={editor} linkPopover={linkPopover} /> : null}
-      <EditorContent editor={editor} />
+  // Browser back or forward can remove the editor with no blur to save on, such as while the
+  // link popover has focus.
+  useEffect(() => {
+    if (!editor) return;
+    return () => void save(editor);
+  }, [editor]);
+
+  useEffect(() => {
+    const warnAboutUnsavedText = (event: BeforeUnloadEvent) => {
+      if (dirty.current || pendingSaves > 0) event.preventDefault();
+    };
+    window.addEventListener('beforeunload', warnAboutUnsavedText);
+    return () => window.removeEventListener('beforeunload', warnAboutUnsavedText);
+  }, [pendingSaves]);
+
+  const field = (
+    <div
+      className={cn(
+        'rounded-lg border border-input transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30',
+        expanded && 'flex min-h-0 flex-col',
+      )}
+    >
+      {editor ? (
+        <Toolbar
+          editor={editor}
+          linkPopover={linkPopover}
+          onExpand={expanded ? undefined : () => setExpanded(true)}
+        />
+      ) : null}
+      <EditorContent
+        editor={editor}
+        className={cn(
+          expanded && 'flex min-h-0 flex-1 flex-col overflow-y-auto [&>.ProseMirror]:flex-1',
+        )}
+      />
     </div>
+  );
+  if (!expanded) return field;
+
+  // The same editor moves into the dialog, so undo history and the cursor come along. The dialog
+  // unmounts as soon as it closes, because only one place can hold the editor at a time.
+  return (
+    <>
+      <div className="min-h-34 rounded-lg border border-input" />
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (open) return;
+          setExpanded(false);
+          editor?.commands.focus();
+        }}
+      >
+        <DialogContent
+          className="h-[80dvh] grid-rows-[auto_minmax(0,1fr)] sm:max-w-3xl"
+          initialFocus={() => editor?.view.dom ?? null}
+        >
+          <DialogTitle>{label}</DialogTitle>
+          {field}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 function Toolbar({
   editor,
   linkPopover,
+  onExpand,
 }: {
   editor: Editor;
   linkPopover: RefObject<HTMLDivElement | null>;
+  onExpand?: () => void;
 }) {
   const active = useEditorState({
     editor,
@@ -218,6 +311,18 @@ function Toolbar({
         <ListOrderedIcon />
       </ToolbarButton>
       <LinkButton editor={editor} pressed={active.link} popoverRef={linkPopover} />
+      {onExpand ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="ml-auto"
+          aria-label="Expand editor"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onExpand}
+        >
+          <Maximize2Icon />
+        </Button>
+      ) : null}
     </div>
   );
 }

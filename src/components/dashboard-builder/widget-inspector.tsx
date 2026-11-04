@@ -75,7 +75,11 @@ export function WidgetSettings({
   widget: DashboardWidget;
   dataSources: BuilderDataSource[];
   onClose: () => void;
-  onChange: (definition: WidgetDefinition, libraryMetric?: LibraryMetricDraft) => Promise<boolean>;
+  onChange: (
+    definition: WidgetDefinition,
+    libraryMetric?: LibraryMetricDraft,
+    trigger?: 'autosave',
+  ) => Promise<boolean>;
   onRemoveEmptyRowAbove?: () => void;
   onRemoveEmptyRowBelow?: () => void;
 }) {
@@ -204,9 +208,11 @@ export function WidgetSettings({
                 key={widget.id}
                 label="Text"
                 value={definition.content.document}
-                onCommit={(document) =>
-                  void commit({ ...definition, content: { ...definition.content, document } })
-                }
+                onCommit={(document, trigger) => {
+                  const next = { ...definition, content: { ...definition.content, document } };
+                  setLocalDefinition(next);
+                  return onChange(next, undefined, trigger);
+                }}
               />
             </Suspense>
           </Field>

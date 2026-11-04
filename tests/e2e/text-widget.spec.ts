@@ -1,10 +1,43 @@
 import { test } from './support/ui-test';
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
 
 type Tool = { execute: (input: Record<string, unknown>) => Promise<unknown> };
+
+// Records every text save, because an autosave can land before a test leaves the editor.
+function trackSavedDocuments(page: Page) {
+  const documents: string[] = [];
+  page.on('request', (request) => {
+    if (!request.url().endsWith('/api/yresonance')) return;
+    const body = request.postDataJSON();
+    if (body.action === 'updateWidget') documents.push(body.definition.content.document);
+  });
+  return documents;
+}
+
+// Opens the builder on a text widget holding `document`, and returns the widget and its editor.
+async function openTextWidget(page: Page, document: string, entry = '/dashboards/dash_demo') {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.dashboard.pages[0]!.widgets.push({
+    id: 'w_notes',
+    layout: { x: 0, y: 7, width: 6, height: 3 },
+    definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document } },
+    definitionHash: 'hash_notes',
+  });
+  await page.goto(entry);
+  // Entering from the list leaves a history entry to go back to without reloading the app.
+  if (entry === '/') await page.getByRole('link', { name: 'Client weekly', exact: true }).click();
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+  const widget = page.locator('[data-widget-id="w_notes"]');
+  await widget.click({ position: { x: 40, y: 20 } });
+  const editor = page.getByRole('complementary').getByRole('textbox', { name: 'Text' });
+  await expect(editor).toContainText(document);
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  return { widget, editor };
+}
 
 test('editors format text and add links in the inspector', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
@@ -17,6 +50,7 @@ test('editors format text and add links in the inspector', async ({ page }) => {
     },
     definitionHash: 'hash_notes',
   });
+  const documents = trackSavedDocuments(page);
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
 
@@ -44,14 +78,12 @@ test('editors format text and add links in the inspector', async ({ page }) => {
   await page.getByLabel('Link URL').fill('example.com/plan');
   await page.keyboard.press('Enter');
 
-  const saved = page.waitForRequest(
-    (request) =>
-      request.url().endsWith('/api/yresonance') && request.postDataJSON().action === 'updateWidget',
-  );
   await editor.blur();
-  const document: string = (await saved).postDataJSON().definition.content.document;
-  expect(document).toMatch(/^Plain notes\s*\\?\nSecond line\n\nBudget \*\*up\*\*, see \[/);
-  expect(document).toContain('](https://example.com/plan)');
+  await expect
+    .poll(() => documents.at(-1))
+    .toMatch(
+      /^Plain notes\s*\\?\nSecond line\n\nBudget \*\*up\*\*, see \[.*\]\(https:\/\/example\.com\/plan\)/,
+    );
 
   await expect(notes.locator('strong')).toHaveText('up');
   const link = notes.getByRole('link', { name: 'https://example.com/plan' });
@@ -123,6 +155,7 @@ test('editing keeps Markdown the editor has no button for', async ({ page }) => 
   });
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  const documents = trackSavedDocuments(page);
   await page.goto('/dashboards/dash_demo');
   await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
   await page.locator('[data-widget-id="w_notes"]').click({ position: { x: 40, y: 20 } });
@@ -136,39 +169,178 @@ test('editing keeps Markdown the editor has no button for', async ({ page }) => 
     .click({ position: { x: 1, y: 5 } });
   await page.keyboard.press('Home');
   await page.keyboard.type('First, ');
-  const saved = page.waitForRequest(
-    (request) =>
-      request.url().endsWith('/api/yresonance') && request.postDataJSON().action === 'updateWidget',
-  );
   await editor.blur();
-  const document: string = (await saved).postDataJSON().definition.content.document;
-  expect(document).toBe(original.replace('Run', 'First, Run'));
+  await expect.poll(() => documents.at(-1)).toBe(original.replace('Run', 'First, Run'));
   expect(errors).toEqual([]);
 });
 
 test('typed leading spaces stay editable text instead of becoming a code block', async ({
   page,
 }) => {
-  const state = await mockYresonanceApi(page, { role: 'editor' });
-  state.dashboard.pages[0]!.widgets.push({
-    id: 'w_notes',
-    layout: { x: 0, y: 7, width: 6, height: 3 },
-    definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'Old' } },
-    definitionHash: 'hash_notes',
-  });
-  await page.goto('/dashboards/dash_demo');
-  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
-  await page.locator('[data-widget-id="w_notes"]').click({ position: { x: 40, y: 20 } });
-  const editor = page.getByRole('complementary').getByRole('textbox', { name: 'Text' });
-  await expect(editor).toContainText('Old');
+  const documents = trackSavedDocuments(page);
+  const { editor } = await openTextWidget(page, 'Old');
 
-  await editor.click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('    Note');
-  const saved = page.waitForRequest(
-    (request) =>
-      request.url().endsWith('/api/yresonance') && request.postDataJSON().action === 'updateWidget',
-  );
   await editor.blur();
-  expect((await saved).postDataJSON().definition.content.document).toBe('Note');
+  await expect.poll(() => documents.at(-1)).toBe('Note');
+});
+
+test('text saves after a pause in typing, without leaving the editor', async ({ page }) => {
+  const documents = trackSavedDocuments(page);
+  const { widget, editor } = await openTextWidget(page, 'Old');
+
+  await page.keyboard.type(' one');
+  await expect.poll(() => documents).toEqual(['Old one']);
+  await expect(widget).toContainText('Old one');
+  await expect(editor).toBeFocused();
+
+  // Saving neither moves the cursor nor interrupts the toolbar.
+  await page.getByRole('complementary').getByRole('button', { name: 'Bold' }).click();
+  await page.keyboard.type(' two');
+  await expect.poll(() => documents.at(-1)).toBe('Old one **two**');
+  await expect(editor).toBeFocused();
+});
+
+test('text saves during long typing that never pauses', async ({ page }) => {
+  await page.clock.install();
+  const documents = trackSavedDocuments(page);
+  await openTextWidget(page, 'Old');
+
+  for (let elapsed = 0; elapsed < 10_500; elapsed += 1_500) {
+    await page.keyboard.type('x');
+    await page.clock.runFor(1_500);
+  }
+  await expect.poll(() => documents.at(0)).toMatch(/^Oldx+$/);
+});
+
+test('a failed save keeps the text, warns before leaving, and retries', async ({ page }) => {
+  const { widget, editor } = await openTextWidget(page, 'Old');
+  let failing = true;
+  await page.route('**/api/yresonance', (route) =>
+    failing && route.request().postDataJSON().action === 'updateWidget'
+      ? route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: false,
+            error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
+          }),
+        })
+      : route.fallback(),
+  );
+
+  await page.keyboard.type(' written');
+  await editor.blur();
+  await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
+  await expect(editor).toContainText('Old written');
+  await expect(widget).not.toContainText('written');
+  const leavingIsCancelled = () =>
+    page.evaluate(() => !window.dispatchEvent(new Event('beforeunload', { cancelable: true })));
+  expect(await leavingIsCancelled()).toBe(true);
+
+  failing = false;
+  await editor.focus();
+  await editor.blur();
+  await expect(widget).toContainText('Old written');
+  await expect(page.getByText('This dashboard changed while saving.')).toBeHidden();
+  await expect(editor).toContainText('Old written');
+  expect(await leavingIsCancelled()).toBe(false);
+});
+
+test('a refresh from an earlier save does not undo newer text', async ({ page }) => {
+  const { widget, editor } = await openTextWidget(page, 'Old');
+  let releaseRefresh = () => {};
+  let releaseSecondSave = () => {};
+  const refreshHeld = new Promise<void>((held) => {
+    const refreshGate = new Promise<void>((release) => (releaseRefresh = release));
+    void page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action === 'getDashboard') {
+        held();
+        await refreshGate;
+      }
+      await route.fallback();
+    });
+  });
+  await page.keyboard.type(' one');
+  await refreshHeld;
+
+  const secondSaveSeen = new Promise<void>((seen) => {
+    const saveGate = new Promise<void>((release) => (releaseSecondSave = release));
+    void page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action === 'updateWidget') {
+        seen();
+        await saveGate;
+      }
+      await route.fallback();
+    });
+  });
+  await page.keyboard.type(' two');
+  await secondSaveSeen;
+
+  // The canvas falling back to the first save shows the stale refresh has landed.
+  releaseRefresh();
+  await expect(widget).toContainText('Old one');
+  await expect(widget).not.toContainText('two');
+  await expect(editor).toContainText('Old one two');
+
+  releaseSecondSave();
+  await expect(widget).toContainText('Old one two');
+  await page.keyboard.type(' three');
+  await expect(editor).toContainText('Old one two three');
+});
+
+test('leaving while the link popover has focus saves the text right away', async ({ page }) => {
+  const documents = trackSavedDocuments(page);
+  const { editor } = await openTextWidget(page, 'Old', '/');
+
+  await page.keyboard.type(' last words');
+  await page.getByRole('complementary').getByRole('button', { name: 'Link' }).click();
+  await expect(page.getByLabel('Link URL')).toBeFocused();
+  await page.goBack();
+  await expect(editor).toBeHidden();
+  // Shorter than the pause before an autosave, so only closing the editor can have saved this.
+  await expect.poll(() => documents, { timeout: 1_000 }).toEqual(['Old last words']);
+});
+
+test('the editor pops out into a dialog and keeps its text, cursor and undo', async ({ page }) => {
+  const documents = trackSavedDocuments(page);
+  const { widget, editor } = await openTextWidget(page, 'Old');
+  const settings = page.getByRole('complementary');
+
+  await page.keyboard.type(' abc');
+  const inspectorWidth = (await settings.boundingBox())!.width;
+  await settings.getByRole('button', { name: 'Expand editor' }).click();
+  const dialog = page.getByRole('dialog');
+  const dialogEditor = dialog.getByRole('textbox', { name: 'Text' });
+  await expect(dialogEditor).toBeFocused();
+  expect((await dialogEditor.boundingBox())!.width).toBeGreaterThan(inspectorWidth);
+
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(dialogEditor).not.toContainText('abc');
+  await page.keyboard.type(' typed ');
+  await dialog.getByRole('button', { name: 'Bold' }).click();
+  await page.keyboard.type('here');
+  await expect(dialogEditor).toContainText('Old typed here');
+  await expect(dialogEditor.locator('strong')).toHaveText('here');
+  await expect.poll(() => documents.at(-1)).toBe('Old typed **here**');
+  await expect(dialogEditor).toBeFocused();
+
+  // A link popover inside the dialog must not close the dialog or lose focus to the page.
+  await page.keyboard.press('Enter');
+  await dialog.getByRole('button', { name: 'Link' }).click();
+  await page.getByLabel('Link URL').fill('example.com/plan');
+  await page.keyboard.press('Enter');
+  await expect(dialogEditor.getByRole('link')).toHaveCount(1);
+
+  // Escape closes only the dialog, and the widget stays selected with the same text.
+  await expect(dialogEditor).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(editor).toBeFocused();
+  await expect(editor).toContainText('Old typed here');
+  await page.keyboard.type(' after');
+  await editor.blur();
+  await expect.poll(() => documents.at(-1)).toContain('after');
+  await expect(widget).toContainText('after');
 });
