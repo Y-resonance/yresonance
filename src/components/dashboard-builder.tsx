@@ -113,6 +113,7 @@ function Builder({
   const dashboardRef = useRef(dashboard);
   const mutationQueueRef = useRef(createSerialQueue());
   const mutationRevisionRef = useRef(0);
+  const queuedMutations = useRef(0);
   const appliedDefaultDateRangeRef = useRef<DateRange | undefined>(
     dashboardDateControlRange(initialDashboard),
   );
@@ -123,6 +124,9 @@ function Builder({
   }, [dashboard.pages]);
 
   useEffect(() => {
+    // A dashboard loaded while a save is queued predates that save and would undo it on screen.
+    // The save's own refresh follows.
+    if (queuedMutations.current > 0) return;
     const canvas = dashboardCanvas(initialDashboard, pageId);
     dashboardRef.current = canvas;
     setDashboard(canvas);
@@ -181,7 +185,10 @@ function Builder({
   }
 
   function enqueueMutation<T>(operation: () => Promise<T>) {
-    return mutationQueueRef.current(operation);
+    queuedMutations.current += 1;
+    return mutationQueueRef.current(operation).finally(() => {
+      queuedMutations.current -= 1;
+    });
   }
 
   function startSaving() {

@@ -248,44 +248,54 @@ test('a failed save keeps the text, warns before leaving, and retries', async ({
   await expect.poll(leavingIsCancelled).toBe(false);
 });
 
-test('a refresh from an earlier save does not undo newer text', async ({ page }) => {
+test('a refresh landing during a newer save does not undo it, even if the next refresh fails', async ({
+  page,
+}) => {
   const { widget, editor } = await openTextWidget(page, 'Old');
   let releaseRefresh = () => {};
   let releaseSecondSave = () => {};
-  const refreshHeld = new Promise<void>((held) => {
-    const refreshGate = new Promise<void>((release) => (releaseRefresh = release));
-    void page.route('**/api/yresonance', async (route) => {
-      if (route.request().postDataJSON().action === 'getDashboard') {
-        held();
-        await refreshGate;
-      }
-      await route.fallback();
-    });
+  const refreshGate = new Promise<void>((release) => (releaseRefresh = release));
+  let refreshHeld = () => {};
+  const firstRefresh = new Promise<void>((held) => (refreshHeld = held));
+  let refreshes = 0;
+  await page.route('**/api/yresonance', async (route) => {
+    if (route.request().postDataJSON().action !== 'getDashboard') return route.fallback();
+    refreshes += 1;
+    if (refreshes > 1) return route.abort();
+    refreshHeld();
+    await refreshGate;
+    await route.fallback();
   });
   await page.keyboard.type(' one');
-  await refreshHeld;
+  await firstRefresh;
 
-  const secondSaveSeen = new Promise<void>((seen) => {
-    const saveGate = new Promise<void>((release) => (releaseSecondSave = release));
-    void page.route('**/api/yresonance', async (route) => {
-      if (route.request().postDataJSON().action === 'updateWidget') {
-        seen();
-        await saveGate;
-      }
-      await route.fallback();
-    });
+  const saveGate = new Promise<void>((release) => (releaseSecondSave = release));
+  let secondSaveSeen = () => {};
+  const secondSave = new Promise<void>((seen) => (secondSaveSeen = seen));
+  await page.route('**/api/yresonance', async (route) => {
+    if (route.request().postDataJSON().action === 'updateWidget') {
+      secondSaveSeen();
+      await saveGate;
+    }
+    await route.fallback();
   });
   await page.keyboard.type(' two');
-  await secondSaveSeen;
+  await secondSave;
 
-  // The canvas falling back to the first save shows the stale refresh has landed.
+  // The mock still holds the first save, so this refresh answers with older text.
+  const staleRefresh = page.waitForResponse(
+    (response) => response.request().postDataJSON()?.action === 'getDashboard',
+  );
   releaseRefresh();
-  await expect(widget).toContainText('Old one');
-  await expect(widget).not.toContainText('two');
+  await staleRefresh;
+  await page.waitForTimeout(500);
+  await expect(widget).toContainText('Old one two');
   await expect(editor).toContainText('Old one two');
 
   releaseSecondSave();
+  await expect(page.getByRole('alert')).toBeVisible();
   await expect(widget).toContainText('Old one two');
+  await expect(editor).toContainText('Old one two');
   await page.keyboard.type(' three');
   await expect(editor).toContainText('Old one two three');
 });
