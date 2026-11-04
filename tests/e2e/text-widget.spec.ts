@@ -110,8 +110,8 @@ test('an agent adds a formatted text widget with links through addWidget', async
 test('editing keeps Markdown the editor has no button for', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
   const original = [
-    'Run `npm i` first.',
     '    indented line',
+    'Run `npm i` first.',
     '![Logo](https://example.com/logo.png)',
     '| a | b |\n| --- | --- |\n| 1 | 2 |',
   ].join('\n\n');
@@ -142,6 +142,6 @@ test('editing keeps Markdown the editor has no button for', async ({ page }) => 
   );
   await editor.blur();
   const document: string = (await saved).postDataJSON().definition.content.document;
-  expect(document).toBe(`First, ${original}`);
+  expect(document).toBe(original.replace('Run', 'First, Run'));
   expect(errors).toEqual([]);
 });

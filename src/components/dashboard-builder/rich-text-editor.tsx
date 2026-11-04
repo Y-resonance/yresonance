@@ -142,7 +142,8 @@ export default function RichTextEditor({
       if (!dirty.current || (target instanceof Node && linkPopover.current?.contains(target)))
         return;
       dirty.current = false;
-      commitRef.current(editor.getMarkdown().trim());
+      // Leading spaces can mark an indented code block, so only the end is trimmed.
+      commitRef.current(editor.getMarkdown().trimEnd());
     },
   });
 
