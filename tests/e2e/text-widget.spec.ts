@@ -416,6 +416,50 @@ test('text from a save that fails after leaving the widget comes back when resel
   expect(await leavingIsCancelled()).toBe(false);
 });
 
+test('reselecting while a save is running keeps the text if that save then fails', async ({
+  page,
+}) => {
+  const documents = trackSavedDocuments(page);
+  const { widget, editor } = await openTextWidget(page, 'Old');
+  let releaseSave = () => {};
+  const saveGate = new Promise<void>((release) => (releaseSave = release));
+  let held = false;
+  await page.route('**/api/yresonance', async (route) => {
+    if (held || route.request().postDataJSON().action !== 'updateWidget') return route.fallback();
+    held = true;
+    await saveGate;
+    await route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: false,
+        error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
+      }),
+    });
+  });
+  const leavingIsCancelled = () =>
+    page.evaluate(() => !window.dispatchEvent(new Event('beforeunload', { cancelable: true })));
+  const otherWidget = page.locator('[data-widget-id]', { hasText: 'Media spend' });
+
+  await page.keyboard.type(' written');
+  await otherWidget.click();
+  await expect.poll(() => documents).toEqual(['Old written']);
+  // The editor is gone, but the save can still fail, so leaving must still warn.
+  await expect(editor).toBeHidden();
+  expect(await leavingIsCancelled()).toBe(true);
+
+  await widget.click({ position: { x: 40, y: 20 } });
+  await expect(editor).toContainText('Old written');
+  releaseSave();
+  await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
+  await expect(editor).toContainText('Old written');
+
+  await otherWidget.click();
+  await expect.poll(() => documents.length).toBe(2);
+  await expect(widget).toContainText('Old written');
+  await expect.poll(leavingIsCancelled).toBe(false);
+});
+
 test('a failed refresh after a save keeps the builder and the text', async ({ page }) => {
   const { widget, editor } = await openTextWidget(page, 'Old');
   let failing = true;

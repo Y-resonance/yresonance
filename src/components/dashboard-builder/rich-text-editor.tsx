@@ -91,11 +91,11 @@ const literalMarkdown = [
 const SAVE_AFTER_PAUSE_MS = 2_000;
 const SAVE_WHILE_TYPING_MS = 10_000;
 
-// Text whose last save failed, by widget. The failure can arrive after the editor has closed, such
-// as when clicking another widget saves on blur, so this outlives it. Reopening the widget restores
-// the text, and its next blur or close retries.
+// Text being saved or whose save failed, by widget. A save can fail after the editor has closed,
+// such as when clicking another widget saves on blur, so this outlives it. Reopening the widget
+// restores the text, and its next blur or close retries.
 const unsavedText = new Map<string, string>();
-const warnAboutFailedSaves = (event: BeforeUnloadEvent) => {
+const warnAboutUnsavedText = (event: BeforeUnloadEvent) => {
   if (unsavedText.size > 0) event.preventDefault();
 };
 
@@ -121,7 +121,6 @@ export default function RichTextEditor({
   // Only user edits mark the document dirty; loading `value` does not, so focusing and leaving
   // an untouched (possibly legacy) document never saves it.
   const dirty = useRef(unsavedText.has(widgetId));
-  const lastAttempt = useRef(0);
   const pauseTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const commitRef = useRef(onCommit);
@@ -138,19 +137,15 @@ export default function RichTextEditor({
     setPendingSaves((count) => count + 1);
     // Leading spaces can mark an indented code block, so only the end is trimmed.
     const markdown = editor.getMarkdown().trimEnd();
-    const attempt = ++lastAttempt.current;
+    unsavedText.set(widgetId, markdown);
+    window.addEventListener('beforeunload', warnAboutUnsavedText);
     const saved = await commitRef.current(markdown, trigger);
-    // Only the latest attempt counts, because it covers the text of any older one. The builder
-    // rolls a failed save back. Staying dirty keeps the text on screen, and the next edit, blur or
-    // close retries it.
-    if (attempt === lastAttempt.current) {
-      if (saved) {
-        unsavedText.delete(widgetId);
-      } else {
-        dirty.current = true;
-        unsavedText.set(widgetId, markdown);
-        window.addEventListener('beforeunload', warnAboutFailedSaves);
-      }
+    // A newer save has replaced this entry and covers this text, so only the latest one decides.
+    // The builder rolls a failed save back. Staying dirty keeps the text on screen, and the next
+    // edit, blur or close retries it.
+    if (unsavedText.get(widgetId) === markdown) {
+      if (saved) unsavedText.delete(widgetId);
+      else dirty.current = true;
     }
     setPendingSaves((count) => count - 1);
   }
@@ -222,12 +217,12 @@ export default function RichTextEditor({
   }, [editor]);
 
   useEffect(() => {
-    const warnAboutUnsavedText = (event: BeforeUnloadEvent) => {
-      if (dirty.current || pendingSaves > 0) event.preventDefault();
+    const warnWhileEditing = (event: BeforeUnloadEvent) => {
+      if (dirty.current) event.preventDefault();
     };
-    window.addEventListener('beforeunload', warnAboutUnsavedText);
-    return () => window.removeEventListener('beforeunload', warnAboutUnsavedText);
-  }, [pendingSaves]);
+    window.addEventListener('beforeunload', warnWhileEditing);
+    return () => window.removeEventListener('beforeunload', warnWhileEditing);
+  }, []);
 
   const field = (
     <div
