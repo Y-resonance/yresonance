@@ -398,6 +398,15 @@ test('a stale refresh does not bring back older text when the next refresh fails
   releaseRefresh();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(editor).toContainText('Old one two');
+
+  // The save has finished, so this must not save the stale refresh's older text.
+  const saves = documents.length;
+  await page.getByRole('complementary').getByRole('combobox', { name: 'Size' }).click();
+  await page.getByRole('option').nth(1).click();
+  await expect.poll(() => documents.length).toBe(saves + 1);
+  expect(documents.at(-1)).toBe('Old one two');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type(' three');
   await expect.poll(() => documents.at(-1)).toBe('Old one two three');
 });
