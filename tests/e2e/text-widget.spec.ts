@@ -289,15 +289,23 @@ test('a refresh landing during a newer save does not undo it, even if the next r
   );
   releaseRefresh();
   await staleRefresh;
-  // The canvas falling back shows the stale refresh has landed.
-  await expect(widget).not.toContainText('two');
+  await page.waitForTimeout(500);
+  await expect(widget).toContainText('Old one two');
   await expect(editor).toContainText('Old one two');
 
   releaseSecondSave();
   await expect(page.getByRole('alert')).toBeVisible();
+  await expect(widget).toContainText('Old one two');
   await expect(editor).toContainText('Old one two');
 
-  // Reopening shows the newest text even though the canvas missed it, and editing keeps it.
+  // Changing a style saves the whole definition, which must hold the newest text.
+  const saves = documents.length;
+  await page.getByRole('complementary').getByRole('combobox', { name: 'Size' }).click();
+  await page.getByRole('option').nth(1).click();
+  await expect.poll(() => documents.length).toBe(saves + 1);
+  expect(documents.at(-1)).toBe('Old one two');
+
+  // Reopening shows the newest text, and editing keeps it.
   await page.locator('[data-widget-id]', { hasText: 'Media spend' }).click();
   await widget.click({ position: { x: 40, y: 20 } });
   await expect(editor).toContainText('Old one two');

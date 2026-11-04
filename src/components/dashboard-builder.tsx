@@ -124,8 +124,23 @@ function Builder({
 
   useEffect(() => {
     const canvas = dashboardCanvas(initialDashboard, pageId);
-    dashboardRef.current = canvas;
-    setDashboard(canvas);
+    // A load can predate a save still running, and the inspector saves whole definitions. So a
+    // widget being saved keeps what the builder has, or a later save would write older settings.
+    const widgets = canvas.widgets.map((widget) => {
+      const local = pendingWidgets[widget.id]
+        ? dashboardRef.current.widgets.find((item) => item.id === widget.id)
+        : undefined;
+      return local
+        ? { ...widget, definition: local.definition, definitionHash: local.definitionHash }
+        : widget;
+    });
+    const next = {
+      ...canvas,
+      widgets,
+      pages: canvas.pages.map((page) => (page.id === pageId ? { ...page, widgets } : page)),
+    };
+    dashboardRef.current = next;
+    setDashboard(next);
   }, [initialDashboard, pageId]);
   useEffect(() => {
     setSelectedId(undefined);

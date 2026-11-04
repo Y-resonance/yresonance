@@ -215,7 +215,7 @@ export default function RichTextEditor({
     if (
       !editor ||
       dirty.current ||
-      unsavedText.get(widgetId)?.failed ||
+      unsavedText.has(widgetId) ||
       knownText.get(widgetId)?.includes(text)
     )
       return;
