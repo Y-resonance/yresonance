@@ -602,7 +602,7 @@ export function DashboardBuilder({
   return (
     <div className="flex flex-col gap-4">
       {desktop === false ? (
-        <div className="flex items-center justify-end">
+        <div className="sticky top-0 z-40 -mx-2 -my-2 flex items-center justify-end bg-background p-2">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger render={<Button variant="outline" size="sm" />}>
               {selected ? (
@@ -644,7 +644,9 @@ export function DashboardBuilder({
         <div>
           {desktop !== false ? (
             <>
-              <div className="mb-2 flex items-center gap-2">
+              {/* Pinned so a widget can be added from the bottom of a long canvas. z-40 sits above
+                the canvas row controls (z-30) and below the catalog popover (z-50). */}
+              <div className="sticky top-0 z-40 -mt-2 flex items-center gap-2 bg-background py-2">
                 <Popover open={catalogOpen} onOpenChange={setCatalogOpen}>
                   <PopoverTrigger render={<Button variant="outline" size="sm" />}>
                     <Grid2X2PlusIcon data-icon="inline-start" />
