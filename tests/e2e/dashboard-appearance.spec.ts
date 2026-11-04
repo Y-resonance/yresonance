@@ -402,35 +402,81 @@ test.describe('desktop', () => {
     await expect(weight).toHaveValue('');
   });
 
-  test('leaving settings while a save runs survives a failed refresh', async ({ page }) => {
+  test('returning to the dashboard survives a failed refresh', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
     const state = await mockYresonanceApi(page, { role: 'editor' });
     await page.goto('/dashboards/dash_demo/settings');
     const weight = page.getByLabel('Style: border weight');
     await expect(weight).toBeVisible();
-
-    const releaseSave = Promise.withResolvers<void>();
-    let saved = false;
     await page.route('**/api/yresonance', async (route) => {
-      const { action } = route.request().postDataJSON();
-      if (action === 'updateDashboard') {
-        await releaseSave.promise;
-        saved = true;
-      }
-      if (action === 'getDashboard' && saved) return route.fulfill(outage);
-      await route.fallback();
+      if (route.request().postDataJSON().action !== 'getDashboard') return route.fallback();
+      await route.fulfill(outage);
     });
 
     await weight.fill('6');
     await weight.blur();
-    await page.getByRole('link', { name: state.dashboard.name }).click();
-    await expect(page.getByRole('heading', { name: state.dashboard.name })).toBeVisible();
-
+    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { borderWidth: 6 } });
     const failedRefresh = page.waitForResponse((response) => response.status() === 500);
-    releaseSave.resolve();
+    await page.getByRole('link', { name: state.dashboard.name }).click();
     await failedRefresh;
     await page.waitForTimeout(300);
     await expect(page.getByRole('heading', { name: state.dashboard.name })).toBeVisible();
+  });
+
+  // The builder resets from the shared cache, so a read the settings page started on its way out
+  // would undo a widget edit made while it runs.
+  test('a theme save finishing after leaving settings leaves builder edits alone', async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const themeWeight = page.getByLabel('Style: border weight');
+    await expect(themeWeight).toBeVisible();
+
+    const releaseSave = Promise.withResolvers<void>();
+    const releaseRead = Promise.withResolvers<void>();
+    let holdReads = false;
+    await page.route('**/api/yresonance', async (route) => {
+      const { action, theme, includeSharing } = route.request().postDataJSON();
+      if (action === 'updateDashboard' && theme) await releaseSave.promise;
+      if (action !== 'getDashboard' || !includeSharing || !holdReads) return route.fallback();
+      const dashboard = structuredClone(state.dashboard);
+      await releaseRead.promise;
+      await route.fulfill({
+        json: { ok: true, data: { dashboard, role: 'editor', dataSources: [] } },
+      });
+    });
+
+    await themeWeight.fill('6');
+    await themeWeight.blur();
+    await page.getByRole('link', { name: state.dashboard.name }).click();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+    holdReads = true;
+    releaseSave.resolve();
+    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { borderWidth: 6 } });
+    await page.waitForTimeout(300);
+
+    // The builder's own refresh would repair the field, so the older read has to land after it.
+    const builderRefresh = page.waitForResponse((response) => {
+      const request = response.request().postDataJSON();
+      return request?.action === 'getDashboard' && request.includeSharing === false;
+    });
+    const widgetWeight = page.getByRole('complementary').getByLabel('Style: border weight');
+    await widgetWeight.fill('9');
+    await widgetWeight.blur();
+    await builderRefresh;
+    await page.waitForTimeout(100);
+    await expect
+      .poll(
+        () =>
+          state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.definition
+            .appearance,
+      )
+      .toEqual({ borderWidth: 9 });
+    releaseRead.resolve();
+    await page.waitForTimeout(300);
+    await expect(widgetWeight).toHaveValue('9');
   });
 
   test('a later theme save clears the error of an earlier one', async ({ page }) => {
