@@ -118,7 +118,8 @@ explain. Update it when a decision changes, not when an implementation detail do
   transformed and billed once. `cf.image` bills every viewed variant monthly, `/cdn-cgi/image/`
   cannot read private R2 objects and caches publicly, and hosted Images caps uploads at 10 MB.
   Asset responses are never `public`: Workers Cache ignores cookies, so it could serve an image
-  to a removed collaborator.
+  to a removed collaborator. They are immutable, except that an original served because a transform
+  failed is cached for 5 minutes, so that width recovers.
 - Adding an image widget places a placeholder and the editor picks the image in the inspector, like
   every other widget's settings. Viewers don't see a widget without an image, so a published page
   never shows an empty box.

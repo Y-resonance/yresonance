@@ -194,6 +194,7 @@ describe('dashboard image serving', () => {
     try {
       const response = await fetchAsset(dashboard.id, asset.id, '?w=640');
       expect(response.headers.get('content-type')).toBe('image/png');
+      expect(response.headers.get('cache-control')).toBe('private, max-age=300');
     } finally {
       bindings.IMAGES = images;
     }

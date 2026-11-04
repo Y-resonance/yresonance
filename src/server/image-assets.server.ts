@@ -261,6 +261,11 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
     return new Response(original.body, {
       headers: {
         ...assetHeaders,
+        // A failed transform can recover, for example when the monthly quota resets, so the
+        // browser must ask for this width again. The other fallbacks never change.
+        ...(fallbackReason === 'transform_failed'
+          ? { 'cache-control': 'private, max-age=300' }
+          : {}),
         'content-type': asset.contentType,
         'content-length': String(original.size),
       },
