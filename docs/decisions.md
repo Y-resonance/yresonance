@@ -102,7 +102,12 @@ explain. Update it when a decision changes, not when an implementation detail do
 - `updateWidget` takes a full definition. No deep patches, because patches on arrays such as
   `metrics` are ambiguous.
 - `addWidget` accepts only width and height and appends at the bottom. Agents do not compute
-  coordinates. Widgets cannot overlap.
+  coordinates.
+- Widgets may overlap, so editors can layer a text widget behind a group of charts. Paint order is
+  the order of `page.widgets`: later widgets sit on top. Overlap is allowed for every widget type,
+  and a widget underneath is a pure background; moving it does not move the widgets on top.
+  Grouping is a separate topic. The stacked phone layout keeps reading order (top to bottom, left
+  to right) and ignores overlap.
 - Bar, pie and line charts drill down through editor-defined levels (`drillDimensions`). The
   viewer only supplies clicked values as `drillPath`, which `queryWidget` turns into equality
   filters, so the security model holds. Drill state stays inside one widget; cross-filtering other
@@ -110,8 +115,22 @@ explain. Update it when a decision changes, not when an implementation detail do
   equality filter. Tables are excluded: they already show several dimensions with subtotals.
 - Comparison runs as a second query with a shifted date range.
 - Relative dates resolve in the dashboard's timezone, default `Europe/Berlin`.
+- Yesterday is the latest queryable day because the current day's data is incomplete. Every range is
+  cut off there when it resolves, and presets end there without saying so in their labels. Ranges
+  saved with a "today" end load as the matching yesterday presets.
+- A custom range can pair a fixed start with an end that stays on yesterday, so "campaign start to
+  yesterday" stays current. The start is not derived from data; editors enter it.
 - Rich text is stored as versioned JSON, never as HTML. Styling is an open object owned by each
   renderer.
+- Images are resized with the Cloudflare Images binding and each variant is stored in R2, so it is
+  transformed and billed once. `cf.image` bills every viewed variant monthly, `/cdn-cgi/image/`
+  cannot read private R2 objects and caches publicly, and hosted Images caps uploads at 10 MB.
+  Asset responses are never `public`: Workers Cache ignores cookies, so it could serve an image
+  to a removed collaborator. They are immutable, except that an original served because a transform
+  failed is cached for 5 minutes, so that width recovers.
+- Adding an image widget places a placeholder and the editor picks the image in the inspector, like
+  every other widget's settings. Viewers don't see a widget without an image, so a published page
+  never shows an empty box.
 
 ## Deferred
 

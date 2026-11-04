@@ -1,4 +1,5 @@
-import { dashboardDateControlRange } from '#/components/dashboard-view';
+import { DashboardAssetsProvider, dashboardDateControlRange } from '#/components/dashboard-view';
+import type { ImageAsset } from '#/domain/image-assets';
 import { dashboardCanvas, type DashboardCanvas } from '#/domain/dashboard-pages';
 import { dashboardControlWidgets, dashboardWidgets } from '#/domain/schema';
 import {
@@ -20,6 +21,7 @@ import {
   removeEmptyRow,
   isRowEmpty,
   appendPlacement,
+  type WidgetStacking,
 } from '#/domain/layout';
 import { type LibraryMetricDraft } from '#/components/metric-formula-dialog';
 import { clearControlValue } from '#/domain/widget-editing';
@@ -55,10 +57,23 @@ import {
   type PendingCanvasWidget,
 } from './dashboard-builder/canvas-layout';
 import { WidgetSettings } from './dashboard-builder/widget-inspector';
+import { LayerSettings } from './dashboard-builder/layer-settings';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
+/** The editor canvas, catalog and inspector. `assets` sizes image widgets (see getDashboard). */
 export function DashboardBuilder({
+  assets,
+  ...props
+}: Parameters<typeof Builder>[0] & { assets?: ImageAsset[] }) {
+  return (
+    <DashboardAssetsProvider assets={assets}>
+      <Builder {...props} />
+    </DashboardAssetsProvider>
+  );
+}
+
+function Builder({
   dashboard: initialDashboard,
   pageId,
   controlState,
@@ -445,6 +460,30 @@ export function DashboardBuilder({
     }
   }
 
+  async function restackWidget(widget: DashboardWidget, stacking: WidgetStacking) {
+    startSaving();
+    setError(undefined);
+    try {
+      await enqueueMutation(() =>
+        callApi({
+          action: 'moveWidget',
+          dashboardId: dashboardRef.current.id,
+          widgetId: widget.id,
+          // Read at send time so a queued drag or resize of this widget is not undone.
+          placement:
+            dashboardRef.current.widgets.find((item) => item.id === widget.id)?.layout ??
+            widget.layout,
+          stacking,
+        }),
+      );
+      await refresh();
+    } catch (caught) {
+      setError(message(caught));
+    } finally {
+      finishSaving();
+    }
+  }
+
   function saveRowInsertion(cut: number) {
     const next = insertRow(dashboardRef.current.widgets, dashboardRef.current.canvasRows, cut);
     if (!next) return;
@@ -460,32 +499,40 @@ export function DashboardBuilder({
   const inspectorPanel = (
     <fieldset disabled={inspectorLocked} className="min-w-0 border-0 p-0">
       {selected ? (
-        <WidgetSettings
-          dashboardId={dashboard.id}
-          dashboardDefaultDateRange={dashboard.defaultDateRange}
-          theme={dashboard.theme}
-          timezone={dashboard.timezone}
-          widget={selected}
-          dataSources={dataSources}
-          onClose={() => setSelectedId(undefined)}
-          onChange={(definition, libraryMetric) =>
-            updateWidget(selected, definition, libraryMetric)
-          }
-          onRemoveEmptyRowAbove={
-            dashboard.canvasRows > 10 &&
-            selected.layout.y > 0 &&
-            isRowEmpty(dashboard.widgets, selected.layout.y - 1)
-              ? () => saveRowRemoval(selected.layout.y - 1)
-              : undefined
-          }
-          onRemoveEmptyRowBelow={
-            dashboard.canvasRows > 10 &&
-            selected.layout.y + selected.layout.height < dashboard.canvasRows &&
-            isRowEmpty(dashboard.widgets, selected.layout.y + selected.layout.height)
-              ? () => saveRowRemoval(selected.layout.y + selected.layout.height)
-              : undefined
-          }
-        />
+        <>
+          <WidgetSettings
+            dashboardId={dashboard.id}
+            dashboardDefaultDateRange={dashboard.defaultDateRange}
+            theme={dashboard.theme}
+            timezone={dashboard.timezone}
+            widget={selected}
+            dataSources={dataSources}
+            onClose={() => setSelectedId(undefined)}
+            onChange={(definition, libraryMetric) =>
+              updateWidget(selected, definition, libraryMetric)
+            }
+            onRemoveEmptyRowAbove={
+              dashboard.canvasRows > 10 &&
+              selected.layout.y > 0 &&
+              isRowEmpty(dashboard.widgets, selected.layout.y - 1)
+                ? () => saveRowRemoval(selected.layout.y - 1)
+                : undefined
+            }
+            onRemoveEmptyRowBelow={
+              dashboard.canvasRows > 10 &&
+              selected.layout.y + selected.layout.height < dashboard.canvasRows &&
+              isRowEmpty(dashboard.widgets, selected.layout.y + selected.layout.height)
+                ? () => saveRowRemoval(selected.layout.y + selected.layout.height)
+                : undefined
+            }
+          />
+          <LayerSettings
+            widgets={dashboard.widgets}
+            selected={selected}
+            onSelect={setSelectedId}
+            onRestack={(stacking) => void restackWidget(selected, stacking)}
+          />
+        </>
       ) : (
         <p className="text-sm text-muted-foreground">Select a widget to edit it.</p>
       )}

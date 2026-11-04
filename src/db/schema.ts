@@ -250,3 +250,23 @@ export const shareLinks = sqliteTable(
   },
   (table) => [index('share_links_dashboard_id_idx').on(table.dashboardId)],
 );
+
+// Uploaded dashboard images. The original and its resized variants live in R2 under
+// `ws/<workspaceId>/assets/<id>/`. Rows stay while any dashboard may reference them.
+export const dashboardAssets = sqliteTable(
+  'dashboard_assets',
+  {
+    id: text().primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    uploadedBy: text('uploaded_by').notNull(),
+    name: text().notNull(),
+    contentType: text('content_type').notNull(),
+    size: integer().notNull(),
+    width: integer().notNull(),
+    height: integer().notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('dashboard_assets_workspace_id_idx').on(table.workspaceId)],
+);

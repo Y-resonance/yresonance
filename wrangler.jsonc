@@ -55,6 +55,8 @@
       "preview_bucket_name": "yresonance-data-preview",
     },
   ],
+  // Resizes dashboard images. Bindings are not inherited, so env.preview and previews repeat it.
+  "images": { "binding": "IMAGES" },
   "containers": [
     {
       "class_name": "QueryEngineContainer",
@@ -147,6 +149,7 @@
           "bucket_name": "yresonance-data-preview",
         },
       ],
+      "images": { "binding": "IMAGES" },
       "containers": [
         {
           "class_name": "QueryEngineContainer",
@@ -167,6 +170,7 @@
     },
   },
   "previews": {
+    "images": { "binding": "IMAGES" },
     "vars": {
       "APP_ENV": "preview",
       "POSTHOG_ENABLED": "false",

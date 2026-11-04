@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { uploadFile, UploadCancelledError } from '#/api/upload';
 import { DatasourceCacheFields } from './datasource-cache-fields';
 import { dataSourceLocationSchema } from '#/domain/schema';
 import type { DatasourceCachePolicy } from '#/domain/schema';
@@ -81,7 +82,7 @@ export function DatasourceRegisterForm({
 
   const uploadMutation = useMutation({
     mutationFn: ({ file, uploadUrl }: { file: File; uploadUrl: string }) =>
-      uploadDatasourceFile(file, uploadUrl, setProgress, (request) => {
+      uploadFile(file, uploadUrl, setProgress, (request) => {
         uploadRequest.current = request;
       }),
     retry: false,
@@ -472,35 +473,6 @@ function validateFile(file: File, format: DatasourceUploadFormat | undefined) {
   if (file.size === 0) return 'The file is empty.';
   return undefined;
 }
-
-function uploadDatasourceFile(
-  file: File,
-  uploadUrl: string,
-  onProgress: (progress: number) => void,
-  onRequest: (request: XMLHttpRequest) => void,
-) {
-  return new Promise<void>((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    onRequest(request);
-    request.open('PUT', uploadUrl);
-    request.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) onProgress((event.loaded / event.total) * 100);
-    });
-    request.addEventListener('load', () => {
-      if (request.status >= 200 && request.status < 300) {
-        onProgress(100);
-        resolve();
-      } else {
-        reject(new Error(`Upload returned HTTP ${request.status}.`));
-      }
-    });
-    request.addEventListener('error', () => reject(new Error('The upload failed. Try again.')));
-    request.addEventListener('abort', () => reject(new UploadCancelledError()));
-    request.send(file);
-  });
-}
-
-class UploadCancelledError extends Error {}
 
 function trackUpload(
   callApi: import('#/api/query').ApiExecutor,

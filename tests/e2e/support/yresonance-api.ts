@@ -1,6 +1,8 @@
 import { apiRequestSchema } from '#/api/contracts';
+import { restack } from '#/domain/layout';
 import type { Page, Route } from '@playwright/test';
 import type { DatasourceDescription } from '#/domain/datasource-fields';
+import type { ImageAsset } from '#/domain/image-assets';
 import type { DatasourceCachePolicy, DashboardDocument, DashboardWidget } from '#/domain/schema';
 
 const fixedRange = {
@@ -175,6 +177,7 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
     sharing: { links: [] as { token: string; url: string }[], grants: [] },
     nextWidget: 0,
     duplicateRequests: [] as unknown[],
+    assets: [] as ImageAsset[],
   };
   const ok = (route: Route, data: unknown) =>
     route.fulfill({
@@ -221,14 +224,17 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         const original = state.dashboard.pages
           .flatMap((page) => page.widgets)
           .find((widget) => widget.id === request.widgetId)!;
+        const moved = { ...original, layout: request.placement as DashboardWidget['layout'] };
         state.dashboard.pages.forEach((page) => {
-          page.widgets = page.widgets.filter((widget) => widget.id !== original.id);
+          page.widgets =
+            page === targetPage && page.widgets.includes(original)
+              ? page.widgets.map((widget) => (widget === original ? moved : widget))
+              : page.widgets.filter((widget) => widget !== original);
         });
-        targetPage.widgets.push({
-          ...original,
-          layout: request.placement as DashboardWidget['layout'],
-        });
-        return ok(route, original);
+        if (!targetPage.widgets.includes(moved)) targetPage.widgets.push(moved);
+        if (request.stacking)
+          targetPage.widgets = restack(targetPage.widgets, moved.id, request.stacking);
+        return ok(route, moved);
       }
       case 'updateDashboard':
         state.dashboard = {
@@ -268,6 +274,14 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
               : state.dashboard,
           role: options.role ?? 'editor',
           dataSources: [{ id: dataSourceId, name: state.source.name }],
+          // Matches the server, which only lists the images the dashboard shows.
+          assets: state.assets.filter((asset) =>
+            state.dashboard.pages.some((page) =>
+              page.widgets.some(
+                ({ definition }) => definition.type === 'image' && definition.assetId === asset.id,
+              ),
+            ),
+          ),
           // Matches the server: builder refreshes opt out of the sharing payload.
           ...(request.action === 'getDashboard' && request.includeSharing === false
             ? {}
@@ -452,6 +466,8 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         return ok(route, { ...state.dashboard, id: 'dash_copy', name: request.name });
       case 'listLibraryMetrics':
         return ok(route, []);
+      case 'listAssets':
+        return ok(route, { assets: state.assets, uploadLimitBytes: 20_000_000 });
       case 'listR2Objects':
         return ok(route, { objects: [] });
       // A blanket success would let a test pass against an action the mock never

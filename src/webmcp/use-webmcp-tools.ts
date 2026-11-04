@@ -162,7 +162,7 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'addWidget',
               description:
-                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. Every widget takes an optional appearance (background, border, radius, shadow) that overrides the theme widgetDefaults field by field. yresonance computes its coordinates.',
+                'Validate and append a widget to the specified page of the open dashboard. Provide its full definition and size. Table metrics can include ordered conditionalFormat threshold rules or a colorScale (heatmap or in-cell bar scaled from the metric minimum to maximum, invert when lower is better), not both; tables with two or more dimensions can set showSubtotals, and pivotDimension creates grouped columns. Bar charts take colorBy to paint one color per metric or one per bar. Combo charts give each metric a mark (bar or line) and an axis (left or right); metrics on one axis must share a dataType. Card titles take titleStyle and text widgets take textStyle. Image widgets take an assetId from listAssets with alt text, fit (contain or cover), an optional https href and an optional title; without assetId they are a placeholder viewers do not see. Every widget takes an optional appearance (background, border, radius, shadow) that overrides the theme widgetDefaults field by field. yresonance computes its coordinates.',
               readOnly: false,
               fixed,
             },
@@ -174,6 +174,13 @@ export function useWebMcpTools(options: WebMcpOptions) {
               fixed,
             },
             {
+              action: 'listAssets',
+              description:
+                'List images uploaded to the active workspace, newest first. Returns ids, names, content types, pixel dimensions, byte sizes, and the upload limit. Place one with addWidget or updateWidget as { type: "image", assetId, alt }. Uploading stays a GUI action.',
+              readOnly: true,
+              fixed,
+            },
+            {
               action: 'removeWidget',
               description: 'Permanently remove a widget from the open dashboard.',
               readOnly: false,
@@ -182,14 +189,14 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'moveWidget',
               description:
-                'Move or resize a widget, optionally to another pageId on the open dashboard. The placement must stay inside the grid and cannot overlap.',
+                'Move or resize a widget, optionally to another pageId on the open dashboard. The placement must stay inside the grid and may overlap other widgets. Later widgets on a page paint on top; a widget moved to another page lands on top. Set stacking to front or back to move it to the top or bottom, for example to put a text widget behind a group of charts.',
               readOnly: false,
               fixed,
             },
             {
               action: 'updateLayout',
               description:
-                'Replace every widget placement and the canvas row count on the specified page in one validated write. Include all placements on that page. Empty rows are allowed, but widgets cannot overlap or leave the 12-column grid.',
+                'Replace every widget placement and the canvas row count on the specified page in one validated write. Include all placements on that page. Empty rows and overlapping widgets are allowed, but widgets cannot leave the 12-column grid. Later widgets paint on top; an entry with stacking front or back moves that widget to the top or bottom, applied in list order.',
               readOnly: false,
               fixed,
             },
@@ -448,6 +455,8 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
     override: ({ jsonSchema }) => {
       if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER) delete jsonSchema.maximum;
       if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;
+      // Likewise, `format: "date"` already names the shape; zod's long calendar regex adds nothing.
+      if (jsonSchema.format === 'date') delete jsonSchema.pattern;
     },
   });
   // The host already interprets this as a JSON Schema; omit the repeated dialect URI.
@@ -455,7 +464,38 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
   const removed = new Set(['action', ...Object.keys(fixed ?? {})]);
   if (json.properties) for (const key of removed) delete json.properties[key];
   if (json.required) json.required = json.required.filter((key) => !removed.has(key));
-  return compactSchema(json) as Record<string, unknown>;
+  const compact = JSON.stringify(inlineSingleUseDefinitions(compactSchema(json)));
+  // Zod's generated definition names repeat on every reference and mean nothing to an agent.
+  return JSON.parse(compact.replaceAll('__schema', 's')) as Record<string, unknown>;
+}
+
+const definitionRef = /"\$ref":"#\/definitions\/([^"]+)"/g;
+
+/**
+ * Moves definitions referenced only once back to where they are used: the reference and the
+ * definition's key cost more than they save, and refined objects turn every field into one.
+ */
+function inlineSingleUseDefinitions(schema: unknown) {
+  const { definitions, ...root } = schema as Record<string, unknown> & {
+    definitions?: Record<string, unknown>;
+  };
+  if (!definitions) return schema;
+  const uses = new Map<string, number>();
+  for (const [, name] of JSON.stringify(schema).matchAll(definitionRef))
+    uses.set(name, (uses.get(name) ?? 0) + 1);
+  const inline = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(inline);
+    if (!node || typeof node !== 'object') return node;
+    const ref = (node as { $ref?: unknown }).$ref;
+    const name = typeof ref === 'string' ? ref.replace('#/definitions/', '') : undefined;
+    if (name && uses.get(name) === 1) return inline(definitions[name]);
+    return Object.fromEntries(Object.entries(node).map(([key, item]) => [key, inline(item)]));
+  };
+  const kept = Object.entries(definitions).filter(([name]) => uses.get(name) !== 1);
+  return {
+    ...(inline(root) as object),
+    ...(kept.length ? { definitions: inline(Object.fromEntries(kept)) } : {}),
+  };
 }
 
 /**

@@ -9,6 +9,8 @@
     "scripts/preview-resources.ts",
     "scripts/preview-config.ts",
     "scripts/preview-config.test.ts",
+    "scripts/preview-template.ts",
+    "scripts/preview-template.test.ts",
     "scripts/prepare-preview-example.ts",
     "scripts/benchmark-query-startup.ts",
     "scripts/benchmark-uncached-queries.ts",

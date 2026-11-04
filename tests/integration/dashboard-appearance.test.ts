@@ -54,6 +54,21 @@ describe('dashboard appearance', () => {
     expect(widgets.find((widget) => widget.id === plain.id)?.definition.appearance).toBeUndefined();
   });
 
+  test('image widgets keep their appearance', async () => {
+    await signInToNewWorkspace();
+    const dashboard = await createDashboard();
+    const appearance = { borderWidth: 4, shadow: true };
+    const image = await addWidget(dashboard.id, { type: 'image', fit: 'contain', appearance });
+    const stored = (await callService({
+      action: 'getDashboard',
+      dashboardId: dashboard.id,
+    })) as { dashboard: DashboardDocument };
+    expect(
+      stored.dashboard.pages[0]!.widgets.find((widget) => widget.id === image.id)?.definition
+        .appearance,
+    ).toEqual(appearance);
+  });
+
   test('an empty theme clears the stored one', async () => {
     await signInToNewWorkspace();
     const dashboard = await createDashboard();

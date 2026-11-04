@@ -1,12 +1,14 @@
 import { useApiQuery } from '#/api/query';
 import type { BuilderDataSource } from '#/components/dashboard-builder';
 import type { SharingState } from '#/components/dashboard-sharing';
+import type { ImageAsset } from '#/domain/image-assets';
 import type { DashboardDocument } from '#/domain/schema';
 
 export interface DashboardPayload {
   dashboard: DashboardDocument;
   role: 'admin' | 'editor' | 'viewer';
   dataSources: BuilderDataSource[];
+  assets?: ImageAsset[];
   sharing?: SharingState;
 }
 

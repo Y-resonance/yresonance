@@ -254,6 +254,7 @@ function DashboardContent() {
                   dashboard={payload.dashboard}
                   pageId={activePage.id}
                   dataSources={payload.dataSources}
+                  assets={payload.assets}
                   refresh={refresh}
                   onSaveStatusChange={setSaveStatus}
                 />
@@ -261,6 +262,7 @@ function DashboardContent() {
                 <DashboardView
                   dashboard={displayedDashboard!}
                   pageId={activePage.id}
+                  assets={payload.assets}
                   dateRange={parseDateRangeSearch(search.dateRange)}
                   onDateRangeChange={(range) => {
                     const defaultRange = dashboardDateControlRange(payload.dashboard);

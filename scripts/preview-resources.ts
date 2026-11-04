@@ -1,7 +1,7 @@
 import { appendFile } from 'node:fs/promises';
 import { previewResourceName, previewClickhouseDatabase } from './preview-config';
 import { managePreviewClickhouse } from './clickhouse-preview';
-import { experimental_readRawConfig } from 'wrangler';
+import { readPreviewTemplate } from './preview-template';
 import { z } from 'zod';
 
 const action = z.enum(['prepare', 'cleanup', 'cleanup-legacy']).parse(process.argv[2]);
@@ -16,14 +16,10 @@ if (legacy)
     .parse(branch);
 const previewName = legacy ? `pr-${branch}` : branch;
 const configPath = '.wrangler-branch.json';
-const { rawConfig } = experimental_readRawConfig({ config: 'wrangler.jsonc' });
-const workerName = z.string().min(1).parse(rawConfig.name);
-const template = rawConfig.previews;
-if (!template || !rawConfig.account_id)
-  throw new Error('Expected a previews block and a Cloudflare account ID.');
+const { rawConfig, workerName, accountId, template } = readPreviewTemplate();
 if (!legacy) previewResourceName(workerName, branch);
 const token = z.string().min(1).parse(process.env.CLOUDFLARE_API_TOKEN);
-const apiBase = `https://api.cloudflare.com/client/v4/accounts/${rawConfig.account_id}`;
+const apiBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}`;
 const databaseSchema = z.object({ uuid: z.string(), name: z.string() });
 const namespaceSchema = z.object({ id: z.string(), title: z.string() });
 
@@ -139,6 +135,7 @@ async function manageResources(workerName: string) {
       kv_namespaces: [{ binding: 'QUERY_CACHE', id: kv.id }],
       r2_buckets: [{ binding: 'DATA', bucket_name: resourceName }],
       analytics_engine_datasets: template.analytics_engine_datasets,
+      images: template.images,
       containers: template.containers,
       durable_objects: template.durable_objects,
     };
@@ -157,7 +154,7 @@ async function manageResources(workerName: string) {
     );
     await Bun.write(
       '.wrangler-preview-migrations.json',
-      JSON.stringify({ account_id: rawConfig.account_id, d1_databases: bindings.d1_databases }),
+      JSON.stringify({ account_id: accountId, d1_databases: bindings.d1_databases }),
     );
     await run([
       'bunx',

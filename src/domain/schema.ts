@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { lastThirtyDaysRange, withoutToday } from './dates';
 
 export const timezoneSchema = z
   .string()
@@ -269,6 +270,23 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     textStyle: optionalTextStyle,
     appearance: optionalAppearance,
   }),
+  // An uploaded workspace image, such as a client logo. `assetId` comes from `listAssets`. Without
+  // one the widget is a placeholder in the builder, and viewers don't see it.
+  z
+    .object({
+      type: z.literal('image'),
+      assetId: z.string().min(1).optional(),
+      alt: z.string().trim().min(1).optional(),
+      fit: z.enum(['contain', 'cover']).default('contain'),
+      // Clickable logos and creatives open in a new tab. Only https links are stored.
+      href: z.url({ protocol: /^https$/u }).optional(),
+      title: z.string().trim().min(1).optional(),
+      appearance: optionalAppearance,
+    })
+    .refine((definition) => !definition.assetId || definition.alt, {
+      message: 'An image needs alt text.',
+      path: ['alt'],
+    }),
   z.object({
     ...cardBase,
     type: z.literal('scorecard'),
@@ -444,10 +462,29 @@ const legacyDashboardSchema = z
     ],
   }));
 
-export const dashboardDocumentSchema = z.preprocess((input) => {
-  const legacy = legacyDashboardSchema.safeParse(input);
-  return legacy.success ? legacy.data : input;
-}, currentDashboardSchema);
+export const dashboardDocumentSchema = z
+  .preprocess((input) => {
+    const legacy = legacyDashboardSchema.safeParse(input);
+    return legacy.success ? legacy.data : input;
+  }, currentDashboardSchema)
+  .transform((document) => ({
+    ...document,
+    defaultDateRange: withoutToday(document.defaultDateRange),
+    pages: document.pages.map((page) => ({
+      ...page,
+      widgets: page.widgets.map((widget) =>
+        widget.definition.type === 'dateControl' && widget.definition.defaultDateRange
+          ? {
+              ...widget,
+              definition: {
+                ...widget.definition,
+                defaultDateRange: withoutToday(widget.definition.defaultDateRange),
+              },
+            }
+          : widget,
+      ),
+    })),
+  }));
 
 export function dashboardWidgets(document: DashboardDocument) {
   return document.pages.flatMap((page) => page.widgets);
@@ -528,7 +565,4 @@ export type BarColorBy = z.infer<typeof barColorBySchema>;
 export type Appearance = z.infer<typeof appearanceSchema>;
 export type DashboardTheme = z.infer<typeof dashboardThemeSchema>;
 
-export const defaultDateRange: DateRange = {
-  startDate: { relative: { amount: 30, unit: 'day', direction: 'past', anchor: 'startOfDay' } },
-  endDate: { relative: { amount: 0, unit: 'day', direction: 'past', anchor: 'startOfDay' } },
-};
+export const defaultDateRange: DateRange = lastThirtyDaysRange;

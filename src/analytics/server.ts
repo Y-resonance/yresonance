@@ -71,6 +71,21 @@ function exportApiRequest({
     ...(input && 'dashboardId' in input ? { dashboard_id: input.dashboardId } : {}),
     ...(input && 'widgetId' in input ? { widget_id: input.widgetId } : {}),
     ...(input && 'dataSourceId' in input ? { datasource_id: input.dataSourceId } : {}),
+    ...(input && 'definition' in input ? { widget_type: input.definition.type } : {}),
+    // Shows how many image widgets stay placeholders and how often the optional title is used.
+    ...(input && 'definition' in input && input.definition.type === 'image'
+      ? {
+          image_has_asset: Boolean(input.definition.assetId),
+          image_has_title: Boolean(input.definition.title),
+        }
+      : {}),
+    ...(input?.action === 'moveWidget' && input.stacking
+      ? { widget_stacking: input.stacking }
+      : {}),
+    // Agents restack through updateLayout entries, so count those as well.
+    ...(input?.action === 'updateLayout'
+      ? { widget_restacks: input.placements.filter((entry) => entry.stacking).length }
+      : {}),
     ...(input?.action === 'registerDatasource'
       ? { datasource_provider: input.provider ?? input.backend ?? 'duckdb-file' }
       : {}),
