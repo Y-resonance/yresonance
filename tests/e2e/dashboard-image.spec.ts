@@ -34,6 +34,19 @@ async function mockAssetRoutes(page: Page, assets: ImageAsset[]) {
   return uploads;
 }
 
+// Keeps uploads running until the returned function is called.
+async function holdUploads(page: Page) {
+  let finish = () => {};
+  const held = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  await page.route('**/api/dashboards/dash_demo/assets?*', async (route) => {
+    await held;
+    await route.fallback();
+  });
+  return finish;
+}
+
 const placeholder = { type: 'image', fit: 'contain' };
 const added = 'w_added_1';
 
@@ -107,14 +120,7 @@ test('an editor picks a workspace image only after the widget saved it', async (
 test('a title typed during an upload survives it', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
   await mockAssetRoutes(page, state.assets);
-  let finishUpload = () => {};
-  const uploadHeld = new Promise<void>((resolve) => {
-    finishUpload = resolve;
-  });
-  await page.route('**/api/dashboards/dash_demo/assets?*', async (route) => {
-    await uploadHeld;
-    await route.fallback();
-  });
+  const finishUpload = await holdUploads(page);
   const stored = () => state.dashboard.pages[0].widgets.find((item) => item.id === added);
   await addPlaceholder(page);
 
@@ -138,14 +144,7 @@ test('a title still being typed when an upload finishes is saved with the image'
 }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
   await mockAssetRoutes(page, state.assets);
-  let finishUpload = () => {};
-  const uploadHeld = new Promise<void>((resolve) => {
-    finishUpload = resolve;
-  });
-  await page.route('**/api/dashboards/dash_demo/assets?*', async (route) => {
-    await uploadHeld;
-    await route.fallback();
-  });
+  const finishUpload = await holdUploads(page);
   const stored = () => state.dashboard.pages[0].widgets.find((item) => item.id === added);
   await addPlaceholder(page);
 
@@ -161,6 +160,55 @@ test('a title still being typed when an upload finishes is saved with the image'
     .poll(() => stored()?.definition)
     .toMatchObject({ title: 'Our partner', assetId: 'asset_logo' });
 });
+
+for (const { field, draft, saved } of [
+  { field: 'Alt text', draft: 'New alt', saved: { alt: 'New alt' } },
+  { field: 'Link', draft: 'https://new.example/', saved: { href: 'https://new.example/' } },
+  { field: 'Link', draft: 'http://new.example/', saved: {} },
+]) {
+  test(`a replacement upload finishing during the typing of ${draft} saves valid drafts`, async ({
+    page,
+  }) => {
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    const old = { ...logo, id: 'asset_old', name: 'old.png' };
+    state.assets.push(old);
+    state.dashboard.pages[0].widgets.push({
+      id: 'w_logo',
+      layout: { x: 8, y: 2, width: 4, height: 3 },
+      definition: {
+        type: 'image',
+        assetId: old.id,
+        alt: 'Old alt',
+        fit: 'contain',
+        href: 'https://old.example/',
+      },
+      definitionHash: 'hash_logo',
+    });
+    await mockAssetRoutes(page, state.assets);
+    const finishUpload = await holdUploads(page);
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Edit Old alt' }).click();
+    await page
+      .getByLabel('Image file')
+      .setInputFiles({ name: 'client-logo.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+    await page.getByLabel(field).fill(draft);
+
+    finishUpload();
+    await expect
+      .poll(() => state.dashboard.pages[0].widgets.find((item) => item.id === 'w_logo')?.definition)
+      .toEqual({
+        type: 'image',
+        assetId: 'asset_logo',
+        alt: 'Old alt',
+        fit: 'contain',
+        href: 'https://old.example/',
+        ...saved,
+      });
+  });
+}
 
 test('a title is optional and clearing it removes it from the widget', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });

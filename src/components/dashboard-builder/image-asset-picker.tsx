@@ -172,6 +172,10 @@ function defaultAlt(asset: ImageAsset) {
 
 type ImageDefinition = Extract<WidgetDefinition, { type: 'image' }>;
 
+function isHttpsLink(href: string) {
+  return URL.canParse(href) && new URL(href).protocol === 'https:';
+}
+
 /**
  * Inspector fields for an image widget: the image itself, an optional title and, once an image is
  * chosen, alt text, fit and an optional link. Title, alt text and link are drafts until they are
@@ -200,6 +204,7 @@ export function ImageSettings({
     setLink(definition.href ?? '');
     setLinkError(undefined);
   }, [definition.alt, definition.href]);
+  const linkDraft = link.trim() || undefined;
   return (
     <>
       <Field>
@@ -215,6 +220,7 @@ export function ImageSettings({
               // so these drafts have to be saved here or they are lost.
               alt: alt.trim() || definition.alt || defaultAlt(asset),
               title: title.trim() || undefined,
+              href: !linkDraft || isHttpsLink(linkDraft) ? linkDraft : definition.href,
             })
           }
         />
@@ -275,12 +281,11 @@ export function ImageSettings({
                 setLink(event.target.value);
               }}
               onBlur={() => {
-                const href = link.trim() || undefined;
-                if (href && !(URL.canParse(href) && new URL(href).protocol === 'https:')) {
+                if (linkDraft && !isHttpsLink(linkDraft)) {
                   setLinkError('Use an https:// link.');
                   return;
                 }
-                if (href !== definition.href) void commit({ ...definition, href });
+                if (linkDraft !== definition.href) void commit({ ...definition, href: linkDraft });
               }}
             />
             {linkError ? <FieldError>{linkError}</FieldError> : null}
