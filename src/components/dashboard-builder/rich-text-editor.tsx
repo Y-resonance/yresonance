@@ -117,6 +117,7 @@ export default function RichTextEditor({
   onCommit: (markdown: string, trigger?: 'autosave') => Promise<boolean>;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const refocusAfterDialog = useRef(false);
   const [pendingSaves, setPendingSaves] = useState(0);
   // Only user edits mark the document dirty; loading `value` does not, so focusing and leaving
   // an untouched (possibly legacy) document never saves it.
@@ -224,6 +225,13 @@ export default function RichTextEditor({
     return () => window.removeEventListener('beforeunload', warnWhileEditing);
   }, []);
 
+  // Focus has to wait until the editor is back in the inspector, so this runs after the dialog closed.
+  useEffect(() => {
+    if (expanded || !refocusAfterDialog.current) return;
+    refocusAfterDialog.current = false;
+    editor?.commands.focus();
+  }, [expanded, editor]);
+
   const field = (
     <div
       className={cn(
@@ -257,13 +265,20 @@ export default function RichTextEditor({
         open
         onOpenChange={(open) => {
           if (open) return;
+          refocusAfterDialog.current = true;
           setExpanded(false);
-          editor?.commands.focus();
         }}
       >
         <DialogContent
           className="h-[80dvh] grid-rows-[auto_minmax(0,1fr)] sm:max-w-3xl"
-          initialFocus={() => editor?.view.dom ?? null}
+          // Focusing the element directly would put the cursor at the start of the text, and the
+          // editor could read that before restoring its own selection. `view.focus` does both.
+          initialFocus={() => {
+            editor?.view.focus();
+            return editor?.view.dom ?? null;
+          }}
+          // The effect above returns focus, once the editor is back in the inspector.
+          finalFocus={false}
         >
           <DialogTitle>{label}</DialogTitle>
           {field}

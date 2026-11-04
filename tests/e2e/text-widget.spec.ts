@@ -245,7 +245,7 @@ test('a failed save keeps the text, warns before leaving, and retries', async ({
   await expect(widget).toContainText('Old written');
   await expect(page.getByText('This dashboard changed while saving.')).toBeHidden();
   await expect(editor).toContainText('Old written');
-  expect(await leavingIsCancelled()).toBe(false);
+  await expect.poll(leavingIsCancelled).toBe(false);
 });
 
 test('a refresh from an earlier save does not undo newer text', async ({ page }) => {
@@ -413,7 +413,7 @@ test('text from a save that fails after leaving the widget comes back when resel
   await otherWidget.click();
   await expect(widget).toContainText('Old written');
   await expect.poll(() => documents.at(-1)).toBe('Old written');
-  expect(await leavingIsCancelled()).toBe(false);
+  await expect.poll(leavingIsCancelled).toBe(false);
 });
 
 test('reselecting while a save is running keeps the text if that save then fails', async ({
@@ -506,14 +506,26 @@ test('the editor pops out into a dialog and keeps its text, cursor and undo', as
   await expect(dialogEditor).toBeFocused();
   expect((await dialogEditor.boundingBox())!.width).toBeGreaterThan(inspectorWidth);
 
+  // Typing carries on at the same place, and undo reaches what was typed before popping out.
+  await page.keyboard.type(' def');
+  await expect(dialogEditor).toContainText('Old abc def');
   await page.keyboard.press('ControlOrMeta+z');
+  await expect(dialogEditor).not.toContainText('def');
+  // Typing close together can undo as one step, depending on timing.
+  const undoneTogether = !(await dialogEditor.textContent())!.includes('abc');
+  if (!undoneTogether) await page.keyboard.press('ControlOrMeta+z');
   await expect(dialogEditor).not.toContainText('abc');
+  await expect(dialogEditor).toContainText('Old');
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  if (!undoneTogether) await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(dialogEditor).toContainText('Old abc def');
+
   await page.keyboard.type(' typed ');
   await dialog.getByRole('button', { name: 'Bold' }).click();
   await page.keyboard.type('here');
-  await expect(dialogEditor).toContainText('Old typed here');
+  await expect(dialogEditor).toContainText('Old abc def typed here');
   await expect(dialogEditor.locator('strong')).toHaveText('here');
-  await expect.poll(() => documents.at(-1)).toBe('Old typed **here**');
+  await expect.poll(() => documents.at(-1)).toBe('Old abc def typed **here**');
   await expect(dialogEditor).toBeFocused();
 
   // A link popover inside the dialog must not close the dialog or lose focus to the page.
@@ -528,7 +540,7 @@ test('the editor pops out into a dialog and keeps its text, cursor and undo', as
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(editor).toBeFocused();
-  await expect(editor).toContainText('Old typed here');
+  await expect(editor).toContainText('Old abc def typed here');
   await page.keyboard.type(' after');
   await editor.blur();
   await expect.poll(() => documents.at(-1)).toContain('after');
