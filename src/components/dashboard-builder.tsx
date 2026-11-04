@@ -341,6 +341,7 @@ function Builder({
     trigger?: 'autosave',
   ) {
     const revision = ++mutationRevisionRef.current;
+    let saveFailed = false;
     const previous = widget;
     const controlFieldChanged =
       widget.definition.type === 'control' &&
@@ -417,6 +418,9 @@ function Builder({
         ),
       }));
       if (revision === mutationRevisionRef.current) setError(message(caught));
+      // The save may have failed because someone else changed the dashboard, and later saves send
+      // whole definitions, so they need what the server has now.
+      saveFailed = true;
       return false;
     } finally {
       setPendingWidgets((current) => {
@@ -426,6 +430,7 @@ function Builder({
         return rest;
       });
       finishSaving();
+      if (saveFailed) void refresh();
     }
   }
 

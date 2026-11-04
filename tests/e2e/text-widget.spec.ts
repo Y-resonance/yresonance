@@ -593,6 +593,57 @@ test('the open editor follows text changed elsewhere and each widget keeps its o
   await expect(editor).toHaveText('Second widget');
 });
 
+test('a save that fails because someone else changed the text loads their change', async ({
+  page,
+}) => {
+  const documents = trackSavedDocuments(page);
+  const { state, widget, editor } = await openTextWidget(page, 'Old');
+  let conflict = true;
+  await page.route('**/api/yresonance', async (route) => {
+    if (!conflict || route.request().postDataJSON().action !== 'updateWidget')
+      return route.fallback();
+    conflict = false;
+    state.dashboard = {
+      ...state.dashboard,
+      pages: state.dashboard.pages.map((item) => ({
+        ...item,
+        widgets: item.widgets.map((candidate) =>
+          candidate.id === 'w_notes'
+            ? {
+                ...candidate,
+                definition: {
+                  type: 'text' as const,
+                  content: { schemaVersion: 'markdown-v1' as const, document: 'Agent text' },
+                },
+              }
+            : candidate,
+        ),
+      })),
+    };
+    await route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: false,
+        error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
+      }),
+    });
+  });
+
+  await page.keyboard.type(' written');
+  await editor.blur();
+  await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
+  await expect(widget).toContainText('Agent text');
+  await expect(editor).toContainText('Old written');
+
+  // A style change sends the whole definition, which now holds the other writer's text.
+  const saves = documents.length;
+  await page.getByRole('complementary').getByRole('combobox', { name: 'Size' }).click();
+  await page.getByRole('option').nth(1).click();
+  await expect.poll(() => documents.length).toBe(saves + 1);
+  expect(documents.at(-1)).toBe('Agent text');
+});
+
 test('a failed refresh after a save keeps the builder and the text', async ({ page }) => {
   const { widget, editor } = await openTextWidget(page, 'Old');
   let failing = true;
