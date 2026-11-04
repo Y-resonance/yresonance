@@ -212,6 +212,9 @@ export function ImageSettings({
               ...definition,
               assetId: asset.id,
               alt: definition.alt ?? defaultAlt(asset),
+              // An upload can finish mid-typing. Saving disables the field without a blur event,
+              // so the draft has to be saved here or it is lost.
+              title: title.trim() || undefined,
             })
           }
         />

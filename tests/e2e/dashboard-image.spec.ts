@@ -133,6 +133,35 @@ test('a title typed during an upload survives it', async ({ page }) => {
     .toMatchObject({ title: 'Our partner', assetId: 'asset_logo' });
 });
 
+test('a title still being typed when an upload finishes is saved with the image', async ({
+  page,
+}) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  await mockAssetRoutes(page, state.assets);
+  let finishUpload = () => {};
+  const uploadHeld = new Promise<void>((resolve) => {
+    finishUpload = resolve;
+  });
+  await page.route('**/api/dashboards/dash_demo/assets?*', async (route) => {
+    await uploadHeld;
+    await route.fallback();
+  });
+  const stored = () => state.dashboard.pages[0].widgets.find((item) => item.id === added);
+  await addPlaceholder(page);
+
+  await page
+    .getByLabel('Image file')
+    .setInputFiles({ name: 'client-logo.png', mimeType: 'image/png', buffer: png });
+  await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  await page.getByLabel('Title', { exact: true }).fill('Our partner');
+
+  // Saving disables the inspector, so the field loses focus without a blur event.
+  finishUpload();
+  await expect
+    .poll(() => stored()?.definition)
+    .toMatchObject({ title: 'Our partner', assetId: 'asset_logo' });
+});
+
 test('a title is optional and clearing it removes it from the widget', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
   state.assets.push(logo);

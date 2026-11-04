@@ -125,7 +125,10 @@ function DashboardGrid({
     if (!defaultDateRange) return;
     setControlState((current) => ({ ...current, dateRange: dateRange ?? defaultDateRange }));
   }, [dateRange, defaultDateRange]);
-  const widgets = activeDashboardPage(dashboard, pageId)?.widgets ?? [];
+  // A widget still waiting for its image doesn't exist for viewers, so it reserves no space either.
+  const widgets = (activeDashboardPage(dashboard, pageId)?.widgets ?? []).filter(
+    ({ definition }) => definition.type !== 'image' || definition.assetId,
+  );
   // DOM order follows reading order for the stacked phone layout and screen readers. On larger
   // screens overlapping widgets paint in stored order instead, so later widgets sit on top.
   const ordered = [...widgets].sort(
@@ -352,7 +355,6 @@ function ImageWidget({
 }) {
   const assets = useContext(DashboardAssetsContext);
   const { assetId, title } = definition;
-  if (!assetId && !builder) return null;
   return (
     <Card className="h-full min-h-0">
       {title ? (
