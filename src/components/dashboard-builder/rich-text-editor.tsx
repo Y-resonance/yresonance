@@ -91,6 +91,14 @@ const literalMarkdown = [
 const SAVE_AFTER_PAUSE_MS = 2_000;
 const SAVE_WHILE_TYPING_MS = 10_000;
 
+// Text whose last save failed, by widget. The failure can arrive after the editor has closed, such
+// as when clicking another widget saves on blur, so this outlives it. Reopening the widget restores
+// the text, and its next blur or close retries.
+const unsavedText = new Map<string, string>();
+const warnAboutFailedSaves = (event: BeforeUnloadEvent) => {
+  if (unsavedText.size > 0) event.preventDefault();
+};
+
 /**
  * WYSIWYG Markdown editor for text widgets in the inspector, which can pop out into a large dialog.
  * It is the default export so the inspector can lazy-load it: viewers and share links never
@@ -98,10 +106,12 @@ const SAVE_WHILE_TYPING_MS = 10_000;
  * user actually changed the text. `onCommit` resolves to whether the save worked.
  */
 export default function RichTextEditor({
+  widgetId,
   label,
   value,
   onCommit,
 }: {
+  widgetId: string;
   label: string;
   value: string;
   onCommit: (markdown: string, trigger?: 'autosave') => Promise<boolean>;
@@ -110,7 +120,8 @@ export default function RichTextEditor({
   const [pendingSaves, setPendingSaves] = useState(0);
   // Only user edits mark the document dirty; loading `value` does not, so focusing and leaving
   // an untouched (possibly legacy) document never saves it.
-  const dirty = useRef(false);
+  const dirty = useRef(unsavedText.has(widgetId));
+  const lastAttempt = useRef(0);
   const pauseTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const commitRef = useRef(onCommit);
@@ -126,10 +137,21 @@ export default function RichTextEditor({
     dirty.current = false;
     setPendingSaves((count) => count + 1);
     // Leading spaces can mark an indented code block, so only the end is trimmed.
-    const saved = await commitRef.current(editor.getMarkdown().trimEnd(), trigger);
-    // The builder rolls a failed save back. Staying dirty keeps the text on screen, and the next
-    // edit, blur or close retries it.
-    if (!saved) dirty.current = true;
+    const markdown = editor.getMarkdown().trimEnd();
+    const attempt = ++lastAttempt.current;
+    const saved = await commitRef.current(markdown, trigger);
+    // Only the latest attempt counts, because it covers the text of any older one. The builder
+    // rolls a failed save back. Staying dirty keeps the text on screen, and the next edit, blur or
+    // close retries it.
+    if (attempt === lastAttempt.current) {
+      if (saved) {
+        unsavedText.delete(widgetId);
+      } else {
+        dirty.current = true;
+        unsavedText.set(widgetId, markdown);
+        window.addEventListener('beforeunload', warnAboutFailedSaves);
+      }
+    }
     setPendingSaves((count) => count - 1);
   }
 
@@ -156,7 +178,7 @@ export default function RichTextEditor({
       paragraph,
       ...literalMarkdown,
     ],
-    content: value,
+    content: unsavedText.get(widgetId) ?? value,
     contentType: 'markdown',
     editorProps: {
       attributes: {

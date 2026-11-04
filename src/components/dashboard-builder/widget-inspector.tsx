@@ -206,6 +206,7 @@ export function WidgetSettings({
             <Suspense fallback={<div className="min-h-34 rounded-lg border border-input" />}>
               <RichTextEditor
                 key={widget.id}
+                widgetId={widget.id}
                 label="Text"
                 value={definition.content.document}
                 onCommit={(document, trigger) => {

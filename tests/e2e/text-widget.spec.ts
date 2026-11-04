@@ -1,6 +1,6 @@
 import { test } from './support/ui-test';
 import { expect, type Page } from '@playwright/test';
-import { mockYresonanceApi } from './support/yresonance-api';
+import { dataSourceId, mockYresonanceApi } from './support/yresonance-api';
 
 test.use({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
 
@@ -36,7 +36,7 @@ async function openTextWidget(page: Page, document: string, entry = '/dashboards
   await expect(editor).toContainText(document);
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');
-  return { widget, editor };
+  return { state, widget, editor };
 }
 
 test('editors format text and add links in the inspector', async ({ page }) => {
@@ -288,6 +288,109 @@ test('a refresh from an earlier save does not undo newer text', async ({ page })
   await expect(widget).toContainText('Old one two');
   await page.keyboard.type(' three');
   await expect(editor).toContainText('Old one two three');
+});
+
+test('a refresh still running from an earlier save does not bring back older text', async ({
+  page,
+}) => {
+  const documents = trackSavedDocuments(page);
+  const { state, widget, editor } = await openTextWidget(page, 'Old');
+  // Only the first refresh is held back, answering with the dashboard as it was when requested.
+  let releaseRefresh = () => {};
+  const refreshGate = new Promise<void>((release) => (releaseRefresh = release));
+  let refreshHeld = () => {};
+  const firstRefresh = new Promise<void>((held) => (refreshHeld = held));
+  let held = false;
+  await page.route('**/api/yresonance', async (route) => {
+    if (held || route.request().postDataJSON().action !== 'getDashboard') return route.fallback();
+    held = true;
+    const dashboard = state.dashboard;
+    refreshHeld();
+    await refreshGate;
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          dashboard,
+          role: 'editor',
+          dataSources: [{ id: dataSourceId, name: state.source.name }],
+          assets: [],
+        },
+      }),
+    });
+  });
+
+  await page.keyboard.type(' one');
+  await firstRefresh;
+  await page.keyboard.type(' two');
+  await expect.poll(() => documents.at(-1)).toBe('Old one two');
+
+  releaseRefresh();
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+  await expect(editor).toContainText('Old one two');
+  await expect(widget).toContainText('Old one two');
+  await page.keyboard.type(' three');
+  await expect.poll(() => documents.at(-1)).toBe('Old one two three');
+});
+
+test('text from a save that fails after leaving the widget comes back when reselected', async ({
+  page,
+}) => {
+  const documents = trackSavedDocuments(page);
+  const { widget, editor } = await openTextWidget(page, 'Old');
+  let failing = true;
+  await page.route('**/api/yresonance', (route) =>
+    failing && route.request().postDataJSON().action === 'updateWidget'
+      ? route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: false,
+            error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
+          }),
+        })
+      : route.fallback(),
+  );
+  const leavingIsCancelled = () =>
+    page.evaluate(() => !window.dispatchEvent(new Event('beforeunload', { cancelable: true })));
+  const otherWidget = page.locator('[data-widget-id]', { hasText: 'Media spend' });
+
+  await page.keyboard.type(' written');
+  await otherWidget.click();
+  await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
+  await expect(widget).not.toContainText('written');
+  expect(await leavingIsCancelled()).toBe(true);
+
+  await widget.click({ position: { x: 40, y: 20 } });
+  await expect(editor).toContainText('Old written');
+
+  // Leaving again retries, without another edit.
+  failing = false;
+  await otherWidget.click();
+  await expect(widget).toContainText('Old written');
+  await expect.poll(() => documents.at(-1)).toBe('Old written');
+  expect(await leavingIsCancelled()).toBe(false);
+});
+
+test('a failed refresh after a save keeps the builder and the text', async ({ page }) => {
+  const { widget, editor } = await openTextWidget(page, 'Old');
+  let failing = true;
+  await page.route('**/api/yresonance', (route) => {
+    if (!failing || route.request().postDataJSON().action !== 'getDashboard')
+      return route.fallback();
+    failing = false;
+    return route.abort();
+  });
+
+  await page.keyboard.type(' one');
+  await expect(widget).toContainText('Old one');
+  await expect.poll(() => failing).toBe(false);
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(editor).toBeFocused();
+  await page.keyboard.type(' two');
+  await expect(editor).toContainText('Old one two');
+  await expect(widget).toContainText('Old one two');
 });
 
 test('leaving while the link popover has focus saves the text right away', async ({ page }) => {

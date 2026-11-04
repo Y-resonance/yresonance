@@ -5,6 +5,7 @@ import {
 import { DashboardPages } from '#/components/dashboard-pages';
 import { dashboardWidgets } from '#/domain/schema';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
+import { createSerialQueue } from '#/domain/serial-queue';
 import { createFileRoute } from '@tanstack/react-router';
 import { CloudAlertIcon, CloudCheckIcon, LoaderCircleIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, useRef } from 'react';
@@ -96,14 +97,19 @@ function DashboardContent() {
   const [saveStatus, setSaveStatus] = useState<DashboardSaveStatus>('saved');
   const [agentMode, setAgentMode] = useState(initialAgentModeState);
   const [queryInputsRevision, setQueryInputsRevision] = useState(0);
+  // Reads join an identical one already running, but that one can predate the save asking for this
+  // refresh and would bring back older text. Loading one at a time always reads after the save.
+  const loadQueue = useRef(createSerialQueue());
   const loadDashboard = useCallback(
     async (includeSharing = true) => {
       try {
-        const loaded = await callApi<DashboardPayload>({
-          action: 'getDashboard',
-          dashboardId,
-          includeSharing,
-        });
+        const loaded = await loadQueue.current(() =>
+          callApi<DashboardPayload>({
+            action: 'getDashboard',
+            dashboardId,
+            includeSharing,
+          }),
+        );
         if (controlDashboardIdRef.current !== loaded.dashboard.id) {
           controlDashboardIdRef.current = loaded.dashboard.id;
           setBuilderControlState(initialControlState(loaded.dashboard));
@@ -160,7 +166,8 @@ function DashboardContent() {
   return (
     <DashboardQueryRefresh key={dashboardId} inputsRevision={queryInputsRevision}>
       <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
-        {error || dashboardQuery.error ? (
+        {/* A failed refresh must not take down a loaded builder, which shows its own alert. */}
+        {(error && !payload) || dashboardQuery.error ? (
           <ErrorState
             error={error ?? dashboardQuery.error?.message ?? 'Failed to load dashboard.'}
           />
