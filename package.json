@@ -94,7 +94,7 @@
     "drizzle-kit": "^0.31.10",
     "oxc-transform-react": "^0.156.0",
     "oxfmt": "0.75.0",
-    "oxlint": "1.90.0",
+    "oxlint": "1.91.0",
     "tailwindcss": "4.3.4",
     "typescript": "7.0.2",
     "vite": "8.3.5",
