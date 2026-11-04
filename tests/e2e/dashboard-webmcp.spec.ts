@@ -175,3 +175,23 @@ test('a failed refresh after an agent change shows an alert on the dashboard', a
   await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Media spend').first()).toBeVisible();
 });
+
+test('a failed refresh after removing a widget does not read as a failed save', async ({
+  page,
+}) => {
+  await mockYresonanceApi(page, { role: 'editor' });
+  await page.goto('/dashboards/dash_demo');
+  const spend = page.locator('[data-widget-id]', { hasText: 'Media spend' });
+  await expect(spend).toBeVisible();
+  await page.route('**/api/yresonance', (route) =>
+    route.request().postDataJSON().action === 'getDashboard' ? route.abort() : route.fallback(),
+  );
+
+  await page.getByRole('button', { name: 'Remove Media spend' }).click();
+  await page.getByRole('button', { name: 'Remove widget' }).click();
+
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(spend).toBeHidden();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+});

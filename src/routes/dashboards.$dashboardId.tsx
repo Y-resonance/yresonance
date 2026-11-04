@@ -99,10 +99,13 @@ function DashboardContent() {
   const [agentMode, setAgentMode] = useState(initialAgentModeState);
   const [queryInputsRevision, setQueryInputsRevision] = useState(0);
   // Reads join an identical one already running, but that one can predate the save asking for this
-  // refresh and would bring back older text. Loading one at a time always reads after the save.
+  // refresh and would bring back older text. Loading one at a time keeps refreshes from joining
+  // each other, and only the newest requested load is shown.
   const loadQueue = useRef(createSerialQueue());
+  const latestLoad = useRef(0);
   const loadDashboard = useCallback(
     async (includeSharing = true) => {
+      const load = ++latestLoad.current;
       try {
         const loaded = await loadQueue.current(() =>
           callApi<DashboardPayload>({
@@ -111,6 +114,12 @@ function DashboardContent() {
             includeSharing,
           }),
         );
+        if (load !== latestLoad.current) {
+          // The newer load may skip sharing, so keep what this one fetched.
+          const { sharing } = loaded;
+          if (sharing) dashboardQuery.setData((current) => ({ ...(current ?? loaded), sharing }));
+          return;
+        }
         if (controlDashboardIdRef.current !== loaded.dashboard.id) {
           controlDashboardIdRef.current = loaded.dashboard.id;
           setBuilderControlState(initialControlState(loaded.dashboard));
@@ -129,7 +138,9 @@ function DashboardContent() {
     },
     [dashboardId, callApi, dashboardQuery.setData],
   );
-  const refresh = useCallback(() => loadDashboard(false), [loadDashboard]);
+  // The change a refresh follows was already saved, so its failure must not read as a failed save.
+  // It shows in this page's alert instead.
+  const refresh = useCallback(() => loadDashboard(false).catch(() => undefined), [loadDashboard]);
   const refreshSharing = useCallback(() => loadDashboard(true), [loadDashboard]);
   useEffect(() => {
     if (payload && controlDashboardIdRef.current !== payload.dashboard.id) {
@@ -252,6 +263,11 @@ function DashboardContent() {
                 void navigate({ search: (current) => ({ ...current, page }) })
               }
             />
+            {loadError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{loadError}</AlertDescription>
+              </Alert>
+            ) : null}
             {activePage ? (
               editing && !agentMode.enabled ? (
                 <DashboardBuilder
@@ -266,32 +282,24 @@ function DashboardContent() {
                   onSaveStatusChange={setSaveStatus}
                 />
               ) : (
-                <>
-                  {/* The builder shows its own alert for this. */}
-                  {loadError ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{loadError}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                  <DashboardView
-                    dashboard={displayedDashboard!}
-                    pageId={activePage.id}
-                    assets={payload.assets}
-                    dateRange={parseDateRangeSearch(search.dateRange)}
-                    onDateRangeChange={(range) => {
-                      const defaultRange = dashboardDateControlRange(payload.dashboard);
-                      void navigate({
-                        search: (current) => ({
-                          ...current,
-                          dateRange:
-                            defaultRange && sameDateRange(defaultRange, range)
-                              ? undefined
-                              : dateRangeSearchValue(range),
-                        }),
-                      });
-                    }}
-                  />
-                </>
+                <DashboardView
+                  dashboard={displayedDashboard!}
+                  pageId={activePage.id}
+                  assets={payload.assets}
+                  dateRange={parseDateRangeSearch(search.dateRange)}
+                  onDateRangeChange={(range) => {
+                    const defaultRange = dashboardDateControlRange(payload.dashboard);
+                    void navigate({
+                      search: (current) => ({
+                        ...current,
+                        dateRange:
+                          defaultRange && sameDateRange(defaultRange, range)
+                            ? undefined
+                            : dateRangeSearchValue(range),
+                      }),
+                    });
+                  }}
+                />
               )
             ) : null}
           </div>

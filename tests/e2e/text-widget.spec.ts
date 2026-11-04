@@ -334,6 +334,49 @@ test('a refresh still running from an earlier save does not bring back older tex
   await expect.poll(() => documents.at(-1)).toBe('Old one two three');
 });
 
+test('a stale refresh does not bring back older text when the next refresh fails', async ({
+  page,
+}) => {
+  const documents = trackSavedDocuments(page);
+  const { state, editor } = await openTextWidget(page, 'Old');
+  let releaseRefresh = () => {};
+  const refreshGate = new Promise<void>((release) => (releaseRefresh = release));
+  let refreshHeld = () => {};
+  const firstRefresh = new Promise<void>((held) => (refreshHeld = held));
+  let refreshes = 0;
+  await page.route('**/api/yresonance', async (route) => {
+    if (route.request().postDataJSON().action !== 'getDashboard') return route.fallback();
+    refreshes += 1;
+    if (refreshes > 1) return route.abort();
+    const dashboard = state.dashboard;
+    refreshHeld();
+    await refreshGate;
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          dashboard,
+          role: 'editor',
+          dataSources: [{ id: dataSourceId, name: state.source.name }],
+          assets: [],
+        },
+      }),
+    });
+  });
+
+  await page.keyboard.type(' one');
+  await firstRefresh;
+  await page.keyboard.type(' two');
+  await expect.poll(() => documents.at(-1)).toBe('Old one two');
+
+  releaseRefresh();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(editor).toContainText('Old one two');
+  await page.keyboard.type(' three');
+  await expect.poll(() => documents.at(-1)).toBe('Old one two three');
+});
+
 test('text from a save that fails after leaving the widget comes back when reselected', async ({
   page,
 }) => {
