@@ -3,6 +3,16 @@ import { dashboardDocumentSchema, defaultDateRange, widgetDefinitionSchema } fro
 import { dateRangePresets, yesterday } from './dates';
 
 describe('dashboard document schema', () => {
+  it('allows an image widget without an image but requires alt text with one', () => {
+    expect(widgetDefinitionSchema.safeParse({ type: 'image' }).success).toBe(true);
+    expect(widgetDefinitionSchema.safeParse({ type: 'image', assetId: 'asset' }).success).toBe(
+      false,
+    );
+    expect(
+      widgetDefinitionSchema.safeParse({ type: 'image', assetId: 'asset', alt: 'Logo' }).success,
+    ).toBe(true);
+  });
+
   it('derives canvas rows for documents saved before the field existed', () => {
     const dashboard = dashboardDocumentSchema.parse({
       id: 'dashboard',

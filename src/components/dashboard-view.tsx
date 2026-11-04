@@ -21,14 +21,18 @@ import {
   YAxis,
 } from 'recharts';
 import {
+  createContext,
   Fragment,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
-import { ChevronRight, ChevronsUpDown, X } from 'lucide-react';
+import { ChevronRight, ChevronsUpDown, ImageIcon, X } from 'lucide-react';
 import {
   drillPathSchema,
   type ComboMetric,
@@ -74,6 +78,7 @@ import {
   withComparisonSeries,
 } from '#/domain/widget-results';
 import { DateRangePicker } from '#/components/date-range-picker';
+import { imageAssetUrl, imageSizes, imageSrcSet, type ImageAsset } from '#/domain/image-assets';
 import {
   Table,
   TableBody,
@@ -83,7 +88,19 @@ import {
   TableRow,
 } from '#/components/ui/table';
 
+/** Renders a dashboard page for viewers. `assets` sizes its image widgets (see getDashboard). */
 export function DashboardView({
+  assets,
+  ...props
+}: Parameters<typeof DashboardGrid>[0] & { assets?: ImageAsset[] }) {
+  return (
+    <DashboardAssetsProvider assets={assets}>
+      <DashboardGrid {...props} />
+    </DashboardAssetsProvider>
+  );
+}
+
+function DashboardGrid({
   dashboard,
   pageId,
   shareToken,
@@ -109,7 +126,11 @@ export function DashboardView({
     if (!defaultDateRange) return;
     setControlState((current) => ({ ...current, dateRange: dateRange ?? defaultDateRange }));
   }, [dateRange, defaultDateRange]);
-  const widgets = activeDashboardPage(dashboard, pageId)?.widgets ?? [];
+  // Viewers don't get a widget still waiting for its image. Rows come from stored positions, so one
+  // between other widgets still leaves its gap.
+  const widgets = (activeDashboardPage(dashboard, pageId)?.widgets ?? []).filter(
+    ({ definition }) => definition.type !== 'image' || definition.assetId,
+  );
   // DOM order follows reading order for the stacked phone layout and screen readers. On larger
   // screens overlapping widgets paint in stored order instead, so later widgets sit on top.
   const ordered = [...widgets].sort(
@@ -195,6 +216,21 @@ function isControlWidget(widget: DashboardWidget) {
   return widget.definition.type === 'control' || widget.definition.type === 'dateControl';
 }
 
+// Dimensions of the images the open dashboard shows, from `getDashboard`. Image widgets read them
+// for `srcset` and their reserved size; viewers without an entry still get the original.
+const DashboardAssetsContext = createContext<ReadonlyMap<string, ImageAsset>>(new Map());
+
+export function DashboardAssetsProvider({
+  assets,
+  children,
+}: {
+  assets: ImageAsset[] | undefined;
+  children: ReactNode;
+}) {
+  const byId = useMemo(() => new Map((assets ?? []).map((asset) => [asset.id, asset])), [assets]);
+  return <DashboardAssetsContext value={byId}>{children}</DashboardAssetsContext>;
+}
+
 function Widget({
   widget,
   dashboardId,
@@ -202,6 +238,7 @@ function Widget({
   defaultDateRange,
   shareToken,
   preview,
+  builder,
   controlState,
   setControlState,
   onDateRangeChange,
@@ -212,10 +249,22 @@ function Widget({
   defaultDateRange?: DateRange;
   shareToken?: string;
   preview?: boolean;
+  // Clicks on builder widgets select them, so links stay inert there.
+  builder?: boolean;
   controlState: ControlState;
   setControlState: (state: ControlState) => void;
   onDateRangeChange?: (range: DateRange) => void;
 }) {
+  if (widget.definition.type === 'image')
+    return (
+      <ImageWidget
+        widget={widget}
+        definition={widget.definition}
+        dashboardId={dashboardId}
+        shareToken={shareToken}
+        builder={Boolean(builder)}
+      />
+    );
   if (widget.definition.type === 'text')
     return (
       <Card>
@@ -287,9 +336,109 @@ export function DashboardWidgetView({
       timezone={dashboard.timezone}
       defaultDateRange={dashboardDateControlRange(dashboard)}
       preview={preview}
+      builder
       controlState={controlState}
       setControlState={setControlState}
     />
+  );
+}
+
+function ImageWidget({
+  widget,
+  definition,
+  dashboardId,
+  shareToken,
+  builder,
+}: {
+  widget: DashboardWidget;
+  definition: Extract<DashboardWidget['definition'], { type: 'image' }>;
+  dashboardId: string;
+  shareToken?: string;
+  builder: boolean;
+}) {
+  const assets = useContext(DashboardAssetsContext);
+  const { assetId, title } = definition;
+  return (
+    <Card className="h-full min-h-0">
+      {title ? (
+        <CardHeader className="shrink-0">
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+      ) : null}
+      <CardContent className={cn('flex min-h-0 flex-1', !title && 'pt-(--card-spacing)')}>
+        {!assetId ? (
+          <div className="flex size-full flex-col items-center justify-center gap-1.5 rounded-md bg-muted text-sm text-muted-foreground">
+            <ImageIcon aria-hidden className="size-5" />
+            Choose an image
+          </div>
+        ) : builder && !assets.has(assetId) ? (
+          // The asset route refuses an image until the saved dashboard shows it, and getDashboard
+          // lists it from then on. Requesting it earlier could leave a broken image behind.
+          <Skeleton className="size-full" />
+        ) : (
+          <ImageContent
+            widget={widget}
+            definition={definition}
+            assetId={assetId}
+            asset={assets.get(assetId)}
+            dashboardId={dashboardId}
+            shareToken={shareToken}
+            linked={!builder}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ImageContent({
+  widget,
+  definition,
+  assetId,
+  asset,
+  dashboardId,
+  shareToken,
+  linked,
+}: {
+  widget: DashboardWidget;
+  definition: Extract<DashboardWidget['definition'], { type: 'image' }>;
+  assetId: string;
+  asset: ImageAsset | undefined;
+  dashboardId: string;
+  shareToken?: string;
+  linked: boolean;
+}) {
+  const url = (width?: number) => imageAssetUrl(dashboardId, assetId, { width, shareToken });
+  const image = (
+    <img
+      src={url()}
+      alt={definition.alt}
+      loading="lazy"
+      decoding="async"
+      {...(asset
+        ? {
+            srcSet: imageSrcSet(asset.width, url),
+            sizes: imageSizes(widget.layout, asset, definition.fit),
+            width: asset.width,
+            height: asset.height,
+          }
+        : {})}
+      className={cn(
+        'size-full min-h-0',
+        definition.fit === 'cover' ? 'object-cover' : 'object-contain',
+      )}
+    />
+  );
+  if (!linked || !definition.href) return image;
+  return (
+    <a
+      href={definition.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex size-full min-h-0"
+    >
+      {image}
+    </a>
   );
 }
 
@@ -606,7 +755,7 @@ function QueryCard({
     changePending(1);
     return () => changePending(-1);
   }, [resultQuery.isFetching, changePending]);
-  if (!('title' in definition)) return null;
+  if (!('title' in definition) || definition.type === 'image') return null;
   const canDrill = drillPath.length < drillLevels(definition).length - 1;
   // Dropping the old level's rows shows a skeleton and keeps a second click from drilling into a
   // value of the level that is being left.

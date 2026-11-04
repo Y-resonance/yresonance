@@ -24,7 +24,9 @@ import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiConnectorFileTokenRouteImport } from './routes/api.connector-file.$token'
 import { Route as ApiDatasourceUploadTokenRouteImport } from './routes/api.datasource-upload.$token'
+import { Route as ApiDashboardsDashboardIdAssetsRouteImport } from './routes/api.dashboards.$dashboardId.assets'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
+import { Route as ApiDashboardsDashboardIdAssetsAssetIdRouteImport } from './routes/api.dashboards.$dashboardId.assets.$assetId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -102,11 +104,23 @@ const ApiDatasourceUploadTokenRoute =
     path: '/api/datasource-upload/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiDashboardsDashboardIdAssetsRoute =
+  ApiDashboardsDashboardIdAssetsRouteImport.update({
+    id: '/api/dashboards/$dashboardId/assets',
+    path: '/api/dashboards/$dashboardId/assets',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiOauthGoogleCallbackRoute = ApiOauthGoogleCallbackRouteImport.update({
   id: '/api/oauth/google/callback',
   path: '/api/oauth/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDashboardsDashboardIdAssetsAssetIdRoute =
+  ApiDashboardsDashboardIdAssetsAssetIdRouteImport.update({
+    id: '/$assetId',
+    path: '/$assetId',
+    getParentRoute: () => ApiDashboardsDashboardIdAssetsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,7 +138,9 @@ export interface FileRoutesByFullPath {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/api/dashboards/$dashboardId/assets': typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
+  '/api/dashboards/$dashboardId/assets/$assetId': typeof ApiDashboardsDashboardIdAssetsAssetIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,7 +158,9 @@ export interface FileRoutesByTo {
   '/datasources': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/api/dashboards/$dashboardId/assets': typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
+  '/api/dashboards/$dashboardId/assets/$assetId': typeof ApiDashboardsDashboardIdAssetsAssetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,7 +179,9 @@ export interface FileRoutesById {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/api/dashboards/$dashboardId/assets': typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
+  '/api/dashboards/$dashboardId/assets/$assetId': typeof ApiDashboardsDashboardIdAssetsAssetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,7 +201,9 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/api/dashboards/$dashboardId/assets'
     | '/api/oauth/google/callback'
+    | '/api/dashboards/$dashboardId/assets/$assetId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,7 +221,9 @@ export interface FileRouteTypes {
     | '/datasources'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/api/dashboards/$dashboardId/assets'
     | '/api/oauth/google/callback'
+    | '/api/dashboards/$dashboardId/assets/$assetId'
   id:
     | '__root__'
     | '/'
@@ -217,7 +241,9 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/api/dashboards/$dashboardId/assets'
     | '/api/oauth/google/callback'
+    | '/api/dashboards/$dashboardId/assets/$assetId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -236,6 +262,7 @@ export interface RootRouteChildren {
   DatasourcesIndexRoute: typeof DatasourcesIndexRoute
   ApiConnectorFileTokenRoute: typeof ApiConnectorFileTokenRoute
   ApiDatasourceUploadTokenRoute: typeof ApiDatasourceUploadTokenRoute
+  ApiDashboardsDashboardIdAssetsRoute: typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
 }
 
@@ -346,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDatasourceUploadTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dashboards/$dashboardId/assets': {
+      id: '/api/dashboards/$dashboardId/assets'
+      path: '/api/dashboards/$dashboardId/assets'
+      fullPath: '/api/dashboards/$dashboardId/assets'
+      preLoaderRoute: typeof ApiDashboardsDashboardIdAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/oauth/google/callback': {
       id: '/api/oauth/google/callback'
       path: '/api/oauth/google/callback'
@@ -353,8 +387,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOauthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dashboards/$dashboardId/assets/$assetId': {
+      id: '/api/dashboards/$dashboardId/assets/$assetId'
+      path: '/$assetId'
+      fullPath: '/api/dashboards/$dashboardId/assets/$assetId'
+      preLoaderRoute: typeof ApiDashboardsDashboardIdAssetsAssetIdRouteImport
+      parentRoute: typeof ApiDashboardsDashboardIdAssetsRoute
+    }
   }
 }
+
+interface ApiDashboardsDashboardIdAssetsRouteChildren {
+  ApiDashboardsDashboardIdAssetsAssetIdRoute: typeof ApiDashboardsDashboardIdAssetsAssetIdRoute
+}
+
+const ApiDashboardsDashboardIdAssetsRouteChildren: ApiDashboardsDashboardIdAssetsRouteChildren =
+  {
+    ApiDashboardsDashboardIdAssetsAssetIdRoute:
+      ApiDashboardsDashboardIdAssetsAssetIdRoute,
+  }
+
+const ApiDashboardsDashboardIdAssetsRouteWithChildren =
+  ApiDashboardsDashboardIdAssetsRoute._addFileChildren(
+    ApiDashboardsDashboardIdAssetsRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -372,6 +428,8 @@ const rootRouteChildren: RootRouteChildren = {
   DatasourcesIndexRoute: DatasourcesIndexRoute,
   ApiConnectorFileTokenRoute: ApiConnectorFileTokenRoute,
   ApiDatasourceUploadTokenRoute: ApiDatasourceUploadTokenRoute,
+  ApiDashboardsDashboardIdAssetsRoute:
+    ApiDashboardsDashboardIdAssetsRouteWithChildren,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport
