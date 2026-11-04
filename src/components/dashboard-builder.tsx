@@ -29,6 +29,7 @@ import {
   removeEmptyRow,
   isRowEmpty,
   appendPlacement,
+  type WidgetStacking,
 } from '#/domain/layout';
 import { type LibraryMetricDraft } from '#/components/metric-formula-dialog';
 import { clearControlValue } from '#/domain/widget-editing';
@@ -64,6 +65,7 @@ import {
   type PendingCanvasWidget,
 } from './dashboard-builder/canvas-layout';
 import { WidgetSettings } from './dashboard-builder/widget-inspector';
+import { LayerSettings } from './dashboard-builder/layer-settings';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
@@ -481,6 +483,30 @@ function Builder({
     }
   }
 
+  async function restackWidget(widget: DashboardWidget, stacking: WidgetStacking) {
+    startSaving();
+    setError(undefined);
+    try {
+      await enqueueMutation(() =>
+        callApi({
+          action: 'moveWidget',
+          dashboardId: dashboardRef.current.id,
+          widgetId: widget.id,
+          // Read at send time so a queued drag or resize of this widget is not undone.
+          placement:
+            dashboardRef.current.widgets.find((item) => item.id === widget.id)?.layout ??
+            widget.layout,
+          stacking,
+        }),
+      );
+      await refresh();
+    } catch (caught) {
+      setError(message(caught));
+    } finally {
+      finishSaving();
+    }
+  }
+
   function saveRowInsertion(cut: number) {
     const next = insertRow(dashboardRef.current.widgets, dashboardRef.current.canvasRows, cut);
     if (!next) return;
@@ -521,6 +547,12 @@ function Builder({
                 ? () => saveRowRemoval(selected.layout.y + selected.layout.height)
                 : undefined
             }
+          />
+          <LayerSettings
+            widgets={dashboard.widgets}
+            selected={selected}
+            onSelect={setSelectedId}
+            onRestack={(stacking) => void restackWidget(selected, stacking)}
           />
           {dashboard.pages.length > 1 ? (
             <Field className="mt-4">

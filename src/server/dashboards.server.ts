@@ -17,6 +17,7 @@ import {
   appendPlacement,
   checkPlacement,
   validateLayoutUpdate,
+  restack,
   requiredCanvasRows,
 } from '#/domain/layout';
 import { placementMessage, layoutMessage, canvasRowsMessage } from '#/domain/layout-messages';
@@ -532,26 +533,25 @@ export async function moveWidget(request: Extract<ApiRequest, { action: 'moveWid
     page.widgets.some((widget) => widget.id === existing.id),
   )!;
   const page = pageById(access.document, request.pageId ?? sourcePage.id);
-  const check = checkPlacement(
-    page.widgets,
-    request.placement,
-    access.document.columns,
-    existing.id,
-  );
+  const check = checkPlacement(request.placement, access.document.columns);
   if (!check.ok)
     throw new ApiError(400, 'invalid_placement', placementMessage(check, widgetLabel(existing)));
   const updatedWidget = { ...existing, layout: request.placement };
   const updated = {
     ...access.document,
     pages: access.document.pages.map((item) => {
-      const widgets = item.widgets.filter((widget) => widget.id !== existing.id);
-      return item.id === page.id
-        ? {
-            ...item,
-            widgets: [...widgets, updatedWidget],
-            canvasRows: Math.max(item.canvasRows, request.placement.y + request.placement.height),
-          }
-        : { ...item, widgets };
+      if (item.id !== page.id)
+        return { ...item, widgets: item.widgets.filter((widget) => widget.id !== existing.id) };
+      // On its own page the widget keeps its paint position; from another page it lands on top.
+      const widgets =
+        item.id === sourcePage.id
+          ? item.widgets.map((widget) => (widget.id === existing.id ? updatedWidget : widget))
+          : [...item.widgets, updatedWidget];
+      return {
+        ...item,
+        widgets: request.stacking ? restack(widgets, existing.id, request.stacking) : widgets,
+        canvasRows: Math.max(item.canvasRows, request.placement.y + request.placement.height),
+      };
     }),
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
@@ -572,10 +572,12 @@ export async function updateLayout(request: Extract<ApiRequest, { action: 'updat
   const placements = new Map(
     request.placements.map((update) => [update.widgetId, update.placement]),
   );
-  const widgets = page.widgets.map((widget) => ({
-    ...widget,
-    layout: placements.get(widget.id)!,
-  }));
+  // Stacking entries apply in list order, so the last `front` entry ends up on top.
+  const widgets = request.placements.reduce(
+    (current, update) =>
+      update.stacking ? restack(current, update.widgetId, update.stacking) : current,
+    page.widgets.map((widget) => ({ ...widget, layout: placements.get(widget.id)! })),
+  );
   if (request.canvasRows < requiredCanvasRows(widgets))
     throw new ApiError(400, 'invalid_layout', canvasRowsMessage(widgets, request.canvasRows));
   const updated = {

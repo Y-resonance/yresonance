@@ -157,7 +157,8 @@ test('the pointer drag handle still moves a widget', async ({ page }) => {
   const box = (await handle.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + 400, box.y + 60, { steps: 12 });
+  // Into the empty rows below Campaigns: dropped on top of it, the widget would paint behind it.
+  await page.mouse.move(box.x + 400, box.y + 5 * 64, { steps: 12 });
   await page.mouse.up();
 
   await expect

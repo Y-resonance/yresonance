@@ -188,14 +188,14 @@ export function useWebMcpTools(options: WebMcpOptions) {
             {
               action: 'moveWidget',
               description:
-                'Move or resize a widget, optionally to another pageId on the open dashboard. The placement must stay inside the grid and cannot overlap.',
+                'Move or resize a widget, optionally to another pageId on the open dashboard. The placement must stay inside the grid and may overlap other widgets. Later widgets on a page paint on top; a widget moved to another page lands on top. Set stacking to front or back to move it to the top or bottom, for example to put a text widget behind a group of charts.',
               readOnly: false,
               fixed,
             },
             {
               action: 'updateLayout',
               description:
-                'Replace every widget placement and the canvas row count on the specified page in one validated write. Include all placements on that page. Empty rows are allowed, but widgets cannot overlap or leave the 12-column grid.',
+                'Replace every widget placement and the canvas row count on the specified page in one validated write. Include all placements on that page. Empty rows and overlapping widgets are allowed, but widgets cannot leave the 12-column grid. Later widgets paint on top; an entry with stacking front or back moves that widget to the top or bottom, applied in list order.',
               readOnly: false,
               fixed,
             },

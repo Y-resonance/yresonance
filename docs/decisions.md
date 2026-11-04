@@ -94,7 +94,12 @@ explain. Update it when a decision changes, not when an implementation detail do
 - `updateWidget` takes a full definition. No deep patches, because patches on arrays such as
   `metrics` are ambiguous.
 - `addWidget` accepts only width and height and appends at the bottom. Agents do not compute
-  coordinates. Widgets cannot overlap.
+  coordinates.
+- Widgets may overlap, so editors can layer a text widget behind a group of charts. Paint order is
+  the order of `page.widgets`: later widgets sit on top. Overlap is allowed for every widget type,
+  and a widget underneath is a pure background; moving it does not move the widgets on top.
+  Grouping is a separate topic. The stacked phone layout keeps reading order (top to bottom, left
+  to right) and ignores overlap.
 - Bar, pie and line charts drill down through editor-defined levels (`drillDimensions`). The
   viewer only supplies clicked values as `drillPath`, which `queryWidget` turns into equality
   filters, so the security model holds. Drill state stays inside one widget; cross-filtering other
