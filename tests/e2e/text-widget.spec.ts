@@ -251,6 +251,7 @@ test('a failed save keeps the text, warns before leaving, and retries', async ({
 test('a refresh landing during a newer save does not undo it, even if the next refresh fails', async ({
   page,
 }) => {
+  const documents = trackSavedDocuments(page);
   const { widget, editor } = await openTextWidget(page, 'Old');
   let releaseRefresh = () => {};
   let releaseSecondSave = () => {};
@@ -288,16 +289,22 @@ test('a refresh landing during a newer save does not undo it, even if the next r
   );
   releaseRefresh();
   await staleRefresh;
-  await page.waitForTimeout(500);
-  await expect(widget).toContainText('Old one two');
+  // The canvas falling back shows the stale refresh has landed.
+  await expect(widget).not.toContainText('two');
   await expect(editor).toContainText('Old one two');
 
   releaseSecondSave();
   await expect(page.getByRole('alert')).toBeVisible();
-  await expect(widget).toContainText('Old one two');
   await expect(editor).toContainText('Old one two');
+
+  // Reopening shows the newest text even though the canvas missed it, and editing keeps it.
+  await page.locator('[data-widget-id]', { hasText: 'Media spend' }).click();
+  await widget.click({ position: { x: 40, y: 20 } });
+  await expect(editor).toContainText('Old one two');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type(' three');
-  await expect(editor).toContainText('Old one two three');
+  await expect.poll(() => documents.at(-1)).toBe('Old one two three');
 });
 
 test('a refresh still running from an earlier save does not bring back older text', async ({
@@ -470,6 +477,105 @@ test('reselecting while a save is running keeps the text if that save then fails
   await expect.poll(leavingIsCancelled).toBe(false);
 });
 
+test('reselecting while a save succeeds does not save it twice or warn', async ({ page }) => {
+  const documents = trackSavedDocuments(page);
+  const { widget, editor } = await openTextWidget(page, 'Old');
+  let releaseSave = () => {};
+  const saveGate = new Promise<void>((release) => (releaseSave = release));
+  await page.route('**/api/yresonance', async (route) => {
+    if (route.request().postDataJSON().action === 'updateWidget') await saveGate;
+    await route.fallback();
+  });
+  const otherWidget = page.locator('[data-widget-id]', { hasText: 'Media spend' });
+
+  await page.keyboard.type(' written');
+  await otherWidget.click();
+  await expect.poll(() => documents).toEqual(['Old written']);
+  await widget.click({ position: { x: 40, y: 20 } });
+  await expect(editor).toContainText('Old written');
+  releaseSave();
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+
+  await otherWidget.click();
+  await expect(editor).toBeHidden();
+  expect(documents).toEqual(['Old written']);
+  expect(
+    await page.evaluate(
+      () => !window.dispatchEvent(new Event('beforeunload', { cancelable: true })),
+    ),
+  ).toBe(false);
+});
+
+test('an older save finishing does not clear the warning for a newer one', async ({ page }) => {
+  const documents = trackSavedDocuments(page);
+  await openTextWidget(page, 'Old');
+  let releaseFirst = () => {};
+  let releaseSecond = () => {};
+  const gates = [
+    new Promise<void>((release) => (releaseFirst = release)),
+    new Promise<void>((release) => (releaseSecond = release)),
+  ];
+  await page.route('**/api/yresonance', async (route) => {
+    if (route.request().postDataJSON().action === 'updateWidget') await gates.shift();
+    await route.fallback();
+  });
+  const leavingIsCancelled = () =>
+    page.evaluate(() => !window.dispatchEvent(new Event('beforeunload', { cancelable: true })));
+
+  await page.keyboard.type(' one');
+  await expect.poll(() => documents).toEqual(['Old one']);
+  await page.keyboard.type(' two');
+  await page.getByRole('complementary').getByRole('textbox', { name: 'Text' }).blur();
+  releaseFirst();
+  await expect.poll(() => documents).toEqual(['Old one', 'Old one two']);
+  expect(await leavingIsCancelled()).toBe(true);
+  releaseSecond();
+  await expect.poll(leavingIsCancelled).toBe(false);
+});
+
+test('the open editor follows text changed elsewhere and each widget keeps its own', async ({
+  page,
+}) => {
+  const { state, widget, editor } = await openTextWidget(page, 'Old');
+  const textOf = (document: string) => ({
+    type: 'text' as const,
+    content: { schemaVersion: 'markdown-v1' as const, document },
+  });
+  state.dashboard = {
+    ...state.dashboard,
+    pages: state.dashboard.pages.map((item) => ({
+      ...item,
+      widgets: [
+        ...item.widgets.map((candidate) =>
+          candidate.id === 'w_notes'
+            ? { ...candidate, definition: textOf('Changed by an agent') }
+            : candidate,
+        ),
+        {
+          id: 'w_other',
+          layout: { x: 6, y: 7, width: 6, height: 3 },
+          definition: textOf('Second widget'),
+          definitionHash: 'hash_other',
+        },
+      ],
+    })),
+  };
+
+  // Removing another widget refreshes the dashboard while this editor stays open.
+  await page.getByRole('button', { name: 'Remove Media spend' }).click();
+  await page.getByRole('button', { name: 'Remove widget' }).click();
+  await expect(editor).toContainText('Changed by an agent');
+
+  // Switching back and forth must not leave either widget showing the other's text.
+  const second = page.locator('[data-widget-id="w_other"]');
+  await second.click({ position: { x: 40, y: 20 } });
+  await expect(editor).toHaveText('Second widget');
+  await widget.click({ position: { x: 40, y: 20 } });
+  await expect(editor).toHaveText('Changed by an agent');
+  await second.click({ position: { x: 40, y: 20 } });
+  await expect(editor).toHaveText('Second widget');
+});
+
 test('a failed refresh after a save keeps the builder and the text', async ({ page }) => {
   const { widget, editor } = await openTextWidget(page, 'Old');
   let failing = true;
@@ -553,6 +659,7 @@ test('the editor pops out into a dialog and keeps its text, cursor and undo', as
   await expect(editor).toContainText('Old abc def typed here');
   await page.keyboard.type(' after');
   await editor.blur();
-  await expect.poll(() => documents.at(-1)).toContain('after');
+  await expect.poll(() => documents.at(-1)).toContain('Old abc def typed **here**');
+  await expect(editor).toContainText(/after$/);
   await expect(widget).toContainText('after');
 });

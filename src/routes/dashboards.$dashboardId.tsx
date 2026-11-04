@@ -99,13 +99,10 @@ function DashboardContent() {
   const [agentMode, setAgentMode] = useState(initialAgentModeState);
   const [queryInputsRevision, setQueryInputsRevision] = useState(0);
   // Reads join an identical one already running, but that one can predate the save asking for this
-  // refresh and would bring back older text. Loading one at a time keeps refreshes from joining
-  // each other, and only the newest requested load is shown.
+  // refresh. Loading one at a time keeps refreshes from joining each other.
   const loadQueue = useRef(createSerialQueue());
-  const latestLoad = useRef(0);
   const loadDashboard = useCallback(
     async (includeSharing = true) => {
-      const load = ++latestLoad.current;
       try {
         const loaded = await loadQueue.current(() =>
           callApi<DashboardPayload>({
@@ -114,12 +111,6 @@ function DashboardContent() {
             includeSharing,
           }),
         );
-        if (load !== latestLoad.current) {
-          // The newer load may skip sharing, so keep what this one fetched.
-          const { sharing } = loaded;
-          if (sharing) dashboardQuery.setData((current) => ({ ...(current ?? loaded), sharing }));
-          return;
-        }
         if (controlDashboardIdRef.current !== loaded.dashboard.id) {
           controlDashboardIdRef.current = loaded.dashboard.id;
           setBuilderControlState(initialControlState(loaded.dashboard));

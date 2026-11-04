@@ -91,13 +91,23 @@ const literalMarkdown = [
 const SAVE_AFTER_PAUSE_MS = 2_000;
 const SAVE_WHILE_TYPING_MS = 10_000;
 
-// Text being saved or whose save failed, by widget. A save can fail after the editor has closed,
-// such as when clicking another widget saves on blur, so this outlives it. Reopening the widget
-// restores the text, and its next blur or close retries.
-const unsavedText = new Map<string, string>();
+// The latest save of each widget's text, until it succeeds. A save can fail after the editor has
+// closed, such as when clicking another widget saves on blur, so this outlives it. Reopening the
+// widget restores the text, and its next blur or close retries.
+const unsavedText = new Map<string, { markdown: string; failed: boolean }>();
 const warnAboutUnsavedText = (event: BeforeUnloadEvent) => {
   if (unsavedText.size > 0) event.preventDefault();
 };
+
+// Recent text each widget has held, newest last. Dashboard responses can arrive late and carry
+// older text, and loading it would make the next edit save over newer text. So the editor only
+// follows text it has not seen, such as an agent's change. An agent restoring an exact earlier
+// text is ignored as well, until the page reloads.
+const knownText = new Map<string, string[]>();
+function rememberText(widgetId: string, text: string) {
+  const earlier = (knownText.get(widgetId) ?? []).filter((known) => known !== text);
+  knownText.set(widgetId, [...earlier, text].slice(-50));
+}
 
 /**
  * WYSIWYG Markdown editor for text widgets in the inspector, which can pop out into a large dialog.
@@ -118,10 +128,9 @@ export default function RichTextEditor({
 }) {
   const [expanded, setExpanded] = useState(false);
   const refocusAfterDialog = useRef(false);
-  const [pendingSaves, setPendingSaves] = useState(0);
   // Only user edits mark the document dirty; loading `value` does not, so focusing and leaving
   // an untouched (possibly legacy) document never saves it.
-  const dirty = useRef(unsavedText.has(widgetId));
+  const dirty = useRef(false);
   const pauseTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const commitRef = useRef(onCommit);
@@ -133,22 +142,19 @@ export default function RichTextEditor({
     clearTimeout(pauseTimer.current);
     clearTimeout(typingTimer.current);
     typingTimer.current = undefined;
-    if (!dirty.current) return;
+    if (!dirty.current && !unsavedText.get(widgetId)?.failed) return;
     dirty.current = false;
-    setPendingSaves((count) => count + 1);
     // Leading spaces can mark an indented code block, so only the end is trimmed.
     const markdown = editor.getMarkdown().trimEnd();
-    unsavedText.set(widgetId, markdown);
+    const entry = { markdown, failed: false };
+    unsavedText.set(widgetId, entry);
     window.addEventListener('beforeunload', warnAboutUnsavedText);
     const saved = await commitRef.current(markdown, trigger);
+    if (saved) rememberText(widgetId, markdown);
     // A newer save has replaced this entry and covers this text, so only the latest one decides.
-    // The builder rolls a failed save back. Staying dirty keeps the text on screen, and the next
-    // edit, blur or close retries it.
-    if (unsavedText.get(widgetId) === markdown) {
-      if (saved) unsavedText.delete(widgetId);
-      else dirty.current = true;
-    }
-    setPendingSaves((count) => count - 1);
+    if (unsavedText.get(widgetId) !== entry) return;
+    if (saved) unsavedText.delete(widgetId);
+    else entry.failed = true;
   }
 
   // Editing a link moves focus into its popover. That is still editing, so it does not commit.
@@ -174,7 +180,12 @@ export default function RichTextEditor({
       paragraph,
       ...literalMarkdown,
     ],
-    content: unsavedText.get(widgetId) ?? value,
+    // The canvas can briefly hold older text, so a known `value` opens at the newest text instead.
+    content:
+      unsavedText.get(widgetId)?.markdown ??
+      (knownText.get(widgetId)?.includes(value.trimEnd())
+        ? knownText.get(widgetId)?.at(-1)
+        : value),
     contentType: 'markdown',
     editorProps: {
       attributes: {
@@ -197,18 +208,21 @@ export default function RichTextEditor({
     },
   });
 
-  // Follow outside changes, such as an agent updating the widget, unless the user is mid-edit.
-  // A refresh from an earlier save can land while a newer one is running, so wait for those too.
+  // Follow outside changes, such as an agent updating the widget, unless the user is mid-edit or
+  // the text is older than what the editor already has.
   useEffect(() => {
+    const text = value.trimEnd();
     if (
       !editor ||
       dirty.current ||
-      pendingSaves > 0 ||
-      editor.getMarkdown().trimEnd() === value.trimEnd()
+      unsavedText.get(widgetId)?.failed ||
+      knownText.get(widgetId)?.includes(text)
     )
       return;
+    rememberText(widgetId, text);
+    if (editor.getMarkdown().trimEnd() === text) return;
     editor.commands.setContent(value, { contentType: 'markdown', emitUpdate: false });
-  }, [editor, value, pendingSaves]);
+  }, [editor, value, widgetId]);
 
   // Browser back or forward can remove the editor with no blur to save on, such as while the
   // link popover has focus.
