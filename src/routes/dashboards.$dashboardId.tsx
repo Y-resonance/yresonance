@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
 import { useApi, useApiQuery } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
+import { Alert, AlertDescription } from '#/components/ui/alert';
 import {
   DashboardBuilder,
   type BuilderDataSource,
@@ -163,16 +164,17 @@ function DashboardContent() {
       ? { ...payload.dashboard, pages: payload.dashboard.pages.filter((page) => !page.hidden) }
       : payload.dashboard);
   const activePage = displayedDashboard && activeDashboardPage(displayedDashboard, search.page);
+  const loadError = error ?? dashboardQuery.error?.message;
   return (
     <DashboardQueryRefresh key={dashboardId} inputsRevision={queryInputsRevision}>
       <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
-        {/* A failed refresh must not take down a loaded builder, which shows its own alert. */}
-        {(error && !payload) || dashboardQuery.error ? (
-          <ErrorState
-            error={error ?? dashboardQuery.error?.message ?? 'Failed to load dashboard.'}
-          />
-        ) : !payload ? (
-          <LoadingState />
+        {/* A failed refresh must not take down a loaded dashboard, so it shows an alert instead. */}
+        {!payload ? (
+          loadError ? (
+            <ErrorState error={loadError} />
+          ) : (
+            <LoadingState />
+          )
         ) : (
           <div className="flex flex-col gap-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
@@ -264,24 +266,32 @@ function DashboardContent() {
                   onSaveStatusChange={setSaveStatus}
                 />
               ) : (
-                <DashboardView
-                  dashboard={displayedDashboard!}
-                  pageId={activePage.id}
-                  assets={payload.assets}
-                  dateRange={parseDateRangeSearch(search.dateRange)}
-                  onDateRangeChange={(range) => {
-                    const defaultRange = dashboardDateControlRange(payload.dashboard);
-                    void navigate({
-                      search: (current) => ({
-                        ...current,
-                        dateRange:
-                          defaultRange && sameDateRange(defaultRange, range)
-                            ? undefined
-                            : dateRangeSearchValue(range),
-                      }),
-                    });
-                  }}
-                />
+                <>
+                  {/* The builder shows its own alert for this. */}
+                  {loadError ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{loadError}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  <DashboardView
+                    dashboard={displayedDashboard!}
+                    pageId={activePage.id}
+                    assets={payload.assets}
+                    dateRange={parseDateRangeSearch(search.dateRange)}
+                    onDateRangeChange={(range) => {
+                      const defaultRange = dashboardDateControlRange(payload.dashboard);
+                      void navigate({
+                        search: (current) => ({
+                          ...current,
+                          dateRange:
+                            defaultRange && sameDateRange(defaultRange, range)
+                              ? undefined
+                              : dateRangeSearchValue(range),
+                        }),
+                      });
+                    }}
+                  />
+                </>
               )
             ) : null}
           </div>

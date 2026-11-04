@@ -134,3 +134,44 @@ test('a tool changing the dashboard timezone re-runs the widget queries', async 
   await setTimezone('America/New_York');
   await expect.poll(() => queries).toBeGreaterThan(before);
 });
+
+test('a failed refresh after an agent change shows an alert on the dashboard', async ({ page }) => {
+  await page.addInitScript(() => {
+    const tools = new Map<string, Tool>();
+    Object.defineProperty(document, 'modelContext', {
+      value: {
+        tools,
+        registerTool: async (tool: Tool) => void tools.set(tool.name, tool),
+      },
+    });
+  });
+  await mockYresonanceApi(page, { role: 'editor' });
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (document.modelContext as unknown as TestModelContext).tools.has('addWidget'),
+      ),
+    )
+    .toBe(true);
+  await page.route('**/api/yresonance', (route) =>
+    route.request().postDataJSON().action === 'getDashboard' ? route.abort() : route.fallback(),
+  );
+
+  await page.evaluate(async () => {
+    const tool = (document.modelContext as unknown as TestModelContext).tools.get('addWidget')!;
+    await tool
+      .execute({
+        pageId: 'page_overview',
+        width: 6,
+        height: 3,
+        definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'Note' } },
+      })
+      .catch(() => undefined);
+  });
+
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
+  await expect(page.getByRole('main').getByText('Media spend').first()).toBeVisible();
+});
