@@ -60,15 +60,6 @@ describe('layout error messages', () => {
     );
   });
 
-  it('names both sides of an overlap', () => {
-    expect(
-      messageFor([
-        { widgetId: 'one', placement: { x: 0, y: 0, width: 8, height: 2 } },
-        { widgetId: 'two', placement: note.layout },
-      ]),
-    ).toBe('"Revenue" overlaps "Text".');
-  });
-
   it('reports the grid width a placement exceeds', () => {
     expect(
       messageFor([
@@ -86,8 +77,16 @@ describe('layout error messages', () => {
   });
 
   it('names the moved widget when a single placement is rejected', () => {
-    expect(placementMessage({ ok: false, reason: 'overlap', widget: note }, 'Revenue')).toBe(
-      '"Revenue" overlaps "Text".',
-    );
+    expect(
+      placementMessage(
+        {
+          ok: false,
+          reason: 'out-of-grid',
+          placement: { x: 10, y: 0, width: 4, height: 2 },
+          columns: 12,
+        },
+        'Revenue',
+      ),
+    ).toBe('"Revenue" runs past the 12-column grid (x 10 + width 4).');
   });
 });

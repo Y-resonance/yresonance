@@ -111,6 +111,89 @@ describe('dashboard pages', () => {
     );
   });
 
+  test('widgets can overlap and keep their stacking through reload, moves, and duplication', async () => {
+    await signInToNewWorkspace();
+    const dashboard = await createDashboard();
+    const pageId = dashboard.pages[0].id;
+    const note = (document: string) => ({
+      type: 'text' as const,
+      content: { schemaVersion: 'markdown-v1' as const, document },
+    });
+    const first = await addWidget(dashboard.id, note('First'));
+    const second = await addWidget(dashboard.id, note('Second'));
+    const band = await addWidget(dashboard.id, note('Band'));
+    const stackOn = async (id: string) =>
+      (await openDashboard(dashboard.id)).dashboard.pages
+        .find((page) => page.widgets.some((widget) => widget.id === id))!
+        .widgets.map((widget) => widget.id);
+
+    // A framed section: the band spans both widgets and goes to the back.
+    await callService({
+      action: 'updateLayout',
+      dashboardId: dashboard.id,
+      pageId,
+      canvasRows: 10,
+      placements: [
+        { widgetId: first.id, placement: { x: 1, y: 1, width: 5, height: 3 } },
+        { widgetId: second.id, placement: { x: 6, y: 1, width: 5, height: 3 } },
+        {
+          widgetId: band.id,
+          placement: { x: 0, y: 0, width: 12, height: 5 },
+          stacking: 'back',
+        },
+      ],
+    });
+    expect(await stackOn(band.id)).toEqual([band.id, first.id, second.id]);
+
+    // Moving within the page keeps the paint position unless stacking is requested.
+    await callService({
+      action: 'moveWidget',
+      dashboardId: dashboard.id,
+      widgetId: first.id,
+      placement: { x: 2, y: 1, width: 4, height: 3 },
+    });
+    expect(await stackOn(band.id)).toEqual([band.id, first.id, second.id]);
+    await callService({
+      action: 'moveWidget',
+      dashboardId: dashboard.id,
+      widgetId: band.id,
+      placement: { x: 0, y: 0, width: 12, height: 5 },
+      stacking: 'front',
+    });
+    expect(await stackOn(band.id)).toEqual([first.id, second.id, band.id]);
+
+    const duplicate = (await callService({
+      action: 'duplicateDashboard',
+      dashboardId: dashboard.id,
+      name: 'Copy',
+    })) as DashboardDocument;
+    expect(
+      duplicate.pages[0].widgets.map(
+        (widget) => widget.definition.type === 'text' && widget.definition.content.document,
+      ),
+    ).toEqual(['First', 'Second', 'Band']);
+
+    // A widget moved to another page lands on top of what is already there.
+    const other = await addPage(dashboard.id, 'Other');
+    const resident = (await callService({
+      action: 'addWidget',
+      dashboardId: dashboard.id,
+      pageId: other.id,
+      definition: note('Resident'),
+      width: 4,
+      height: 3,
+    })) as { widget: DashboardWidget };
+    await callService({
+      action: 'moveWidget',
+      dashboardId: dashboard.id,
+      widgetId: second.id,
+      pageId: other.id,
+      placement: { x: 0, y: 0, width: 4, height: 3 },
+    });
+    expect(await stackOn(second.id)).toEqual([resident.widget.id, second.id]);
+    expect(await stackOn(band.id)).toEqual([first.id, band.id]);
+  });
+
   test('shared viewers see all published pages but cannot access draft widgets, controls, datasources, or mutations', async () => {
     const workspace = await signInToNewWorkspace();
     const source = await seedDataSource(workspace);

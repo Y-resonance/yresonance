@@ -63,6 +63,58 @@ describe('widget queries', () => {
     expect(call).not.toHaveProperty('requiresR2Credentials');
   });
 
+  test('a range without a complete day returns no rows without querying the datasource', async () => {
+    const { dashboardId, widgetId } = await seedScorecardDashboard();
+    const daysAgo = (amount: number) => ({
+      relative: {
+        amount,
+        unit: 'day' as const,
+        direction: 'past' as const,
+        anchor: 'startOfDay' as const,
+      },
+    });
+
+    // Like "This month" on the 1st: it starts today, after the yesterday cutoff.
+    const result = (await callService({
+      action: 'queryWidget',
+      dashboardId,
+      widgetId,
+      controlState: { dateRange: { startDate: daysAgo(0), endDate: daysAgo(1) } },
+    })) as QueryResult;
+
+    expect(result.rows).toEqual([]);
+    expect(result.columns).not.toHaveLength(0);
+    expect(queryEngine.queryCalls).toHaveLength(0);
+  });
+
+  test('a range that ends before it starts is rejected', async () => {
+    const { dashboardId, widgetId } = await seedScorecardDashboard();
+    const daysAgo = (amount: number) => ({
+      relative: {
+        amount,
+        unit: 'day' as const,
+        direction: 'past' as const,
+        anchor: 'startOfDay' as const,
+      },
+    });
+
+    // Starting today is only "no complete days yet" when the range also reaches yesterday.
+    for (const [start, end] of [
+      [1, 7],
+      [0, 7],
+    ])
+      await expectApiError(
+        callService({
+          action: 'queryWidget',
+          dashboardId,
+          widgetId,
+          controlState: { dateRange: { startDate: daysAgo(start), endDate: daysAgo(end) } },
+        }),
+        { status: 400, code: 'invalid_date_range' },
+      );
+    expect(queryEngine.queryCalls).toHaveLength(0);
+  });
+
   test('date dimensions rebucket when a widget crosses a width tier', async () => {
     const workspace = await signInToNewWorkspace();
     const source = await seedDataSource(workspace);

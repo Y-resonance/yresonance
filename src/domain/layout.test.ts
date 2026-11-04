@@ -6,6 +6,7 @@ import {
   insertRow,
   isRowEmpty,
   removeEmptyRow,
+  restack,
   rowInsertionCuts,
   rollbackFailedLayout,
   rollbackFailedLayoutState,
@@ -26,32 +27,35 @@ describe('dashboard layout', () => {
     expect(appendPlacement([widget], 20, 3, 12)).toEqual({ x: 0, y: 2, width: 12, height: 3 });
   });
 
-  it('reports what a rejected placement collides with', () => {
-    expect(checkPlacement([widget], { x: 5, y: 1, width: 4, height: 2 })).toEqual({
-      ok: false,
-      reason: 'overlap',
-      widget,
-    });
-    expect(checkPlacement([widget], { x: 10, y: 3, width: 4, height: 2 })).toEqual({
+  it('accepts overlapping placements but not ones past the grid edge', () => {
+    expect(checkPlacement({ x: 5, y: 1, width: 4, height: 2 })).toEqual({ ok: true });
+    expect(checkPlacement({ x: 10, y: 3, width: 4, height: 2 })).toEqual({
       ok: false,
       reason: 'out-of-grid',
       placement: { x: 10, y: 3, width: 4, height: 2 },
       columns: 12,
     });
-    expect(checkPlacement([widget], { x: 6, y: 0, width: 6, height: 2 })).toEqual({ ok: true });
   });
 
-  it('accepts a complete free-placement layout with empty rows', () => {
+  it('accepts a complete layout with empty rows and overlapping widgets', () => {
     const second = { ...widget, id: 'two', layout: { x: 6, y: 0, width: 6, height: 2 } };
     expect(
       validateLayoutUpdate(
         [widget, second],
         [
-          { widgetId: 'one', placement: { x: 0, y: 4, width: 4, height: 2 } },
-          { widgetId: 'two', placement: { x: 8, y: 8, width: 4, height: 2 } },
+          { widgetId: 'one', placement: { x: 0, y: 4, width: 12, height: 6 } },
+          { widgetId: 'two', placement: { x: 1, y: 5, width: 4, height: 2 } },
         ],
       ),
     ).toEqual({ ok: true });
+  });
+
+  it('moves one widget to either end of the paint order and keeps the rest in order', () => {
+    const ids = (widgets: { id: string }[]) => widgets.map((item) => item.id);
+    const stack = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    expect(ids(restack(stack, 'a', 'front'))).toEqual(['b', 'c', 'a']);
+    expect(ids(restack(stack, 'c', 'back'))).toEqual(['c', 'a', 'b']);
+    expect(ids(restack(stack, 'b', 'back'))).toEqual(['b', 'a', 'c']);
   });
 
   it('reports which widgets make a batch layout invalid', () => {
@@ -74,12 +78,6 @@ describe('dashboard layout', () => {
         { widgetId: 'ghost', placement: { x: 6, y: 0, width: 6, height: 2 } },
       ]),
     ).toEqual({ ok: false, reason: 'unknown', widgetIds: ['ghost'] });
-    expect(
-      validateLayoutUpdate(widgets, [
-        { widgetId: 'one', placement: { x: 0, y: 0, width: 8, height: 2 } },
-        { widgetId: 'two', placement: { x: 6, y: 0, width: 6, height: 2 } },
-      ]),
-    ).toMatchObject({ ok: false, reason: 'overlap' });
     expect(
       validateLayoutUpdate(widgets, [
         { widgetId: 'one', placement: { x: 0, y: 0, width: 6, height: 2 } },

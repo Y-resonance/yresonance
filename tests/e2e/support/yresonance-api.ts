@@ -1,4 +1,5 @@
 import { apiRequestSchema } from '#/api/contracts';
+import { restack } from '#/domain/layout';
 import type { Page, Route } from '@playwright/test';
 import type { DatasourceDescription } from '#/domain/datasource-fields';
 import type { DatasourceCachePolicy, DashboardDocument, DashboardWidget } from '#/domain/schema';
@@ -221,14 +222,17 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
         const original = state.dashboard.pages
           .flatMap((page) => page.widgets)
           .find((widget) => widget.id === request.widgetId)!;
+        const moved = { ...original, layout: request.placement as DashboardWidget['layout'] };
         state.dashboard.pages.forEach((page) => {
-          page.widgets = page.widgets.filter((widget) => widget.id !== original.id);
+          page.widgets =
+            page === targetPage && page.widgets.includes(original)
+              ? page.widgets.map((widget) => (widget === original ? moved : widget))
+              : page.widgets.filter((widget) => widget !== original);
         });
-        targetPage.widgets.push({
-          ...original,
-          layout: request.placement as DashboardWidget['layout'],
-        });
-        return ok(route, original);
+        if (!targetPage.widgets.includes(moved)) targetPage.widgets.push(moved);
+        if (request.stacking)
+          targetPage.widgets = restack(targetPage.widgets, moved.id, request.stacking);
+        return ok(route, moved);
       }
       case 'trackPageView':
         return ok(route, { pageId: request.pageId });

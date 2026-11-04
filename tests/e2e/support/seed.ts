@@ -28,6 +28,12 @@ const reportCsv = [
   '',
 ].join('\n');
 
+// The seeded CSV only has rows in early January 2026.
+const january2026 = {
+  startDate: { fixed: '2026-01-01' },
+  endDate: { fixed: '2026-01-31' },
+};
+
 /** Calls the API with the signed-in browser context, so tenancy is resolved the real way. */
 export async function callApi<T>(page: Page, body: Record<string, unknown>): Promise<T> {
   const response = await page.request.post('/api/yresonance', { data: body });
@@ -75,7 +81,7 @@ export async function seedDashboard(page: Page, name: string, source: SeededData
     name,
     dataSourceIds: [source.id],
     timezone: 'Europe/Berlin',
-    defaultDateRange: { startDate: { fixed: '2026-01-01' }, endDate: { fixed: '2026-01-31' } },
+    defaultDateRange: january2026,
   });
   await callApi(page, {
     action: 'addWidget',
@@ -118,7 +124,7 @@ export async function seedImpressionsDashboard(page: Page, name: string, source:
     name,
     dataSourceIds: [source.id],
     timezone: 'Europe/Berlin',
-    defaultDateRange: { startDate: { fixed: '2026-01-01' }, endDate: { fixed: '2026-01-31' } },
+    defaultDateRange: january2026,
   });
   const metric = {
     source: {
@@ -161,7 +167,8 @@ export async function seedImpressionsDashboard(page: Page, name: string, source:
     action: 'addWidget',
     pageId: `${dashboard.id}_page`,
     dashboardId: dashboard.id,
-    definition: { type: 'dateControl' },
+    // Without its own default the control would use "Year to date", which drifts with the clock.
+    definition: { type: 'dateControl', defaultDateRange: january2026 },
     width: 4,
     height: 2,
   });

@@ -31,6 +31,9 @@ const libraryMetricInputSchema = z.object({
   description: z.string().optional(),
 });
 
+// Later widgets on a page paint on top. `front` and `back` move the widget to either end.
+const widgetStackingSchema = z.enum(['front', 'back']);
+
 export const apiRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('bootstrap') }),
   z.object({ action: z.literal('listDashboards') }),
@@ -109,6 +112,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     dashboardId: z.string().min(1),
     widgetId: z.string().min(1),
     placement: gridPlacementSchema,
+    stacking: widgetStackingSchema.optional(),
   }),
   z.object({
     action: z.literal('updateLayout'),
@@ -120,6 +124,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
         z.object({
           widgetId: z.string().min(1),
           placement: gridPlacementSchema,
+          stacking: widgetStackingSchema.optional(),
         }),
       )
       .max(1_000),

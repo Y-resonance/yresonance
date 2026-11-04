@@ -94,7 +94,12 @@ explain. Update it when a decision changes, not when an implementation detail do
 - `updateWidget` takes a full definition. No deep patches, because patches on arrays such as
   `metrics` are ambiguous.
 - `addWidget` accepts only width and height and appends at the bottom. Agents do not compute
-  coordinates. Widgets cannot overlap.
+  coordinates.
+- Widgets may overlap, so editors can layer a text widget behind a group of charts. Paint order is
+  the order of `page.widgets`: later widgets sit on top. Overlap is allowed for every widget type,
+  and a widget underneath is a pure background; moving it does not move the widgets on top.
+  Grouping is a separate topic. The stacked phone layout keeps reading order (top to bottom, left
+  to right) and ignores overlap.
 - Bar, pie and line charts drill down through editor-defined levels (`drillDimensions`). The
   viewer only supplies clicked values as `drillPath`, which `queryWidget` turns into equality
   filters, so the security model holds. Drill state stays inside one widget; cross-filtering other
@@ -102,11 +107,17 @@ explain. Update it when a decision changes, not when an implementation detail do
   equality filter. Tables are excluded: they already show several dimensions with subtotals.
 - Comparison runs as a second query with a shifted date range.
 - Relative dates resolve in the dashboard's timezone, default `Europe/Berlin`.
+- Yesterday is the latest queryable day because the current day's data is incomplete. Every range is
+  cut off there when it resolves, and presets end there without saying so in their labels. Ranges
+  saved with a "today" end load as the matching yesterday presets.
+- A custom range can pair a fixed start with an end that stays on yesterday, so "campaign start to
+  yesterday" stays current. The start is not derived from data; editors enter it.
 - Text widgets store versioned Markdown (`markdown-v1`), never HTML. The renderer allows a small
   subset, and only https: and mailto: links, which open in a new tab, so agent and API content is
   safe too. Older text is read as Markdown and stored as such on the next save; there is no bulk
-  migration. Editing happens in the inspector, and its editor loads lazily so viewers never
-  download it. Styling is an open object owned by each renderer.
+  migration, and it is not escaped to keep its old look because no production content depends on it
+  yet. Editing happens in the inspector, and its editor loads lazily so viewers never download it.
+  Styling is an open object owned by each renderer.
 
 ## Deferred
 

@@ -10,7 +10,8 @@ import {
   type SetStateAction,
   type RefObject,
 } from 'react';
-import GridLayout, { noCompactor, useContainerWidth, type LayoutItem } from 'react-grid-layout';
+import GridLayout, { useContainerWidth, type LayoutItem } from 'react-grid-layout';
+import { noOverlapCompactor } from 'react-grid-layout/core';
 import { GridBackground } from 'react-grid-layout/extras';
 import { DashboardWidgetView } from '#/components/dashboard-view';
 import type { ControlState } from '#/domain/schema';
@@ -262,7 +263,9 @@ export function BuilderCanvas({
                 style={{ minHeight: canvasHeight }}
                 width={width}
                 layout={layout}
-                compactor={noCompactor}
+                // Widgets stay where they are dropped and may overlap; children render in stored
+                // order, so later widgets paint on top.
+                compactor={noOverlapCompactor}
                 gridConfig={DASHBOARD_GRID}
                 dragConfig={{ enabled: !saving, handle: '.widget-drag-handle', threshold: 8 }}
                 resizeConfig={{
