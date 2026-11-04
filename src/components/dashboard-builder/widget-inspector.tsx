@@ -176,7 +176,7 @@ export function WidgetSettings({
           <AlertDescription>{settingsError ?? sourceQuery.error?.message}</AlertDescription>
         </Alert>
       ) : null}
-      {'title' in definition ? (
+      {'title' in definition && definition.type !== 'image' ? (
         <>
           <Field>
             <FieldLabel htmlFor={`title-${widget.id}`}>Title</FieldLabel>

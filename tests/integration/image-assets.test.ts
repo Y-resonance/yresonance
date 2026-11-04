@@ -142,6 +142,17 @@ describe('dashboard image upload', () => {
       { status: 400, code: 'unknown_asset' },
     );
   });
+
+  test('keeps a placeholder without an image next to a real one', async () => {
+    const { dashboard, asset } = await dashboardWithImage();
+    await addWidget(dashboard.id, { type: 'image', fit: 'contain', title: 'Coming soon' });
+
+    const opened = (await callService({ action: 'getDashboard', dashboardId: dashboard.id })) as {
+      assets: ImageAsset[];
+    };
+    expect(opened.assets).toEqual([asset]);
+    expect((await fetchAsset(dashboard.id, asset.id)).status).toBe(200);
+  });
 });
 
 describe('dashboard image serving', () => {

@@ -403,7 +403,9 @@ export async function validateDefinition(
       'A single-select filter accepts only one default value.',
     );
   if (definition.type === 'image')
-    return assertWorkspaceAsset(dashboard.workspaceId, definition.assetId);
+    return definition.assetId
+      ? assertWorkspaceAsset(dashboard.workspaceId, definition.assetId)
+      : undefined;
   if (!('dataSourceId' in definition)) return;
   const { dataSource, metadata } =
     context ?? (await loadQueryContext(definition.dataSourceId, dashboard.workspaceId));

@@ -64,7 +64,6 @@ import {
   type PendingCanvasWidget,
 } from './dashboard-builder/canvas-layout';
 import { WidgetSettings } from './dashboard-builder/widget-inspector';
-import { ImageAssetPicker, imageWidgetDefinition } from './dashboard-builder/image-asset-picker';
 
 export type DashboardSaveStatus = 'saved' | 'saving' | 'error';
 
@@ -107,8 +106,6 @@ function Builder({
   const [pendingWidgets, setPendingWidgets] = useState<Record<string, number>>({});
   const [removeTarget, setRemoveTarget] = useState<DashboardWidget>();
   const [catalogOpen, setCatalogOpen] = useState(false);
-  // Set while the editor picks the image for a new image widget, with its drop position if dragged.
-  const [imageDialog, setImageDialog] = useState<{ dropped?: LayoutItem }>();
   const [removing, setRemoving] = useState(false);
   const [desktop, setDesktop] = useState<boolean>();
   const dashboardRef = useRef(dashboard);
@@ -255,11 +252,7 @@ function Builder({
     }
   }
 
-  async function addWidget(type: BuilderType, dropped?: LayoutItem, ready?: WidgetDefinition) {
-    if (type === 'image' && !ready) {
-      setImageDialog({ dropped });
-      return;
-    }
+  async function addWidget(type: BuilderType, dropped?: LayoutItem) {
     const entry = catalog.find((item) => item.type === type)!;
     const pendingId = `pending_${crypto.randomUUID()}`;
     setPendingAddition({
@@ -278,7 +271,7 @@ function Builder({
     startSaving();
     setError(undefined);
     try {
-      const definition = ready ?? (await defaultDefinition(callApi, type, dataSources[0]));
+      const definition = await defaultDefinition(callApi, type, dataSources[0]);
       revision = ++mutationRevisionRef.current;
       const result = await enqueueMutation(() =>
         callApi<{ widget: DashboardWidget }>({
@@ -650,27 +643,6 @@ function Builder({
           </aside>
         ) : null}
       </div>
-      <Dialog
-        open={Boolean(imageDialog)}
-        onOpenChange={(open) => {
-          if (!open) setImageDialog(undefined);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add image</DialogTitle>
-            <DialogDescription>Upload an image or reuse one from this workspace.</DialogDescription>
-          </DialogHeader>
-          <ImageAssetPicker
-            dashboardId={dashboard.id}
-            onSelect={(asset) => {
-              const dropped = imageDialog?.dropped;
-              setImageDialog(undefined);
-              void addWidget('image', dropped, imageWidgetDefinition(asset));
-            }}
-          />
-        </DialogContent>
-      </Dialog>
       <Dialog
         open={Boolean(removeTarget)}
         onOpenChange={(open) => {

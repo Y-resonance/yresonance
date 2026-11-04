@@ -64,7 +64,9 @@ export async function listAssets(dashboardId: string) {
 function referencedAssetIds(document: DashboardDocument) {
   return new Set(
     dashboardWidgets(document).flatMap((widget) =>
-      widget.definition.type === 'image' ? [widget.definition.assetId] : [],
+      widget.definition.type === 'image' && widget.definition.assetId
+        ? [widget.definition.assetId]
+        : [],
     ),
   );
 }

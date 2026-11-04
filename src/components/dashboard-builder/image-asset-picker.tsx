@@ -20,8 +20,8 @@ import { Progress } from '#/components/ui/progress';
 import { cn } from '#/lib/utils';
 
 /**
- * Uploads a new workspace image or picks an existing one. Used by the "Add image" dialog and the
- * image widget inspector. The file is checked for SVG, size and type before any byte is sent.
+ * Uploads a new workspace image or picks an existing one for the image widget inspector. The file
+ * is checked for SVG, size and type before any byte is sent.
  */
 export function ImageAssetPicker({
   dashboardId,
@@ -42,6 +42,11 @@ export function ImageAssetPicker({
   const input = useRef<HTMLInputElement>(null);
   const request = useRef<XMLHttpRequest | undefined>(undefined);
   useEffect(() => () => request.current?.abort(), []);
+  // Editors keep changing other settings during an upload, which must end with their latest state.
+  const latestOnSelect = useRef(onSelect);
+  useEffect(() => {
+    latestOnSelect.current = onSelect;
+  });
 
   async function upload(file: File) {
     setError(undefined);
@@ -70,7 +75,7 @@ export function ImageAssetPicker({
       );
       track('success');
       void assetsQuery.refetch();
-      onSelect(JSON.parse(body) as ImageAsset);
+      latestOnSelect.current(JSON.parse(body) as ImageAsset);
     } catch (caught) {
       const cancelled = caught instanceof UploadCancelledError;
       track(cancelled ? 'cancelled' : 'failed');
@@ -155,22 +160,22 @@ export function ImageAssetPicker({
   );
 }
 
-/** A starting image widget for an asset. The file name doubles as alt text until edited. */
-export function imageWidgetDefinition(asset: ImageAsset) {
-  const alt =
+/** The file name doubles as alt text until edited. */
+function defaultAlt(asset: ImageAsset) {
+  return (
     asset.name
       .replace(/\.[a-z0-9]+$/iu, '')
       .replace(/[-_]+/gu, ' ')
-      .trim() || 'Image';
-  return { type: 'image' as const, assetId: asset.id, alt, fit: 'contain' as const };
+      .trim() || 'Image'
+  );
 }
 
 type ImageDefinition = Extract<WidgetDefinition, { type: 'image' }>;
 
 /**
- * Inspector fields for an image widget: the image itself, alt text, fit and an optional link.
- * Alt text and link are drafts until they are valid, so an invalid entry never rides along with
- * the next fit or image change.
+ * Inspector fields for an image widget: the image itself, an optional title and, once an image is
+ * chosen, alt text, fit and an optional link. Title, alt text and link are drafts until they are
+ * valid, so an invalid entry never rides along with the next fit or image change.
  */
 export function ImageSettings({
   widgetId,
@@ -183,11 +188,15 @@ export function ImageSettings({
   definition: ImageDefinition;
   commit: (definition: WidgetDefinition) => Promise<void>;
 }) {
-  const [alt, setAlt] = useState(definition.alt);
+  const [title, setTitle] = useState(definition.title ?? '');
+  const [alt, setAlt] = useState(definition.alt ?? '');
   const [link, setLink] = useState(definition.href ?? '');
   const [linkError, setLinkError] = useState<string>();
+  // Separate from the effect below: picking the first image sets the alt text and must not discard
+  // a title that is still being typed.
+  useEffect(() => setTitle(definition.title ?? ''), [definition.title]);
   useEffect(() => {
-    setAlt(definition.alt);
+    setAlt(definition.alt ?? '');
     setLink(definition.href ?? '');
     setLinkError(undefined);
   }, [definition.alt, definition.href]);
@@ -198,59 +207,83 @@ export function ImageSettings({
         <ImageAssetPicker
           dashboardId={dashboardId}
           selectedId={definition.assetId}
-          onSelect={(asset) => void commit({ ...definition, assetId: asset.id })}
-        />
-      </Field>
-      <Field>
-        <FieldLabel htmlFor={`alt-${widgetId}`}>Alt text</FieldLabel>
-        <Input
-          id={`alt-${widgetId}`}
-          value={alt}
-          onChange={(event) => setAlt(event.target.value)}
-          onBlur={() => {
-            const next = alt.trim();
-            if (!next) setAlt(definition.alt);
-            else if (next !== definition.alt) void commit({ ...definition, alt: next });
-          }}
-        />
-        <FieldDescription>Describes the image for screen readers.</FieldDescription>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor={`fit-${widgetId}`}>Fit</FieldLabel>
-        <NativeSelect
-          id={`fit-${widgetId}`}
-          value={definition.fit}
-          onChange={(event) =>
-            void commit({ ...definition, fit: event.target.value as ImageDefinition['fit'] })
+          onSelect={(asset) =>
+            void commit({
+              ...definition,
+              assetId: asset.id,
+              alt: definition.alt ?? defaultAlt(asset),
+            })
           }
-        >
-          <NativeSelectOption value="contain">Show whole image</NativeSelectOption>
-          <NativeSelectOption value="cover">Fill and crop</NativeSelectOption>
-        </NativeSelect>
+        />
       </Field>
-      <Field data-invalid={Boolean(linkError)}>
-        <FieldLabel htmlFor={`link-${widgetId}`}>Link</FieldLabel>
+      <Field>
+        <FieldLabel htmlFor={`title-${widgetId}`}>Title</FieldLabel>
         <Input
-          id={`link-${widgetId}`}
-          type="url"
-          placeholder="https://"
-          value={link}
-          aria-invalid={Boolean(linkError)}
-          onChange={(event) => {
-            setLinkError(undefined);
-            setLink(event.target.value);
-          }}
+          id={`title-${widgetId}`}
+          placeholder="Optional"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
           onBlur={() => {
-            const href = link.trim() || undefined;
-            if (href && !(URL.canParse(href) && new URL(href).protocol === 'https:')) {
-              setLinkError('Use an https:// link.');
-              return;
-            }
-            if (href !== definition.href) void commit({ ...definition, href });
+            const next = title.trim() || undefined;
+            setTitle(next ?? '');
+            if (next !== definition.title) void commit({ ...definition, title: next });
           }}
         />
-        {linkError ? <FieldError>{linkError}</FieldError> : null}
       </Field>
+      {definition.assetId ? (
+        <>
+          <Field>
+            <FieldLabel htmlFor={`alt-${widgetId}`}>Alt text</FieldLabel>
+            <Input
+              id={`alt-${widgetId}`}
+              value={alt}
+              onChange={(event) => setAlt(event.target.value)}
+              onBlur={() => {
+                const next = alt.trim();
+                if (!next) setAlt(definition.alt ?? '');
+                else if (next !== definition.alt) void commit({ ...definition, alt: next });
+              }}
+            />
+            <FieldDescription>Describes the image for screen readers.</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={`fit-${widgetId}`}>Fit</FieldLabel>
+            <NativeSelect
+              id={`fit-${widgetId}`}
+              value={definition.fit}
+              onChange={(event) =>
+                void commit({ ...definition, fit: event.target.value as ImageDefinition['fit'] })
+              }
+            >
+              <NativeSelectOption value="contain">Show whole image</NativeSelectOption>
+              <NativeSelectOption value="cover">Fill and crop</NativeSelectOption>
+            </NativeSelect>
+          </Field>
+          <Field data-invalid={Boolean(linkError)}>
+            <FieldLabel htmlFor={`link-${widgetId}`}>Link</FieldLabel>
+            <Input
+              id={`link-${widgetId}`}
+              type="url"
+              placeholder="https://"
+              value={link}
+              aria-invalid={Boolean(linkError)}
+              onChange={(event) => {
+                setLinkError(undefined);
+                setLink(event.target.value);
+              }}
+              onBlur={() => {
+                const href = link.trim() || undefined;
+                if (href && !(URL.canParse(href) && new URL(href).protocol === 'https:')) {
+                  setLinkError('Use an https:// link.');
+                  return;
+                }
+                if (href !== definition.href) void commit({ ...definition, href });
+              }}
+            />
+            {linkError ? <FieldError>{linkError}</FieldError> : null}
+          </Field>
+        </>
+      ) : null}
     </>
   );
 }

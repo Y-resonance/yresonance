@@ -32,7 +32,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { ChevronRight, ChevronsUpDown, X } from 'lucide-react';
+import { ChevronRight, ChevronsUpDown, ImageIcon, X } from 'lucide-react';
 import {
   drillPathSchema,
   type ComboMetric,
@@ -208,7 +208,7 @@ function isControlWidget(widget: DashboardWidget) {
 }
 
 // Dimensions of the images the open dashboard shows, from `getDashboard`. Image widgets read them
-// for `srcset` and their reserved size; without an entry they still render the original.
+// for `srcset` and their reserved size; viewers without an entry still get the original.
 const DashboardAssetsContext = createContext<ReadonlyMap<string, ImageAsset>>(new Map());
 
 export function DashboardAssetsProvider({
@@ -253,7 +253,7 @@ function Widget({
         definition={widget.definition}
         dashboardId={dashboardId}
         shareToken={shareToken}
-        linked={!builder}
+        builder={Boolean(builder)}
       />
     );
   if (widget.definition.type === 'text')
@@ -338,17 +338,68 @@ function ImageWidget({
   definition,
   dashboardId,
   shareToken,
-  linked,
+  builder,
 }: {
   widget: DashboardWidget;
   definition: Extract<DashboardWidget['definition'], { type: 'image' }>;
   dashboardId: string;
   shareToken?: string;
+  builder: boolean;
+}) {
+  const assets = useContext(DashboardAssetsContext);
+  const { assetId, title } = definition;
+  if (!assetId && !builder) return null;
+  return (
+    <Card className="h-full min-h-0">
+      {title ? (
+        <CardHeader className="shrink-0">
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+      ) : null}
+      <CardContent className={cn('flex min-h-0 flex-1', !title && 'pt-(--card-spacing)')}>
+        {!assetId ? (
+          <div className="flex size-full flex-col items-center justify-center gap-1.5 rounded-md bg-muted text-sm text-muted-foreground">
+            <ImageIcon aria-hidden className="size-5" />
+            Choose an image
+          </div>
+        ) : builder && !assets.has(assetId) ? (
+          // The asset route refuses an image until the saved dashboard shows it, and getDashboard
+          // lists it from then on. Requesting it earlier could leave a broken image behind.
+          <Skeleton className="size-full" />
+        ) : (
+          <ImageContent
+            widget={widget}
+            definition={definition}
+            assetId={assetId}
+            asset={assets.get(assetId)}
+            dashboardId={dashboardId}
+            shareToken={shareToken}
+            linked={!builder}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ImageContent({
+  widget,
+  definition,
+  assetId,
+  asset,
+  dashboardId,
+  shareToken,
+  linked,
+}: {
+  widget: DashboardWidget;
+  definition: Extract<DashboardWidget['definition'], { type: 'image' }>;
+  assetId: string;
+  asset: ImageAsset | undefined;
+  dashboardId: string;
+  shareToken?: string;
   linked: boolean;
 }) {
-  const asset = useContext(DashboardAssetsContext).get(definition.assetId);
-  const url = (width?: number) =>
-    imageAssetUrl(dashboardId, definition.assetId, { width, shareToken });
+  const url = (width?: number) => imageAssetUrl(dashboardId, assetId, { width, shareToken });
   const image = (
     <img
       src={url()}
@@ -369,23 +420,16 @@ function ImageWidget({
       )}
     />
   );
+  if (!linked || !definition.href) return image;
   return (
-    <Card>
-      <CardContent className="flex min-h-0 flex-1 pt-(--card-spacing)">
-        {linked && definition.href ? (
-          <a
-            href={definition.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex size-full min-h-0"
-          >
-            {image}
-          </a>
-        ) : (
-          image
-        )}
-      </CardContent>
-    </Card>
+    <a
+      href={definition.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex size-full min-h-0"
+    >
+      {image}
+    </a>
   );
 }
 
@@ -702,7 +746,7 @@ function QueryCard({
     changePending(1);
     return () => changePending(-1);
   }, [resultQuery.isFetching, changePending]);
-  if (!('title' in definition)) return null;
+  if (!('title' in definition) || definition.type === 'image') return null;
   const canDrill = drillPath.length < drillLevels(definition).length - 1;
   // Dropping the old level's rows shows a skeleton and keeps a second click from drilling into a
   // value of the level that is being left.

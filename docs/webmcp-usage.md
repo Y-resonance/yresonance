@@ -53,10 +53,12 @@ placements. `updatePage` renames, changes draft status, or moves a page to a zer
 `removePage` requires `confirm: true` when it contains widgets and cannot remove the last page.
 View tools on shared links and viewer grants can read and query only published pages.
 
-Image widgets reference an uploaded workspace image: `{ type: "image", assetId, alt, fit, href }`.
-`listAssets` returns the workspace's images with ids, names, dimensions, sizes, and the upload
-limit. Agents place an existing image with `addWidget` or `updateWidget`; uploading stays a GUI
-action. `href` must be an `https:` URL and opens in a new tab.
+Image widgets reference an uploaded workspace image:
+`{ type: "image", assetId, alt, fit, href, title }`. `listAssets` returns the
+workspace's images with ids, names, dimensions, sizes, and the upload limit. Agents place an existing
+image with `addWidget` or `updateWidget`; uploading stays a GUI action. `href` must be an `https:`
+URL and opens in a new tab. `alt` is required with an `assetId`. Without an `assetId` the widget is a
+placeholder that editors fill in later and viewers do not see.
 
 `registerDatasource` accepts an optional `cachePolicy`; `updateDatasource` changes it for an
 existing datasource. Policies are `default`, `disabled`, or `duration` with `ttlSeconds` from

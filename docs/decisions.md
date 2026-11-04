@@ -114,6 +114,9 @@ explain. Update it when a decision changes, not when an implementation detail do
   cannot read private R2 objects and caches publicly, and hosted Images caps uploads at 10 MB.
   Asset responses are never `public`: Workers Cache ignores cookies, so it could serve an image
   to a removed collaborator.
+- Adding an image widget places a placeholder and the editor picks the image in the inspector, like
+  every other widget's settings. Viewers don't see a widget without an image, so a published page
+  never shows an empty box.
 
 ## Deferred
 

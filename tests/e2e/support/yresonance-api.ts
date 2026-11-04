@@ -263,7 +263,14 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
               : state.dashboard,
           role: options.role ?? 'editor',
           dataSources: [{ id: dataSourceId, name: state.source.name }],
-          assets: state.assets,
+          // Matches the server, which only lists the images the dashboard shows.
+          assets: state.assets.filter((asset) =>
+            state.dashboard.pages.some((page) =>
+              page.widgets.some(
+                ({ definition }) => definition.type === 'image' && definition.assetId === asset.id,
+              ),
+            ),
+          ),
           // Matches the server: builder refreshes opt out of the sharing payload.
           ...(request.action === 'getDashboard' && request.includeSharing === false
             ? {}
@@ -405,7 +412,9 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
           };
         }
         return ok(route, {
-          widget: targetPage.widgets.find((i) => i.id === request.widgetId),
+          widget: state.dashboard.pages
+            .find((page) => page.id === targetPage.id)
+            ?.widgets.find((i) => i.id === request.widgetId),
         });
       }
       case 'updateLayout': {
