@@ -145,3 +145,30 @@ test('editing keeps Markdown the editor has no button for', async ({ page }) => 
   expect(document).toBe(original.replace('Run', 'First, Run'));
   expect(errors).toEqual([]);
 });
+
+test('typed leading spaces stay editable text instead of becoming a code block', async ({
+  page,
+}) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.dashboard.pages[0]!.widgets.push({
+    id: 'w_notes',
+    layout: { x: 0, y: 7, width: 6, height: 3 },
+    definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'Old' } },
+    definitionHash: 'hash_notes',
+  });
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+  await page.locator('[data-widget-id="w_notes"]').click({ position: { x: 40, y: 20 } });
+  const editor = page.getByRole('complementary').getByRole('textbox', { name: 'Text' });
+  await expect(editor).toContainText('Old');
+
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type('    Note');
+  const saved = page.waitForRequest(
+    (request) =>
+      request.url().endsWith('/api/yresonance') && request.postDataJSON().action === 'updateWidget',
+  );
+  await editor.blur();
+  expect((await saved).postDataJSON().definition.content.document).toBe('Note');
+});

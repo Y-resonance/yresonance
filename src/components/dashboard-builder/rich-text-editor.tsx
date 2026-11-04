@@ -71,6 +71,10 @@ const paragraph = Paragraph.extend({
       return helpers.createNode('paragraph', undefined, helpers.parseInline(tokens));
     return this.parent?.(token, helpers) ?? [];
   },
+  // Four typed or pasted spaces would read back as a code block, which can't be edited.
+  renderMarkdown(node, helpers, context) {
+    return (this.parent?.(node, helpers, context) ?? '').replace(/^[ \t]+/, '');
+  },
 });
 
 const literalMarkdown = [
@@ -149,7 +153,7 @@ export default function RichTextEditor({
 
   // Follow outside changes, such as an agent updating the widget, unless the user is mid-edit.
   useEffect(() => {
-    if (!editor || dirty.current || editor.getMarkdown().trim() === value.trim()) return;
+    if (!editor || dirty.current || editor.getMarkdown().trimEnd() === value.trimEnd()) return;
     editor.commands.setContent(value, { contentType: 'markdown', emitUpdate: false });
   }, [editor, value]);
 
