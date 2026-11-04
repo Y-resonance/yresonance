@@ -423,60 +423,83 @@ test.describe('desktop', () => {
     await expect(page.getByRole('heading', { name: state.dashboard.name })).toBeVisible();
   });
 
-  // The builder resets from the shared cache, so a read the settings page started on its way out
-  // would undo a widget edit made while it runs.
-  test('a theme save finishing after leaving settings leaves builder edits alone', async ({
-    page,
-  }) => {
-    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+  test('leaving settings waits for a running save', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
     const state = await mockYresonanceApi(page, { role: 'editor' });
     await page.goto('/dashboards/dash_demo/settings');
-    const themeWeight = page.getByLabel('Style: border weight');
-    await expect(themeWeight).toBeVisible();
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
 
     const releaseSave = Promise.withResolvers<void>();
-    const releaseRead = Promise.withResolvers<void>();
-    let holdReads = false;
     await page.route('**/api/yresonance', async (route) => {
-      const { action, theme, includeSharing } = route.request().postDataJSON();
-      if (action === 'updateDashboard' && theme) await releaseSave.promise;
-      if (action !== 'getDashboard' || !includeSharing || !holdReads) return route.fallback();
-      const dashboard = structuredClone(state.dashboard);
-      await releaseRead.promise;
-      await route.fulfill({
-        json: { ok: true, data: { dashboard, role: 'editor', dataSources: [] } },
-      });
+      if (route.request().postDataJSON().action === 'updateDashboard') await releaseSave.promise;
+      await route.fallback();
     });
 
-    await themeWeight.fill('6');
-    await themeWeight.blur();
+    await weight.fill('6');
+    await weight.blur();
     await page.getByRole('link', { name: state.dashboard.name }).click();
-    await page.getByRole('button', { name: 'Edit Media spend' }).click();
-    holdReads = true;
-    releaseSave.resolve();
-    await expect.poll(() => state.dashboard.theme).toEqual({ widgetDefaults: { borderWidth: 6 } });
     await page.waitForTimeout(300);
+    await expect(page).toHaveURL(/\/settings/);
 
-    // The builder's own refresh would repair the field, so the older read has to land after it.
-    const builderRefresh = page.waitForResponse((response) => {
-      const request = response.request().postDataJSON();
-      return request?.action === 'getDashboard' && request.includeSharing === false;
+    releaseSave.resolve();
+    await expect(page).toHaveURL(/\/dashboards\/dash_demo(\?|$)/);
+    expect(state.dashboard.theme).toEqual({ widgetDefaults: { borderWidth: 6 } });
+  });
+
+  test('the browser back button also waits for a running save', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await page.getByRole('link', { name: 'Settings' }).click();
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
+
+    const releaseSave = Promise.withResolvers<void>();
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action === 'updateDashboard') await releaseSave.promise;
+      await route.fallback();
     });
-    const widgetWeight = page.getByRole('complementary').getByLabel('Style: border weight');
-    await widgetWeight.fill('9');
-    await widgetWeight.blur();
-    await builderRefresh;
-    await page.waitForTimeout(100);
-    await expect
-      .poll(
-        () =>
-          state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.definition
-            .appearance,
-      )
-      .toEqual({ borderWidth: 9 });
-    releaseRead.resolve();
+
+    await weight.fill('6');
+    await weight.blur();
+    await page.evaluate(() => history.back());
+    // The browser changes the URL before the app can react, so the page is what has to stay.
     await page.waitForTimeout(300);
-    await expect(widgetWeight).toHaveValue('9');
+    await expect(weight).toBeVisible();
+
+    releaseSave.resolve();
+    await expect(weight).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboards\/dash_demo(\?|$)/);
+  });
+
+  test('leaving during a save that fails stays to show why, then lets you go', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
+
+    const releaseSave = Promise.withResolvers<void>();
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action !== 'updateDashboard') return route.fallback();
+      await releaseSave.promise;
+      await route.fulfill(conflict);
+    });
+
+    await weight.fill('6');
+    await weight.blur();
+    const backLink = page.getByRole('link', { name: state.dashboard.name });
+    await backLink.click();
+    releaseSave.resolve();
+
+    await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
+    await expect(page).toHaveURL(/\/settings/);
+    await expect(weight).toHaveValue('');
+
+    await backLink.click();
+    await expect(page).toHaveURL(/\/dashboards\/dash_demo(\?|$)/);
   });
 
   test('a later theme save clears the error of an earlier one', async ({ page }) => {

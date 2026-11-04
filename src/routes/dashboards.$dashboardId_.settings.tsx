@@ -1,6 +1,6 @@
-import { createFileRoute, Link, Navigate } from '@tanstack/react-router';
+import { createFileRoute, Link, Navigate, useBlocker } from '@tanstack/react-router';
 import { ArrowLeftIcon } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { z } from 'zod';
 import { useApi } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
@@ -45,14 +45,8 @@ function DashboardSettingsContent() {
   const [error, setError] = useState<string>();
   const [pendingSaves, setPendingSaves] = useState(0);
   const saveQueue = useRef(createSerialQueue());
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
   const saving = useRef(0);
+  const saveFailed = useRef(false);
   const latestEdit = useRef(0);
   const savedTheme = useRef<DashboardTheme>(undefined);
   const canEdit = payload?.role === 'admin' || payload?.role === 'editor';
@@ -61,6 +55,16 @@ function DashboardSettingsContent() {
   const refreshAfterTool = useCallback(() => {
     if (!saving.current) void refetch();
   }, [refetch]);
+  // Leaving waits for running saves. The dashboard page then reads them, and the builder, which resets
+  // from the cache this page writes to, can't lose an edit to a save finishing behind it. If the last
+  // save failed, the user stays here to see why.
+  const waitForSaves = useCallback(async () => {
+    if (!saving.current) return false;
+    while (saving.current) await saveQueue.current(() => Promise.resolve());
+    return saveFailed.current;
+  }, []);
+  const hasRunningSave = useCallback(() => saving.current > 0, []);
+  useBlocker({ shouldBlockFn: waitForSaves, enableBeforeUnload: hasRunningSave });
   usePageTitle(payload ? `${payload.dashboard.name} settings` : 'Dashboard settings');
   useWebMcpTools({
     dashboardId,
@@ -88,18 +92,18 @@ function DashboardSettingsContent() {
     try {
       await saveQueue.current(() => callApi({ action: 'updateDashboard', dashboardId, theme }));
       savedTheme.current = theme;
+      saveFailed.current = false;
       // This save also stored whatever an earlier failure lost.
       setError(undefined);
     } catch (caught) {
+      saveFailed.current = true;
       // A later edit still saving contains this one, so only the newest failure undoes anything.
       if (edit === latestEdit.current) storeTheme(savedTheme.current);
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setPendingSaves((current) => current - 1);
-      // Replaces any read cancelled above, and the server's answer can't predate these saves. After
-      // leaving the page it stays out: the builder resets from this cache, so a read could undo an
-      // edit made there in the meantime.
-      if (--saving.current === 0 && mounted.current) void refetch();
+      // Replaces any read cancelled above, and the server's answer can't predate these saves.
+      if (--saving.current === 0) void refetch();
     }
   }
 
