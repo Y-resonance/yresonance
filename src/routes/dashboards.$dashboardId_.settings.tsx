@@ -45,6 +45,8 @@ function DashboardSettingsContent() {
   const [error, setError] = useState<string>();
   const [pendingSaves, setPendingSaves] = useState(0);
   const saveQueue = useRef(createSerialQueue());
+  const latestEdit = useRef(0);
+  const savedTheme = useRef<DashboardTheme>(undefined);
   const canEdit = payload?.role === 'admin' || payload?.role === 'editor';
   const refreshAfterTool = useCallback(() => void refetch(), [refetch]);
   usePageTitle(payload ? `${payload.dashboard.name} settings` : 'Dashboard settings');
@@ -56,29 +58,28 @@ function DashboardSettingsContent() {
     onMutation: refreshAfterTool,
   });
 
-  function storeTheme(theme: DashboardTheme | undefined, onlyIfThemeIs?: DashboardTheme) {
-    setData((current) =>
-      current && (onlyIfThemeIs === undefined || current.dashboard.theme === onlyIfThemeIs)
-        ? { ...current, dashboard: { ...current.dashboard, theme } }
-        : current,
-    );
+  function storeTheme(theme: DashboardTheme | undefined) {
+    setData((current) => current && { ...current, dashboard: { ...current.dashboard, theme } });
   }
 
-  // Saves run in edit order. A read still running predates this edit, and the next edit is built from
-  // what it would show, so it is cancelled first. The dashboard page refetches when it opens.
+  // Saves run in edit order and each holds the whole theme. A read still running predates this edit,
+  // and the next edit is built from what it would show, so it is cancelled first.
   async function updateTheme(theme: DashboardTheme) {
-    const previous = payload?.dashboard.theme;
+    const edit = ++latestEdit.current;
+    // With nothing saving, the form shows what the server has.
+    if (!pendingSaves) savedTheme.current = payload?.dashboard.theme;
     await cancel();
     storeTheme(theme);
     setPendingSaves((current) => current + 1);
     setError(undefined);
     try {
       await saveQueue.current(() => callApi({ action: 'updateDashboard', dashboardId, theme }));
-      // Each save holds the whole theme, so this one also stored whatever an earlier failure lost.
+      savedTheme.current = theme;
+      // This save also stored whatever an earlier failure lost.
       setError(undefined);
     } catch (caught) {
-      // Only undo when no later edit has replaced this one in the meantime.
-      storeTheme(previous, theme);
+      // A later edit still saving contains this one, so only the newest failure undoes anything.
+      if (edit === latestEdit.current) storeTheme(savedTheme.current);
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setPendingSaves((current) => current - 1);
