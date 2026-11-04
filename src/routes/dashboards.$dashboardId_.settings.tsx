@@ -41,7 +41,7 @@ function DashboardSettingsContent() {
   const { dashboardId } = Route.useParams();
   const { page } = Route.useSearch();
   const dashboardQuery = useDashboardPayload(dashboardId);
-  const { data: payload, setData, refetch } = dashboardQuery;
+  const { data: payload, setData, cancel, refetch } = dashboardQuery;
   const [error, setError] = useState<string>();
   const [pendingSaves, setPendingSaves] = useState(0);
   const saveQueue = useRef(createSerialQueue());
@@ -64,15 +64,18 @@ function DashboardSettingsContent() {
     );
   }
 
-  // Saves run in edit order and the page keeps its own edit, so no refresh can overwrite a newer
-  // one. The dashboard page reads the shared cache and refetches when it opens.
+  // Saves run in edit order. A read still running predates this edit, and the next edit is built from
+  // what it would show, so it is cancelled first. The dashboard page refetches when it opens.
   async function updateTheme(theme: DashboardTheme) {
     const previous = payload?.dashboard.theme;
+    await cancel();
     storeTheme(theme);
     setPendingSaves((current) => current + 1);
     setError(undefined);
     try {
       await saveQueue.current(() => callApi({ action: 'updateDashboard', dashboardId, theme }));
+      // Each save holds the whole theme, so this one also stored whatever an earlier failure lost.
+      setError(undefined);
     } catch (caught) {
       // Only undo when no later edit has replaced this one in the meantime.
       storeTheme(previous, theme);

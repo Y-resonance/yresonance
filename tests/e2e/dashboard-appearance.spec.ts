@@ -180,6 +180,55 @@ test.describe('desktop', () => {
     await expect(corner).toHaveValue('20');
   });
 
+  // Opening settings with an older cache entry refetches it behind the form. The next edit is built
+  // from what the form shows, so a response that undoes an edit would also erase it on the server.
+  test('a settings edit survives the refresh that was running when it was made', async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.clock.install();
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+
+    const refreshStarted = Promise.withResolvers<void>();
+    const releaseRefresh = Promise.withResolvers<void>();
+    const savedThemes: unknown[] = [];
+    await page.route('**/api/yresonance', async (route) => {
+      const { action, theme } = route.request().postDataJSON();
+      if (action === 'getDashboard') {
+        refreshStarted.resolve();
+        await releaseRefresh.promise;
+        return route.fallback().catch(() => undefined);
+      }
+      if (action !== 'updateDashboard') return route.fallback();
+      // The mock's document keeps the old theme, like a read that started before this save.
+      savedThemes.push(theme);
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, data: state.dashboard }),
+      });
+    });
+    await page.clock.fastForward(31_000);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await refreshStarted.promise;
+
+    const shadow = page.getByRole('switch', { name: 'Style: shadow' });
+    await shadow.click();
+    await expect.poll(() => savedThemes).toEqual([{ widgetDefaults: { shadow: true } }]);
+    releaseRefresh.resolve();
+    // Nothing visible marks a dropped response, so give an applied one time to render.
+    await page.waitForTimeout(300);
+    await expect(shadow).toBeChecked();
+
+    const weight = page.getByLabel('Style: border weight');
+    await weight.fill('6');
+    await weight.blur();
+    await expect
+      .poll(() => savedThemes.at(-1))
+      .toEqual({ widgetDefaults: { shadow: true, borderWidth: 6 } });
+  });
+
   test('a theme save that fails shows why and restores the field', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
     await mockYresonanceApi(page, { role: 'editor' });
@@ -202,6 +251,43 @@ test.describe('desktop', () => {
     await expect(page.getByText('This dashboard changed while saving.')).toBeVisible();
     await expect(page.getByRole('status', { name: 'Changes could not be saved' })).toBeVisible();
     await expect(weight).toHaveValue('');
+  });
+
+  test('a later theme save clears the error of an earlier one', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const weight = page.getByLabel('Style: border weight');
+    await expect(weight).toBeVisible();
+
+    const releaseFirstSave = Promise.withResolvers<void>();
+    let saves = 0;
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action !== 'updateDashboard') return route.fallback();
+      if (++saves > 1) return route.fallback();
+      await releaseFirstSave.promise;
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: false,
+          error: { code: 'dashboard_conflict', message: 'This dashboard changed while saving.' },
+        }),
+      });
+    });
+
+    await weight.fill('6');
+    await weight.blur();
+    const corner = page.getByLabel('Style: border radius');
+    await corner.fill('20');
+    await corner.blur();
+    releaseFirstSave.resolve();
+
+    await expect
+      .poll(() => state.dashboard.theme?.widgetDefaults)
+      .toEqual({ borderWidth: 6, borderRadius: 20 });
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await expect(page.getByText('This dashboard changed while saving.')).toHaveCount(0);
   });
 
   test('viewers have no settings and are sent back to the dashboard', async ({ page }) => {

@@ -99,6 +99,11 @@ export function useApiQuery<T>(
       client.setQueryData<T>(JSON.parse(keyString), updater),
     [client, keyString],
   );
+  // For optimistic writes: await it first so an older read in flight can't land on top of the edit.
+  const cancel = useCallback(
+    () => client.cancelQueries({ queryKey: JSON.parse(keyString) }),
+    [client, keyString],
+  );
   const queryFn = options.queryFn;
   const result = useQuery({
     ...base,
@@ -107,7 +112,7 @@ export function useApiQuery<T>(
     ...(queryFn ? { queryFn: ({ signal }: { signal: AbortSignal }) => queryFn(signal) } : {}),
     enabled: typeof window !== 'undefined' && ready && (options.enabled ?? true),
   });
-  return { ...result, setData };
+  return { ...result, setData, cancel };
 }
 
 // Imperative reads support event handlers, ordered builder saves, and WebMCP tools.
