@@ -409,7 +409,9 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
           };
         }
         return ok(route, {
-          widget: targetPage.widgets.find((i) => i.id === request.widgetId),
+          widget: state.dashboard.pages
+            .find((page) => page.id === targetPage.id)
+            ?.widgets.find((i) => i.id === request.widgetId),
         });
       }
       case 'updateLayout': {

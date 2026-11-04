@@ -97,7 +97,7 @@ export const appearanceSchema = z.object({
   backgroundOpacity: z.number().int().min(0).max(100).optional(),
   borderColor: colorSchema.optional(),
   borderRadius: z.number().int().min(0).max(32).optional(),
-  borderWidth: z.number().int().min(0).max(8).optional(),
+  borderWidth: z.number().int().min(0).max(16).optional(),
   borderStyle: z.enum(['solid', 'dashed', 'dotted']).optional(),
   shadow: z.boolean().optional(),
 });

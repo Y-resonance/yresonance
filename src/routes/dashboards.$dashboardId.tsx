@@ -95,13 +95,15 @@ function DashboardContent() {
   const [agentMode, setAgentMode] = useState(initialAgentModeState);
   const [queryInputsRevision, setQueryInputsRevision] = useState(0);
   const loadDashboard = useCallback(
-    async (includeSharing = true) => {
+    // isCurrent lets the builder drop a response that a newer edit has already outdated.
+    async (includeSharing = true, isCurrent?: () => boolean) => {
       try {
         const loaded = await callApi<DashboardPayload>({
           action: 'getDashboard',
           dashboardId,
           includeSharing,
         });
+        if (isCurrent?.() === false) return;
         if (controlDashboardIdRef.current !== loaded.dashboard.id) {
           controlDashboardIdRef.current = loaded.dashboard.id;
           setBuilderControlState(initialControlState(loaded.dashboard));
@@ -120,7 +122,10 @@ function DashboardContent() {
     },
     [dashboardId, callApi, dashboardQuery.setData],
   );
-  const refresh = useCallback(() => loadDashboard(false), [loadDashboard]);
+  const refresh = useCallback(
+    (isCurrent?: () => boolean) => loadDashboard(false, isCurrent),
+    [loadDashboard],
+  );
   const refreshSharing = useCallback(() => loadDashboard(true), [loadDashboard]);
   useEffect(() => {
     if (payload && controlDashboardIdRef.current !== payload.dashboard.id) {

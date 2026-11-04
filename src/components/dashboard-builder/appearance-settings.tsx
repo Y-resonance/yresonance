@@ -95,7 +95,7 @@ export function AppearanceSettings({
             label={`${legend}: border weight`}
             value={value?.borderWidth}
             inherited={inherited.borderWidth}
-            max={8}
+            max={16}
             onChange={(next) => update('borderWidth', next)}
           />,
         )}
@@ -389,7 +389,10 @@ function HexInput({
   );
 }
 
-/** Whole numbers from 0 to max. Empty shows the inherited value as placeholder. */
+/**
+ * Whole numbers from 0 to max: anything else snaps to the nearest allowed value on commit, so the
+ * field shows what was saved. Empty shows the inherited value as placeholder.
+ */
 function NumberSetting({
   label,
   value,
@@ -407,10 +410,9 @@ function NumberSetting({
   useEffect(() => setInput(value === undefined ? '' : String(value)), [value]);
   const commit = () => {
     if (input.trim() === '') return value === undefined ? undefined : onChange(undefined);
-    const next = Number(input);
-    if (Number.isInteger(next) && next >= 0 && next <= max) {
-      if (next !== value) onChange(next);
-    } else setInput(value === undefined ? '' : String(value));
+    const next = Math.min(max, Math.max(0, Math.round(Number(input))));
+    setInput(String(next));
+    if (next !== value) onChange(next);
   };
   return (
     <Input

@@ -83,7 +83,7 @@ export function DashboardBuilder({
   controlState: ControlState;
   setControlState: Dispatch<SetStateAction<ControlState>>;
   dataSources: BuilderDataSource[];
-  refresh: () => Promise<void>;
+  refresh: (isCurrent?: () => boolean) => Promise<void>;
   onSaveStatusChange: (status: DashboardSaveStatus) => void;
 }) {
   const callApi = useApi();
@@ -91,6 +91,7 @@ export function DashboardBuilder({
   const [selectedId, setSelectedId] = useState<string>();
   const [error, setError] = useState<string>();
   const [pendingOperations, setPendingOperations] = useState(0);
+  const [pendingRestyles, setPendingRestyles] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingAddition, setPendingAddition] = useState<PendingCanvasWidget>();
   const [pendingWidgets, setPendingWidgets] = useState<Record<string, number>>({});
@@ -106,6 +107,10 @@ export function DashboardBuilder({
   );
   const draggedType = useRef<BuilderType | undefined>(undefined);
   const saving = pendingOperations > 0;
+  // Theme and appearance fields save on blur, so locking the inspector for those saves would take
+  // focus from the next field and drop what is typed there. Their saves are queued and never
+  // change a query, so only other saves lock it.
+  const inspectorLocked = pendingOperations > pendingRestyles;
   useEffect(() => {
     setControlState((current) => reconcileDashboardControls(dashboard, current));
   }, [dashboard.pages]);
@@ -172,12 +177,14 @@ export function DashboardBuilder({
     return mutationQueueRef.current(operation);
   }
 
-  function startSaving() {
+  function startSaving(restyle = false) {
     setPendingOperations((current) => current + 1);
+    if (restyle) setPendingRestyles((current) => current + 1);
   }
 
-  function finishSaving() {
+  function finishSaving(restyle = false) {
     setPendingOperations((current) => Math.max(0, current - 1));
+    if (restyle) setPendingRestyles((current) => Math.max(0, current - 1));
   }
 
   const selected = dashboard.widgets.find((widget) => widget.id === selectedId);
@@ -337,7 +344,7 @@ export function DashboardBuilder({
         ...current,
         [widget.id]: (current[widget.id] ?? 0) + 1,
       }));
-    startSaving();
+    startSaving(!queryChanged);
     setError(undefined);
     try {
       const result = await enqueueMutation(() =>
@@ -364,7 +371,7 @@ export function DashboardBuilder({
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
         try {
-          await refresh();
+          await refresh(() => revision === mutationRevisionRef.current);
         } catch (caught) {
           if (revision === mutationRevisionRef.current) setError(message(caught));
         }
@@ -405,14 +412,15 @@ export function DashboardBuilder({
           const { [widget.id]: _removed, ...rest } = current;
           return rest;
         });
-      finishSaving();
+      finishSaving(!queryChanged);
     }
   }
 
   async function updateTheme(theme: DashboardTheme) {
+    const revision = ++mutationRevisionRef.current;
     const previous = dashboardRef.current.theme;
     updateDashboard((current) => ({ ...current, theme }));
-    startSaving();
+    startSaving(true);
     setError(undefined);
     try {
       try {
@@ -426,11 +434,12 @@ export function DashboardBuilder({
         );
         throw caught;
       }
-      await refresh();
+      if (revision === mutationRevisionRef.current)
+        await refresh(() => revision === mutationRevisionRef.current);
     } catch (caught) {
       setError(message(caught));
     } finally {
-      finishSaving();
+      finishSaving(true);
     }
   }
 
@@ -519,7 +528,7 @@ export function DashboardBuilder({
     <ThemeSettings theme={dashboard.theme} onChange={(theme) => void updateTheme(theme)} />
   );
   const inspectorPanel = (
-    <fieldset disabled={saving} className="min-w-0 border-0 p-0">
+    <fieldset disabled={inspectorLocked} className="min-w-0 border-0 p-0">
       {selected ? (
         <>
           <WidgetSettings
@@ -625,7 +634,7 @@ export function DashboardBuilder({
                 ) : (
                   <div className="flex flex-col gap-6">
                     {catalogPanel}
-                    <fieldset disabled={saving} className="min-w-0 border-0 p-0">
+                    <fieldset disabled={inspectorLocked} className="min-w-0 border-0 p-0">
                       {themePanel}
                     </fieldset>
                   </div>
