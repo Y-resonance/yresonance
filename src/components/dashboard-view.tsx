@@ -125,7 +125,8 @@ function DashboardGrid({
     if (!defaultDateRange) return;
     setControlState((current) => ({ ...current, dateRange: dateRange ?? defaultDateRange }));
   }, [dateRange, defaultDateRange]);
-  // A widget still waiting for its image doesn't exist for viewers, so it reserves no space either.
+  // Viewers don't get a widget still waiting for its image. Rows come from stored positions, so one
+  // between other widgets still leaves its gap.
   const widgets = (activeDashboardPage(dashboard, pageId)?.widgets ?? []).filter(
     ({ definition }) => definition.type !== 'image' || definition.assetId,
   );
