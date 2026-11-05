@@ -71,6 +71,9 @@ const stylingSchema = z.record(z.string(), z.unknown()).optional();
 export const textStyleSchema = z.object({
   size: z.enum(['xs', 'sm', 'base', 'lg', 'xl', '2xl']).optional(),
   weight: z.enum(['normal', 'medium', 'semibold', 'bold']).optional(),
+  italic: z.boolean().optional(),
+  // One value because the classes for each line set the same CSS property, so they can't combine.
+  decoration: z.enum(['underline', 'strikethrough']).optional(),
   transform: z.enum(['none', 'uppercase']).optional(),
   align: z.enum(['left', 'center', 'right']).optional(),
   // Only meaningful for elements that own free vertical space, which today is the text widget.

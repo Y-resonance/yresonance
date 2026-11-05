@@ -26,15 +26,19 @@ import {
   AlignVerticalJustifyCenterIcon,
   AlignVerticalJustifyEndIcon,
   AlignVerticalJustifyStartIcon,
+  BoldIcon,
   CaseSensitiveIcon,
   CaseUpperIcon,
+  ItalicIcon,
   MinusIcon,
   PencilIcon,
   PlusIcon,
+  StrikethroughIcon,
   TextAlignCenterIcon,
   TextAlignEndIcon,
   TextAlignStartIcon,
   Trash2Icon,
+  UnderlineIcon,
   XIcon,
   type LucideIcon,
 } from 'lucide-react';
@@ -640,11 +644,6 @@ const textStyleFields = [
     fullWidth: true,
   },
   {
-    key: 'weight',
-    label: 'Weight',
-    options: { normal: 'Normal', medium: 'Medium', semibold: 'Semibold', bold: 'Bold' },
-  },
-  {
     key: 'transform',
     label: 'Case',
     options: { none: 'As typed', uppercase: 'Uppercase' },
@@ -684,6 +683,13 @@ const textStyleFields = [
   needsFreeHeight?: boolean;
 }>;
 
+const textFormats = [
+  { value: 'bold', label: 'Bold', Icon: BoldIcon },
+  { value: 'italic', label: 'Italic', Icon: ItalicIcon },
+  { value: 'underline', label: 'Underline', Icon: UnderlineIcon },
+  { value: 'strikethrough', label: 'Strikethrough', Icon: StrikethroughIcon },
+];
+
 // The option previews itself by running through the same mapping that styles the real widget, so a
 // preview can never drift from the render.
 function textStylePreview(key: keyof TextStyle, option: string) {
@@ -707,24 +713,68 @@ function TextStyleSettings({
   /** Whether the styled element fills its widget, which is what makes vertical alignment do anything. */
   hasFreeHeight?: boolean;
 }) {
-  const update = (key: keyof TextStyle, selected: string | undefined) => {
-    const draft: Record<string, string | undefined> = { ...value };
-    if (selected) draft[key] = selected;
-    else delete draft[key];
-    const parsed = textStyleSchema.safeParse(draft);
-    onChange(parsed.success && Object.keys(draft).length ? parsed.data : undefined);
+  const update = (changes: Record<string, string | boolean | undefined>) => {
+    const parsed = textStyleSchema.safeParse(
+      Object.fromEntries(
+        Object.entries({ ...value, ...changes }).filter(([, setting]) => setting !== undefined),
+      ),
+    );
+    onChange(parsed.success && Object.keys(parsed.data).length ? parsed.data : undefined);
   };
+  const updateFormat = (pressed: string[]) =>
+    update({
+      // Tools can still store other weights, which stay until someone presses Bold.
+      weight: pressed.includes('bold')
+        ? 'bold'
+        : value?.weight === 'bold'
+          ? undefined
+          : value?.weight,
+      italic: pressed.includes('italic') || undefined,
+      // The latest press is last, so choosing one line replaces the other.
+      decoration: pressed.filter((line) => line === 'underline' || line === 'strikethrough').at(-1),
+    });
+  const format = [
+    value?.weight === 'bold' && 'bold',
+    value?.italic && 'italic',
+    value?.decoration,
+  ].filter((pressed) => typeof pressed === 'string');
+  const formatGroup = (
+    <div key="format" className="grid gap-1">
+      <span className="text-xs text-muted-foreground">Format</span>
+      <ToggleGroup
+        multiple
+        aria-label={`${legend}: format`}
+        variant="outline"
+        spacing={0}
+        className="w-full"
+        value={format}
+        onValueChange={updateFormat}
+      >
+        {textFormats.map(({ value: option, label, Icon }) => (
+          <ToggleGroupItem
+            key={option}
+            value={option}
+            aria-label={label}
+            title={label}
+            className="min-w-0 flex-1 px-0"
+          >
+            <Icon aria-hidden="true" />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
+  );
   return (
     <Field>
       <FieldLabel>{legend}</FieldLabel>
       <div className="grid grid-cols-2 gap-2">
         {textStyleFields
           .filter((setting) => hasFreeHeight || !('needsFreeHeight' in setting))
-          .map((setting) => {
+          .flatMap((setting) => {
             const icons: Record<string, LucideIcon> | undefined =
               'icons' in setting ? setting.icons : undefined;
             const selected = value?.[setting.key];
-            return (
+            const group = (
               <div
                 key={setting.key}
                 className={cn('grid gap-1', 'fullWidth' in setting && 'col-span-2')}
@@ -737,7 +787,7 @@ function TextStyleSettings({
                   spacing={0}
                   className="w-full"
                   value={selected ? [selected] : []}
-                  onValueChange={([next]) => update(setting.key, next)}
+                  onValueChange={([next]) => update({ [setting.key]: next })}
                 >
                   {Object.entries(setting.options).map(([option, name]) => {
                     const Icon = icons?.[option];
@@ -760,6 +810,7 @@ function TextStyleSettings({
                 </ToggleGroup>
               </div>
             );
+            return setting.key === 'size' ? [group, formatGroup] : [group];
           })}
       </div>
     </Field>

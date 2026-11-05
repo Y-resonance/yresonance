@@ -141,6 +141,46 @@ test.describe('desktop', () => {
     await expect.poll(titleStyle).toBeUndefined();
   });
 
+  test('format buttons combine, and a new line style replaces the other', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+
+    const titleStyle = () => {
+      const widget = state.dashboard.pages[0].widgets.find((item) => item.id === 'w_spend');
+      return widget?.definition.type === 'scorecard' ? widget.definition.titleStyle : undefined;
+    };
+    const format = page
+      .getByRole('complementary')
+      .getByRole('group', { name: 'Title style: format' });
+    const title = page.locator('[data-widget-id="w_spend"] [data-slot="card-title"]');
+
+    await format.getByRole('button', { name: 'Bold' }).click();
+    await expect(title).toHaveCSS('font-weight', '700');
+    await format.getByRole('button', { name: 'Italic' }).click();
+    await expect(title).toHaveCSS('font-style', 'italic');
+    await format.getByRole('button', { name: 'Underline' }).click();
+    await expect(title).toHaveCSS('text-decoration-line', 'underline');
+    await format.getByRole('button', { name: 'Strikethrough' }).click();
+    await expect(title).toHaveCSS('text-decoration-line', 'line-through');
+    await expect.poll(titleStyle).toEqual({
+      weight: 'bold',
+      italic: true,
+      decoration: 'strikethrough',
+    });
+    await expect(format.getByRole('button', { name: 'Underline' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    await format.getByRole('button', { name: 'Bold' }).click();
+    await format.getByRole('button', { name: 'Italic' }).click();
+    await format.getByRole('button', { name: 'Strikethrough' }).click();
+    await expect.poll(titleStyle).toBeUndefined();
+  });
+
   test('widget fields keep edits made one after the other', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
     const state = await mockYresonanceApi(page, { role: 'editor' });

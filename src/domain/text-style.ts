@@ -17,6 +17,8 @@ const weights = {
   bold: 'font-bold',
 } as const;
 
+const decorations = { underline: 'underline', strikethrough: 'line-through' } as const;
+
 // Uppercase without extra tracking reads as a cramped block, so the two always travel together.
 const transforms = { none: 'normal-case', uppercase: 'uppercase tracking-wide' } as const;
 
@@ -45,6 +47,8 @@ export function textStyleClasses(style: TextStyle | undefined) {
   const classes = [
     style.size && sizes[style.size],
     style.weight && weights[style.weight],
+    style.italic && 'italic',
+    style.decoration && decorations[style.decoration],
     style.transform && transforms[style.transform],
     style.align && alignments[style.align],
     style.tone && tones[style.tone],
