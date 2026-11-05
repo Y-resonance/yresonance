@@ -5,7 +5,7 @@ import { addWidget, callService, createDashboard, signInToNewWorkspace } from '.
 
 const text: WidgetDefinition = {
   type: 'text',
-  content: { schemaVersion: 'plain', document: 'Summary' },
+  content: { schemaVersion: 'markdown-v1', document: 'Summary' },
 };
 
 describe('dashboard appearance', () => {

@@ -120,8 +120,14 @@ explain. Update it when a decision changes, not when an implementation detail do
   saved with a "today" end load as the matching yesterday presets.
 - A custom range can pair a fixed start with an end that stays on yesterday, so "campaign start to
   yesterday" stays current. The start is not derived from data; editors enter it.
-- Rich text is stored as versioned JSON, never as HTML. Styling is an open object owned by each
-  renderer.
+- Text widgets store versioned Markdown (`markdown-v1`), never HTML. The renderer allows a small
+  subset, and only https: and mailto: links, which open in a new tab, so agent and API content is
+  safe too. Older text is read as Markdown and stored as such on the next save; there is no bulk
+  migration, and it is not escaped to keep its old look because no production content depends on it
+  yet. Editing happens in the inspector or its pop-out dialog, and the editor loads lazily so
+  viewers never download it. Text saves while typing so long text survives a closed tab. There are
+  no drafts, so anyone loading the dashboard can see half-written text.
+  Styling is an open object owned by each renderer.
 - Images are resized with the Cloudflare Images binding and each variant is stored in R2, so it is
   transformed and billed once. `cf.image` bills every viewed variant monthly, `/cdn-cgi/image/`
   cannot read private R2 objects and caches publicly, and hosted Images caps uploads at 10 MB.

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { lastThirtyDaysRange, withoutToday } from './dates';
+import { migrateTextDefinition, textContentSchema } from './text-content.ts';
 
 export const timezoneSchema = z
   .string()
@@ -266,7 +267,7 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('text'),
-    content: z.object({ schemaVersion: z.string().min(1), document: z.unknown() }),
+    content: textContentSchema,
     textStyle: optionalTextStyle,
     appearance: optionalAppearance,
   }),
@@ -383,7 +384,8 @@ export const gridPlacementSchema = z.object({
 export const dashboardWidgetSchema = z.object({
   id: z.string().min(1),
   layout: gridPlacementSchema,
-  definition: widgetDefinitionSchema,
+  // Stored documents may predate Markdown text; the API itself only accepts `markdown-v1`.
+  definition: z.preprocess(migrateTextDefinition, widgetDefinitionSchema),
   definitionHash: z.string().min(1),
 });
 

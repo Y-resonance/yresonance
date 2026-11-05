@@ -63,6 +63,11 @@ series colours from `brandColor`), and `widgetDefaults`. Every widget definition
 `appearance` with the same fields as `widgetDefaults`, and each field it sets wins over the theme.
 Colours are `theme:brand`, `theme:surface`, `theme:muted`, `theme:foreground`, or `#rrggbb`.
 
+Text widgets take Markdown in `content.document` with `schemaVersion: "markdown-v1"`: headings,
+bold, italic, bullet and numbered lists, links, and horizontal rules. Links must use https: or
+mailto: and open in a new tab; other links render as plain text. Raw HTML and images are not
+rendered.
+
 Image widgets reference an uploaded workspace image:
 `{ type: "image", assetId, alt, fit, href, title }`. `listAssets` returns the
 workspace's images with ids, names, dimensions, sizes, and the upload limit. Agents place an existing

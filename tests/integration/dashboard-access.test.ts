@@ -409,7 +409,7 @@ describe('date controls', () => {
 
     const text = await addWidget(dashboard.id, {
       type: 'text',
-      content: { schemaVersion: 'plain-text-v1', document: 'Notes' },
+      content: { schemaVersion: 'markdown-v1', document: 'Notes' },
     });
     await expectApiError(
       callService({

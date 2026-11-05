@@ -248,7 +248,10 @@ test('a widget dragged over others can be layered behind them and stays selectab
   overview.widgets.push({
     id: 'w_band',
     layout: { x: 0, y: 8, width: 12, height: 5 },
-    definition: { type: 'text', content: { schemaVersion: 'plain', document: 'Paid social' } },
+    definition: {
+      type: 'text',
+      content: { schemaVersion: 'markdown-v1', document: 'Paid social' },
+    },
     definitionHash: 'hash_band',
   });
   await page.goto('/dashboards/dash_demo');

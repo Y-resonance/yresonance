@@ -5,12 +5,14 @@ import {
 import { DashboardPages } from '#/components/dashboard-pages';
 import { dashboardWidgets } from '#/domain/schema';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
+import { createSerialQueue } from '#/domain/serial-queue';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { SettingsIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
 import { useApi } from '#/api/query';
 import { AppShell } from '#/components/app-shell';
+import { Alert, AlertDescription } from '#/components/ui/alert';
 import { DashboardBuilder, type DashboardSaveStatus } from '#/components/dashboard-builder';
 import { type DashboardPayload, useDashboardPayload } from '#/components/dashboard-payload';
 import { DashboardSharing } from '#/components/dashboard-sharing';
@@ -83,15 +85,20 @@ function DashboardContent() {
   const [saveStatus, setSaveStatus] = useState<DashboardSaveStatus>('saved');
   const [agentMode, setAgentMode] = useState(initialAgentModeState);
   const [queryInputsRevision, setQueryInputsRevision] = useState(0);
+  // Reads join an identical one already running, but that one can predate the save asking for this
+  // refresh. Loading one at a time keeps refreshes from joining each other.
+  const loadQueue = useRef(createSerialQueue());
   const loadDashboard = useCallback(
     // isCurrent lets the builder drop a response that a newer edit has already outdated.
     async (includeSharing = true, isCurrent?: () => boolean) => {
       try {
-        const loaded = await callApi<DashboardPayload>({
-          action: 'getDashboard',
-          dashboardId,
-          includeSharing,
-        });
+        const loaded = await loadQueue.current(() =>
+          callApi<DashboardPayload>({
+            action: 'getDashboard',
+            dashboardId,
+            includeSharing,
+          }),
+        );
         if (isCurrent?.() === false) return;
         if (controlDashboardIdRef.current !== loaded.dashboard.id) {
           controlDashboardIdRef.current = loaded.dashboard.id;
@@ -111,8 +118,10 @@ function DashboardContent() {
     },
     [dashboardId, callApi, dashboardQuery.setData],
   );
+  // The change a refresh follows was already saved, so its failure must not read as a failed save.
+  // It shows in this page's alert instead.
   const refresh = useCallback(
-    (isCurrent?: () => boolean) => loadDashboard(false, isCurrent),
+    (isCurrent?: () => boolean) => loadDashboard(false, isCurrent).catch(() => undefined),
     [loadDashboard],
   );
   const refreshSharing = useCallback(() => loadDashboard(true), [loadDashboard]);
@@ -149,15 +158,17 @@ function DashboardContent() {
       ? { ...payload.dashboard, pages: payload.dashboard.pages.filter((page) => !page.hidden) }
       : payload.dashboard);
   const activePage = displayedDashboard && activeDashboardPage(displayedDashboard, search.page);
+  const loadError = error ?? dashboardQuery.error?.message;
   return (
     <DashboardQueryRefresh key={dashboardId} inputsRevision={queryInputsRevision}>
       <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6">
-        {error || (dashboardQuery.error && !payload) ? (
-          <ErrorState
-            error={error ?? dashboardQuery.error?.message ?? 'Failed to load dashboard.'}
-          />
-        ) : !payload ? (
-          <LoadingState />
+        {/* A failed refresh must not take down a loaded dashboard, so it shows an alert instead. */}
+        {!payload ? (
+          loadError ? (
+            <ErrorState error={loadError} />
+          ) : (
+            <LoadingState />
+          )
         ) : (
           <div className="flex flex-col gap-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
@@ -245,6 +256,11 @@ function DashboardContent() {
                 void navigate({ search: (current) => ({ ...current, page }) })
               }
             />
+            {loadError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{loadError}</AlertDescription>
+              </Alert>
+            ) : null}
             {activePage ? (
               editing && !agentMode.enabled ? (
                 <DashboardBuilder
