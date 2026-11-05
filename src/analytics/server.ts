@@ -5,6 +5,8 @@ import { PostHog } from 'posthog-node';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { waitUntil } from 'cloudflare:workers';
 import type { ApiRequest } from '#/api/contracts';
+import type { WidgetDefinition } from '#/domain/schema';
+import { markdownFeatures } from '#/domain/text-content';
 import { analyticsConfig } from './config.server';
 import { sanitizeAnalyticsProperties } from './config';
 
@@ -64,6 +66,8 @@ function exportApiRequest({
     duration_ms: durationMs,
     error_code: errorCode,
     source: request.headers.get('X-YRESONANCE-SOURCE') === 'webmcp' ? 'webmcp' : 'gui',
+    // Autosaves would otherwise inflate `updateWidget` counts as if each were a deliberate edit.
+    ...(request.headers.get('X-YRESONANCE-TRIGGER') === 'autosave' ? { trigger: 'autosave' } : {}),
     environment: config.environment,
     workspace_id: orgId ?? undefined,
     $session_id: sessionId,
@@ -87,6 +91,9 @@ function exportApiRequest({
       : {}),
     ...(input?.action === 'registerDatasource'
       ? { datasource_provider: input.provider ?? input.backend ?? 'duckdb-file' }
+      : {}),
+    ...(input?.action === 'addWidget' || input?.action === 'updateWidget'
+      ? widgetProperties(input.definition)
       : {}),
   };
   if (distinctId) {
@@ -124,6 +131,18 @@ function exportApiRequest({
         console.warn('yresonance.telemetry_export_failed');
     }),
   );
+}
+
+// Widget writes record their type; text widgets also whether they use links or formatting, to
+// see whether rich text gets adopted. Never the text itself.
+function widgetProperties(definition: WidgetDefinition) {
+  if (definition.type !== 'text') return { widget_type: definition.type };
+  const features = markdownFeatures(definition.content.document);
+  return {
+    widget_type: definition.type,
+    text_has_links: features.hasLinks,
+    text_has_formatting: features.hasFormatting,
+  };
 }
 
 // Drizzle embeds SQL and bound values in the message. Keep stack locations, not parameters or causes.

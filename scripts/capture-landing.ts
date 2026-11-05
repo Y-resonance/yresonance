@@ -346,7 +346,7 @@ async function buildDashboard(
     {
       type: 'text',
       content: {
-        schemaVersion: '1',
+        schemaVersion: 'markdown-v1',
         document:
           'Easter week carried the quarter. Spend stays inside the plan, so the remaining budget ' +
           'moves to TikTok video in April.',

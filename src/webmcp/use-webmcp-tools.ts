@@ -456,6 +456,19 @@ export function inputSchemaFor(action: ApiRequest['action'], fixed?: Record<stri
       if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;
       // Likewise, `format: "date"` already names the shape; zod's long calendar regex adds nothing.
       if (jsonSchema.format === 'date') delete jsonSchema.pattern;
+      // Zod wraps some references in a one-item `allOf`, and JSON keys are always strings, so a
+      // bare string `propertyNames` adds nothing.
+      const [onlyMember, ...others] = jsonSchema.allOf ?? [];
+      if (onlyMember && !others.length && Object.keys(jsonSchema).length === 1) {
+        delete jsonSchema.allOf;
+        Object.assign(jsonSchema, onlyMember);
+      }
+      if (
+        typeof jsonSchema.propertyNames === 'object' &&
+        jsonSchema.propertyNames.type === 'string' &&
+        Object.keys(jsonSchema.propertyNames).length === 1
+      )
+        delete jsonSchema.propertyNames;
     },
   });
   // The host already interprets this as a JSON Schema; omit the repeated dialect URI.

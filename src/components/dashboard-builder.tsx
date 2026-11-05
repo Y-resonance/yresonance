@@ -124,8 +124,23 @@ function Builder({
 
   useEffect(() => {
     const canvas = dashboardCanvas(initialDashboard, pageId);
-    dashboardRef.current = canvas;
-    setDashboard(canvas);
+    // A load can predate a save still running, and the inspector saves whole definitions. So a
+    // widget being saved keeps what the builder has, or a later save would write older settings.
+    const widgets = canvas.widgets.map((widget) => {
+      const local = pendingWidgets[widget.id]
+        ? dashboardRef.current.widgets.find((item) => item.id === widget.id)
+        : undefined;
+      return local
+        ? { ...widget, definition: local.definition, definitionHash: local.definitionHash }
+        : widget;
+    });
+    const next = {
+      ...canvas,
+      widgets,
+      pages: canvas.pages.map((page) => (page.id === pageId ? { ...page, widgets } : page)),
+    };
+    dashboardRef.current = next;
+    setDashboard(next);
   }, [initialDashboard, pageId]);
   useEffect(() => {
     setSelectedId(undefined);
@@ -323,8 +338,10 @@ function Builder({
     widget: DashboardWidget,
     definition: WidgetDefinition,
     libraryMetric?: LibraryMetricDraft,
+    trigger?: 'autosave',
   ) {
     const revision = ++mutationRevisionRef.current;
+    let saveFailed = false;
     const previous = widget;
     const controlFieldChanged =
       widget.definition.type === 'control' &&
@@ -347,13 +364,16 @@ function Builder({
     setError(undefined);
     try {
       const result = await enqueueMutation(() =>
-        callApi<{ widget: DashboardWidget }>({
-          action: 'updateWidget',
-          dashboardId: dashboardRef.current.id,
-          widgetId: widget.id,
-          definition,
-          libraryMetric,
-        }),
+        callApi<{ widget: DashboardWidget }>(
+          {
+            action: 'updateWidget',
+            dashboardId: dashboardRef.current.id,
+            widgetId: widget.id,
+            definition,
+            libraryMetric,
+          },
+          { trigger },
+        ),
       );
       updateDashboard((current) => ({
         ...current,
@@ -369,11 +389,7 @@ function Builder({
       }));
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        try {
-          await refresh();
-        } catch (caught) {
-          if (revision === mutationRevisionRef.current) setError(message(caught));
-        }
+        await refresh();
       }
       return true;
     } catch (caught) {
@@ -402,6 +418,9 @@ function Builder({
         ),
       }));
       if (revision === mutationRevisionRef.current) setError(message(caught));
+      // The save may have failed because someone else changed the dashboard, and later saves send
+      // whole definitions, so they need what the server has now.
+      saveFailed = true;
       return false;
     } finally {
       setPendingWidgets((current) => {
@@ -411,6 +430,7 @@ function Builder({
         return rest;
       });
       finishSaving();
+      if (saveFailed) void refresh();
     }
   }
 
@@ -520,18 +540,23 @@ function Builder({
   }
 
   const inspectorPanel = (
-    <fieldset disabled={saving} className="min-w-0 border-0 p-0">
+    // Text autosaves while the editor is in use, which would otherwise keep graying out its toolbar.
+    <fieldset
+      disabled={saving && selected?.definition.type !== 'text'}
+      className="min-w-0 border-0 p-0"
+    >
       {selected ? (
         <>
           <WidgetSettings
+            key={selected.id}
             dashboardId={dashboard.id}
             dashboardDefaultDateRange={dashboard.defaultDateRange}
             timezone={dashboard.timezone}
             widget={selected}
             dataSources={dataSources}
             onClose={() => setSelectedId(undefined)}
-            onChange={(definition, libraryMetric) =>
-              updateWidget(selected, definition, libraryMetric)
+            onChange={(definition, libraryMetric, trigger) =>
+              updateWidget(selected, definition, libraryMetric, trigger)
             }
             onRemoveEmptyRowAbove={
               dashboard.canvasRows > 10 &&

@@ -56,6 +56,11 @@ entry accept `stacking: 'front' | 'back'` to move a widget to the top or bottom 
 widget moved to another page lands on top.
 View tools on shared links and viewer grants can read and query only published pages.
 
+Text widgets take Markdown in `content.document` with `schemaVersion: "markdown-v1"`: headings,
+bold, italic, bullet and numbered lists, links, and horizontal rules. Links must use https: or
+mailto: and open in a new tab; other links render as plain text. Raw HTML and images are not
+rendered.
+
 Image widgets reference an uploaded workspace image:
 `{ type: "image", assetId, alt, fit, href, title }`. `listAssets` returns the
 workspace's images with ids, names, dimensions, sizes, and the upload limit. Agents place an existing

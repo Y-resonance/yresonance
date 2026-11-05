@@ -140,7 +140,9 @@ preserves asset cache headers. See [PostHog's proxy reference](https://posthog.c
 
 - Web analytics capture pageviews, page exits, campaign attribution, and Web Vitals.
 - `product_action` records API actions with `action`, `result`, `duration_ms`, `source` (`gui` or
-  `webmcp`), resource IDs, and Clerk organization ID as `workspace_id`.
+  `webmcp`), resource IDs, and Clerk organization ID as `workspace_id`. Widget writes add
+  `widget_type`; text widgets also add `text_has_links` and `text_has_formatting`. Text editor
+  saves made while typing add `trigger: 'autosave'`.
 - `workspace_action` records onboarding actions and their outcomes.
 - Clerk user IDs identify signed-in visitors. Logout and account switches reset the browser identity.
 - PostHog Logs receive `api_request_completed` from `yresonance-api` and API failures from

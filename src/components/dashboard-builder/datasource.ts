@@ -16,7 +16,7 @@ export async function defaultDefinition(
 ): Promise<WidgetDefinition> {
   if (type === 'dateControl') return { type, defaultDateRange: yearToDateRange };
   if (type === 'text')
-    return { type, content: { schemaVersion: 'plain-text-v1', document: 'Add text' } };
+    return { type, content: { schemaVersion: 'markdown-v1', document: 'Add text' } };
   // Starts as a placeholder. The editor picks the image in the inspector.
   if (type === 'image') return { type, fit: 'contain' };
   if (!source) throw new Error('Register a datasource before adding a data widget.');

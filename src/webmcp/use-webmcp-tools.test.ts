@@ -47,6 +47,13 @@ describe('WebMCP input schemas', () => {
     expect(schema.properties).not.toHaveProperty('dataSourceId');
   });
 
+  it('keeps constraints on record keys', () => {
+    const schema = inputSchemaFor('duplicateDashboard', { dashboardId: 'dashboard' });
+    expect(schema.properties).toMatchObject({
+      dataSourceMapping: { propertyNames: { minLength: 1 } },
+    });
+  });
+
   it('keeps consequential mutation fields in schemas', () => {
     const schema = inputSchemaFor('shareDashboard', { dashboardId: 'dashboard' });
     expect(schema.properties).toHaveProperty('operation');

@@ -61,6 +61,7 @@ import { Skeleton } from '#/components/ui/skeleton';
 import { widgetQueryRequest } from '#/domain/widget-query';
 import { cn } from '#/lib/utils';
 import { textBoxClasses, textStyleClasses } from '#/domain/text-style';
+import { RichText } from '#/components/rich-text';
 import { colorsPerCategory, paletteColor } from '#/domain/chart-colors';
 import {
   controlDefaultValues,
@@ -275,9 +276,10 @@ function Widget({
             textBoxClasses(widget.definition.textStyle),
           )}
         >
-          <p className={cn('whitespace-pre-wrap', textStyleClasses(widget.definition.textStyle))}>
-            {richText(widget.definition.content.document)}
-          </p>
+          <RichText
+            markdown={widget.definition.content.document}
+            className={textStyleClasses(widget.definition.textStyle)}
+          />
         </CardContent>
       </Card>
     );
@@ -1579,13 +1581,6 @@ export function dashboardDateControlRange(dashboard: DashboardDocument) {
     : undefined;
 }
 
-function richText(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(richText).join('\n');
-  if (value && typeof value === 'object')
-    return Object.values(value).map(richText).filter(Boolean).join(' ');
-  return '';
-}
 export function formatValue(value: unknown, column: QueryResultColumn) {
   const number = numericMetricValue(value, column);
   if (number === undefined) return value == null ? '' : String(value);

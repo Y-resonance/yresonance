@@ -41,7 +41,7 @@ test('overlapping add and move reject the stale write, then retry preserves both
   const dashboard = await createDashboard();
   const widget = await addWidget(dashboard.id, {
     type: 'text',
-    content: { schemaVersion: 'plain-text-v1', document: 'Existing' },
+    content: { schemaVersion: 'markdown-v1', document: 'Existing' },
   });
   // Even edits within the same millisecond need distinct versions.
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -51,7 +51,7 @@ test('overlapping add and move reject the stale write, then retry preserves both
       action: 'addWidget',
       pageId: `${dashboard.id}_page`,
       dashboardId: dashboard.id,
-      definition: { type: 'text', content: { schemaVersion: 'plain-text-v1', document: 'Added' } },
+      definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'Added' } },
       width: 4,
       height: 3,
     },

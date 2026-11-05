@@ -12,7 +12,7 @@ export class ApiClientError extends Error {
 
 export async function callApi<T>(
   request: ApiRequest,
-  options: { signal?: AbortSignal; source?: 'gui' | 'webmcp' } = {},
+  options: { signal?: AbortSignal; source?: 'gui' | 'webmcp'; trigger?: 'autosave' } = {},
 ): Promise<T> {
   try {
     const response = await fetch('/api/yresonance', {
@@ -21,6 +21,7 @@ export async function callApi<T>(
         'Content-Type': 'application/json',
         ...analyticsHeaders(),
         'X-YRESONANCE-SOURCE': options.source ?? 'gui',
+        ...(options.trigger ? { 'X-YRESONANCE-TRIGGER': options.trigger } : {}),
       },
       body: JSON.stringify(request),
       signal: options.signal,
