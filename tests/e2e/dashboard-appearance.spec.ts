@@ -106,6 +106,41 @@ test.describe('desktop', () => {
 
   // Saving the first field must neither take focus from the second one nor let the refresh that
   // follows the first save overwrite the second edit.
+  test('text style buttons apply a value and a second press returns to the default', async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+
+    const titleStyle = () => {
+      const widget = state.dashboard.pages[0].widgets.find((item) => item.id === 'w_spend');
+      return widget?.definition.type === 'scorecard' ? widget.definition.titleStyle : undefined;
+    };
+    const settings = page.getByRole('complementary');
+    const size = settings.getByRole('group', { name: 'Title style: size' });
+    const fontColor = settings.getByRole('group', { name: 'Title style: font color' });
+    const title = page.locator('[data-widget-id="w_spend"] [data-slot="card-title"]');
+
+    await size.getByRole('button', { name: 'XL', exact: true }).click();
+    await expect(title).toHaveCSS('font-size', '20px');
+    await size.getByRole('button', { name: '2XL', exact: true }).click();
+    await expect(title).toHaveCSS('font-size', '24px');
+    await fontColor.getByRole('button', { name: 'Muted' }).click();
+    await expect.poll(titleStyle).toEqual({ size: '2xl', tone: 'muted' });
+    await expect(size.getByRole('button', { name: 'XL', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    await size.getByRole('button', { name: '2XL', exact: true }).click();
+    await expect.poll(titleStyle).toEqual({ tone: 'muted' });
+    await fontColor.getByRole('button', { name: 'Muted' }).click();
+    await expect.poll(titleStyle).toBeUndefined();
+  });
+
   test('widget fields keep edits made one after the other', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
     const state = await mockYresonanceApi(page, { role: 'editor' });

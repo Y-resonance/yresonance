@@ -22,7 +22,23 @@ import { changeSource } from './datasource';
 import { calculatedFieldRow, DatasourceDialog } from './datasource-dialog';
 import { widgetLabel } from '#/domain/widget-label';
 import { Button } from '#/components/ui/button';
-import { XIcon, MinusIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import {
+  AlignVerticalJustifyCenterIcon,
+  AlignVerticalJustifyEndIcon,
+  AlignVerticalJustifyStartIcon,
+  CaseSensitiveIcon,
+  CaseUpperIcon,
+  MinusIcon,
+  PencilIcon,
+  PlusIcon,
+  TextAlignCenterIcon,
+  TextAlignEndIcon,
+  TextAlignStartIcon,
+  Trash2Icon,
+  XIcon,
+  type LucideIcon,
+} from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group';
 import { Alert, AlertDescription } from '#/components/ui/alert';
 import { Field, FieldLabel, FieldDescription } from '#/components/ui/field';
 import { Input } from '#/components/ui/input';
@@ -32,14 +48,6 @@ import { DateRangePicker } from '#/components/date-range-picker';
 import { CalculatedFieldDialog } from '#/components/calculated-field-dialog';
 import { textStyleClasses } from '#/domain/text-style';
 import { cn } from '#/lib/utils';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from '#/components/ui/select';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
 import { Separator } from '#/components/ui/separator';
 import {
@@ -636,42 +644,56 @@ const textStyleFields = [
   {
     key: 'size',
     label: 'Size',
-    // Short labels because each option renders at its own size, so a long word would overflow the
-    // popup at the larger steps. The preview carries the meaning, not the wording.
     options: { xs: 'XS', sm: 'S', base: 'M', lg: 'L', xl: 'XL', '2xl': '2XL' },
+    fullWidth: true,
   },
   {
     key: 'weight',
     label: 'Weight',
     options: { normal: 'Normal', medium: 'Medium', semibold: 'Semibold', bold: 'Bold' },
   },
-  { key: 'transform', label: 'Case', options: { none: 'As typed', uppercase: 'Uppercase' } },
-  { key: 'align', label: 'Align', options: { left: 'Left', center: 'Center', right: 'Right' } },
+  {
+    key: 'transform',
+    label: 'Case',
+    options: { none: 'As typed', uppercase: 'Uppercase' },
+    icons: { none: CaseSensitiveIcon, uppercase: CaseUpperIcon },
+  },
+  {
+    key: 'align',
+    label: 'Align',
+    options: { left: 'Left', center: 'Center', right: 'Right' },
+    icons: { left: TextAlignStartIcon, center: TextAlignCenterIcon, right: TextAlignEndIcon },
+  },
   {
     key: 'verticalAlign',
     label: 'Vertical',
     options: { top: 'Top', center: 'Middle', bottom: 'Bottom' },
+    icons: {
+      top: AlignVerticalJustifyStartIcon,
+      center: AlignVerticalJustifyCenterIcon,
+      bottom: AlignVerticalJustifyEndIcon,
+    },
     needsFreeHeight: true,
   },
   {
+    // Stored as `tone` so existing dashboards and WebMCP clients keep working.
     key: 'tone',
-    label: 'Tone',
+    label: 'Font color',
     options: { default: 'Normal', muted: 'Muted', primary: 'Accent' },
-    // A swatch rather than coloured label text: the highlighted option recolours its own text and
-    // every descendant, which would hide exactly the preview the user is looking at.
-    swatches: { default: 'bg-foreground', muted: 'bg-muted-foreground', primary: 'bg-primary' },
   },
 ] as const satisfies ReadonlyArray<{
   key: keyof TextStyle;
   label: string;
   options: Record<string, string>;
-  swatches?: Record<string, string>;
+  // Options without an icon show sample text styled with their own value.
+  icons?: Record<string, LucideIcon>;
+  fullWidth?: boolean;
   // Set on properties that only make sense when the element can grow taller than its text.
   needsFreeHeight?: boolean;
 }>;
 
 // The option previews itself by running through the same mapping that styles the real widget, so a
-// preview can never drift from the render. Unknown values (the unset "Default") produce no classes.
+// preview can never drift from the render.
 function textStylePreview(key: keyof TextStyle, option: string) {
   const parsed = textStyleSchema.safeParse({ [key]: option });
   return parsed.success ? textStyleClasses(parsed.data) : undefined;
@@ -693,7 +715,7 @@ function TextStyleSettings({
   /** Whether the styled element fills its widget, which is what makes vertical alignment do anything. */
   hasFreeHeight?: boolean;
 }) {
-  const update = (key: keyof TextStyle, selected: string | null) => {
+  const update = (key: keyof TextStyle, selected: string | undefined) => {
     const draft: Record<string, string | undefined> = { ...value };
     if (selected) draft[key] = selected;
     else delete draft[key];
@@ -707,56 +729,43 @@ function TextStyleSettings({
         {textStyleFields
           .filter((setting) => hasFreeHeight || !('needsFreeHeight' in setting))
           .map((setting) => {
-            const options: Record<string, string> = setting.options;
-            const swatches: Record<string, string> | undefined =
-              'swatches' in setting ? setting.swatches : undefined;
-            // `w-full` is what lets the align preview work: the label fills the row, so `text-right`
-            // actually moves it. The other properties are unaffected by the extra width.
-            const optionContent = (option: string, preview: boolean) => (
-              <>
-                {/* The empty slot for the unset option keeps every label in the list on one line. */}
-                {swatches ? (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'size-2.5 shrink-0 self-center rounded-full',
-                      swatches[option] ?? 'bg-transparent',
-                    )}
-                  />
-                ) : null}
-                <span className={cn('w-full', preview && textStylePreview(setting.key, option))}>
-                  {options[option] ?? 'Default'}
-                </span>
-              </>
-            );
+            const icons: Record<string, LucideIcon> | undefined =
+              'icons' in setting ? setting.icons : undefined;
+            const selected = value?.[setting.key];
             return (
-              <div key={setting.key} className="grid gap-1">
+              <div
+                key={setting.key}
+                className={cn('grid gap-1', 'fullWidth' in setting && 'col-span-2')}
+              >
                 <span className="text-xs text-muted-foreground">{setting.label}</span>
-                <Select
-                  value={value?.[setting.key] ?? ''}
-                  onValueChange={(selected) => update(setting.key, selected)}
+                {/* Pressing the selected option again unsets the property, back to the app default. */}
+                <ToggleGroup
+                  aria-label={`${legend}: ${setting.label.toLowerCase()}`}
+                  variant="outline"
+                  spacing={0}
+                  className="w-full"
+                  value={selected ? [selected] : []}
+                  onValueChange={([next]) => update(setting.key, next)}
                 >
-                  <SelectTrigger
-                    aria-label={`${legend}: ${setting.label.toLowerCase()}`}
-                    className="w-full"
-                  >
-                    {/* The trigger stays at the control's own size so the two columns keep an even
-                      height. Only the options preview themselves. */}
-                    <SelectValue>
-                      {(selected: string | null) => optionContent(selected ?? '', false)}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="min-w-40" align="start" alignItemWithTrigger={false}>
-                    <SelectGroup>
-                      <SelectItem value="">{optionContent('', false)}</SelectItem>
-                      {Object.keys(options).map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {optionContent(option, true)}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  {Object.entries(setting.options).map(([option, name]) => {
+                    const Icon = icons?.[option];
+                    return (
+                      <ToggleGroupItem
+                        key={option}
+                        value={option}
+                        aria-label={name}
+                        title={name}
+                        className="min-w-0 flex-1 px-0"
+                      >
+                        {Icon ? (
+                          <Icon aria-hidden="true" />
+                        ) : (
+                          <span className={textStylePreview(setting.key, option)}>Aa</span>
+                        )}
+                      </ToggleGroupItem>
+                    );
+                  })}
+                </ToggleGroup>
               </div>
             );
           })}
