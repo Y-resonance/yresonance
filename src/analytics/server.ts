@@ -145,10 +145,18 @@ function exportApiRequest({
 // Widget writes record their type; text widgets also whether they use links or formatting, to
 // see whether rich text gets adopted. Never the text itself.
 function widgetProperties(definition: WidgetDefinition) {
-  if (definition.type !== 'text') return { widget_type: definition.type };
+  const style =
+    definition.type === 'text'
+      ? definition.textStyle
+      : 'titleStyle' in definition
+        ? definition.titleStyle
+        : undefined;
+  const styles = style ? { text_style_fields: appearanceFieldNames(style) } : {};
+  if (definition.type !== 'text') return { widget_type: definition.type, ...styles };
   const features = markdownFeatures(definition.content.document);
   return {
     widget_type: definition.type,
+    ...styles,
     text_has_links: features.hasLinks,
     text_has_formatting: features.hasFormatting,
   };

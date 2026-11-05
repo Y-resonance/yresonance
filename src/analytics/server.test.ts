@@ -174,6 +174,7 @@ describe('server analytics delivery', () => {
             schemaVersion: 'markdown-v1',
             document: 'Read the [secret plan](https://x.io)',
           },
+          textStyle: { size: 'lg', italic: true },
         },
       },
       userId: 'user_authenticated',
@@ -188,6 +189,7 @@ describe('server analytics delivery', () => {
       widget_type: 'text',
       text_has_links: true,
       text_has_formatting: false,
+      text_style_fields: ['size', 'italic'],
     });
     expect(JSON.stringify(requests)).not.toContain('secret plan');
   });

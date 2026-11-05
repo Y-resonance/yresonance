@@ -202,11 +202,10 @@ export function WidgetSettings({
         <>
           <Field>
             <FieldLabel htmlFor={`title-${widget.id}`}>Title</FieldLabel>
-            <Input
+            <TitleInput
               id={`title-${widget.id}`}
-              value={definition.title}
-              onChange={(event) => setLocalDefinition({ ...definition, title: event.target.value })}
-              onBlur={() => void commit(definition)}
+              title={definition.title}
+              onCommit={(title) => void commit({ ...definition, title })}
             />
           </Field>
           <TextStyleSettings
@@ -634,6 +633,31 @@ function dimensionForField(
   const { dateGranularity: _dateGranularity, ...rest } = dimension;
   const date = fields.some((field) => field.id === fieldId && field.semanticType === 'date');
   return date ? { ...rest, fieldId, dateGranularity: dateDefault } : { ...rest, fieldId };
+}
+
+// Typing stays here until blur, because a style save finishing meanwhile replaces the definition.
+function TitleInput({
+  id,
+  title,
+  onCommit,
+}: {
+  id: string;
+  title: string;
+  onCommit: (title: string) => void;
+}) {
+  const [draft, setDraft] = useState<string>();
+  return (
+    <Input
+      id={id}
+      value={draft ?? title}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        if (draft === undefined) return;
+        setDraft(undefined);
+        onCommit(draft);
+      }}
+    />
+  );
 }
 
 const textStyleFields = [

@@ -14,7 +14,8 @@ const weights = {
   normal: 'font-normal',
   medium: 'font-medium',
   semibold: 'font-semibold',
-  bold: 'font-bold',
+  // Headings set their own weight, so bold has to reach them or they end up lighter than the body.
+  bold: 'font-bold [&_:is(h1,h2,h3,h4,h5,h6)]:font-bold!',
 } as const;
 
 const decorations = { underline: 'underline', strikethrough: 'line-through' } as const;

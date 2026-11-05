@@ -1,5 +1,6 @@
 import { callApi as requestApi } from '#/api/client';
 import { useDebouncedValue } from '#/lib/use-debounced-value';
+import { withoutCardPresentation } from '#/domain/cache';
 import { stableStringify } from '#/domain/hash';
 import { activeDashboardPage } from '#/domain/dashboard-pages';
 import { dashboardControlWidgets } from '#/domain/schema';
@@ -687,10 +688,9 @@ function QueryCard({
   controlState: ControlState;
 }) {
   const definition = widget.definition;
-  // Compare query inputs by content, since saves and refreshes replace their objects. Appearance
-  // only restyles the card, so it never re-runs the query or resets paging and drill state.
-  const { appearance: _appearance, ...queriedDefinition } = definition;
-  const definitionKey = stableStringify(queriedDefinition);
+  // Compare query inputs by content, since saves and refreshes replace their objects. Restyling
+  // the card never re-runs the query or resets paging and drill state.
+  const definitionKey = stableStringify(withoutCardPresentation(definition));
   // Empty selections are left out so a control that only gains an empty entry does not re-run
   // the query. Controls with defaults always carry values, so no default is hidden by this.
   const controlsKey = stableStringify({

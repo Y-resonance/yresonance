@@ -104,8 +104,6 @@ test.describe('desktop', () => {
     await expect(weight).toHaveValue('16');
   });
 
-  // Saving the first field must neither take focus from the second one nor let the refresh that
-  // follows the first save overwrite the second edit.
   test('text style buttons apply a value and a second press returns to the default', async ({
     page,
   }) => {
@@ -181,6 +179,250 @@ test.describe('desktop', () => {
     await expect.poll(titleStyle).toBeUndefined();
   });
 
+  test('title style presses stack up while an earlier one is saving', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+
+    const firstSaveSent = Promise.withResolvers<void>();
+    const releaseFirstSave = Promise.withResolvers<void>();
+    let saves = 0;
+    const previews: unknown[] = [];
+    await page.route('**/api/yresonance', async (route) => {
+      const { action } = route.request().postDataJSON();
+      if (action === 'previewWidget') previews.push(action);
+      if (action === 'updateWidget' && ++saves === 1) {
+        firstSaveSent.resolve();
+        await releaseFirstSave.promise;
+      }
+      await route.fallback();
+    });
+
+    const format = page
+      .getByRole('complementary')
+      .getByRole('group', { name: 'Title style: format' });
+    await format.getByRole('button', { name: 'Bold' }).click();
+    await firstSaveSent.promise;
+    await format.getByRole('button', { name: 'Italic' }).click();
+    await expect(format.getByRole('button', { name: 'Italic' })).toBeFocused();
+    releaseFirstSave.resolve();
+
+    await expect
+      .poll(() => {
+        const widget = state.dashboard.pages[0].widgets.find((item) => item.id === 'w_spend');
+        return widget?.definition.type === 'scorecard' ? widget.definition.titleStyle : undefined;
+      })
+      .toEqual({ weight: 'bold', italic: true });
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    // Styling the title doesn't change the numbers, so it has no reason to query the datasource.
+    expect(previews).toEqual([]);
+  });
+
+  test('format buttons keep a weight only tools can set', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    const spend = () => {
+      const widget = state.dashboard.pages[0].widgets.find((item) => item.id === 'w_spend');
+      if (widget?.definition.type !== 'scorecard') throw new Error('Expected the scorecard');
+      return widget.definition;
+    };
+    spend().titleStyle = { weight: 'semibold' };
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+
+    const format = page
+      .getByRole('complementary')
+      .getByRole('group', { name: 'Title style: format' });
+    await expect(format.getByRole('button', { name: 'Bold' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    await format.getByRole('button', { name: 'Italic' }).click();
+    await expect.poll(() => spend().titleStyle).toEqual({ weight: 'semibold', italic: true });
+  });
+
+  test('a title typed while a style is saving survives the save', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+
+    const saveSent = Promise.withResolvers<void>();
+    const releaseSave = Promise.withResolvers<void>();
+    let saves = 0;
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action === 'updateWidget' && ++saves === 1) {
+        saveSent.resolve();
+        await releaseSave.promise;
+      }
+      await route.fallback();
+    });
+
+    const settings = page.getByRole('complementary');
+    const borderWeight = settings.getByRole('spinbutton', { name: 'Style: border weight' });
+    await borderWeight.fill('6');
+    await borderWeight.blur();
+    await saveSent.promise;
+    const title = settings.getByRole('textbox', { name: 'Title' });
+    await title.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' typed');
+    const refreshed = page.waitForResponse(
+      (response) => response.request().postDataJSON()?.action === 'getDashboard',
+    );
+    releaseSave.resolve();
+    await refreshed;
+    await expect(title).toHaveValue('Media spend typed');
+    await title.blur();
+
+    await expect
+      .poll(() => {
+        const widget = state.dashboard.pages[0].widgets.find((item) => item.id === 'w_spend');
+        return widget?.definition.type === 'scorecard' ? widget.definition.title : undefined;
+      })
+      .toBe('Media spend typed');
+    const widget = state.dashboard.pages[0].widgets.find((item) => item.id === 'w_spend');
+    expect(widget?.definition.appearance).toEqual({ borderWidth: 6 });
+  });
+
+  test('the refresh after a failed save does not undo a newer edit', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+
+    const firstSaveSent = Promise.withResolvers<void>();
+    const releaseFirstSave = Promise.withResolvers<void>();
+    const secondSaveSent = Promise.withResolvers<void>();
+    const failSecondSave = Promise.withResolvers<void>();
+    const thirdSaveSent = Promise.withResolvers<void>();
+    const releaseThirdSave = Promise.withResolvers<void>();
+    let saves = 0;
+    await page.route('**/api/yresonance', async (route) => {
+      if (route.request().postDataJSON().action !== 'updateWidget') return route.fallback();
+      saves += 1;
+      if (saves === 1) {
+        firstSaveSent.resolve();
+        await releaseFirstSave.promise;
+      }
+      if (saves === 2) {
+        secondSaveSent.resolve();
+        await failSecondSave.promise;
+        return route.fulfill(conflict);
+      }
+      if (saves === 3) {
+        thirdSaveSent.resolve();
+        await releaseThirdSave.promise;
+      }
+      await route.fallback();
+    });
+
+    const settings = page.getByRole('complementary');
+    const borderWeight = settings.getByRole('spinbutton', { name: 'Style: border weight' });
+    const corner = settings.getByRole('spinbutton', { name: 'Style: border radius' });
+    const opacity = settings.getByRole('spinbutton', { name: 'Style: background opacity' });
+    await borderWeight.fill('6');
+    await borderWeight.blur();
+    await firstSaveSent.promise;
+    await corner.fill('20');
+    await corner.blur();
+    await opacity.fill('50');
+    await opacity.blur();
+    releaseFirstSave.resolve();
+    await secondSaveSent.promise;
+
+    // The failed save's refresh reads the first save, which is news to the page, but not the third.
+    const refreshed = page.waitForResponse(
+      (response) => response.request().postDataJSON()?.action === 'getDashboard',
+    );
+    failSecondSave.resolve();
+    await thirdSaveSent.promise;
+    await refreshed;
+    // Nothing visible marks a dropped response, so give an applied one time to render.
+    await page.waitForTimeout(300);
+    await expect(corner).toHaveValue('20');
+    await expect(opacity).toHaveValue('50');
+
+    releaseThirdSave.resolve();
+    await expect
+      .poll(
+        () =>
+          state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.definition
+            .appearance,
+      )
+      .toEqual({ borderWidth: 6, borderRadius: 20, backgroundOpacity: 50 });
+  });
+
+  test('the refresh after a restack does not undo a newer edit', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    // Layer buttons only appear for widgets that overlap another one.
+    state.dashboard.pages[0].widgets.push({
+      id: 'w_band',
+      layout: { x: 0, y: 2, width: 4, height: 3 },
+      definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: 'Band' } },
+      definitionHash: 'hash_band',
+    });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    const band = page.locator('.react-grid-item[data-widget-id="w_band"]');
+    await band.hover();
+    await band.locator('.widget-drag-handle').click();
+
+    const readSent = Promise.withResolvers<void>();
+    const releaseRead = Promise.withResolvers<void>();
+    const saveSent = Promise.withResolvers<void>();
+    const releaseSave = Promise.withResolvers<void>();
+    let moved = false;
+    await page.route('**/api/yresonance', async (route) => {
+      const { action } = route.request().postDataJSON();
+      if (action === 'moveWidget') moved = true;
+      if (action === 'getDashboard' && moved) {
+        moved = false;
+        readSent.resolve();
+        await releaseRead.promise;
+      }
+      if (action === 'updateWidget') {
+        saveSent.resolve();
+        await releaseSave.promise;
+      }
+      await route.fallback();
+    });
+
+    const settings = page.getByRole('complementary');
+    await settings.getByRole('button', { name: 'Send to back' }).click();
+    await readSent.promise;
+    const corner = settings.getByRole('spinbutton', { name: 'Style: border radius' });
+    await corner.fill('20');
+    await corner.blur();
+    await saveSent.promise;
+
+    // The read reports the new stacking but not the radius, which is still saving.
+    const delivered = page.waitForResponse(
+      (response) => response.request().postDataJSON()?.action === 'getDashboard',
+    );
+    releaseRead.resolve();
+    await delivered;
+    // Nothing visible marks a dropped response, so give an applied one time to render.
+    await page.waitForTimeout(300);
+    await expect(corner).toHaveValue('20');
+    releaseSave.resolve();
+    await expect
+      .poll(
+        () =>
+          state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_band')?.definition
+            .appearance,
+      )
+      .toEqual({ borderRadius: 20 });
+  });
+
+  // Saving the first field must neither take focus from the second one nor let the refresh that
+  // follows the first save overwrite the second edit.
   test('widget fields keep edits made one after the other', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
     const state = await mockYresonanceApi(page, { role: 'editor' });

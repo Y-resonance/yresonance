@@ -68,6 +68,22 @@ export function widgetDependencyState(definition: WidgetDefinition, metadata: Qu
   };
 }
 
+// These only restyle or relabel a card, so they never change what its query returns.
+export function withoutCardPresentation(definition: WidgetDefinition) {
+  const {
+    appearance: _appearance,
+    title: _title,
+    titleStyle: _titleStyle,
+    textStyle: _textStyle,
+    ...query
+  } = definition as WidgetDefinition & {
+    title?: string;
+    titleStyle?: unknown;
+    textStyle?: unknown;
+  };
+  return query;
+}
+
 function queryDefinition(definition: WidgetDefinition) {
   // colorScale stays in the key: paged results carry scale bounds only when a metric has one.
   const withoutMetricPresentation = (metric: ReturnType<typeof metricsIn>[number]) => {
@@ -80,17 +96,7 @@ function queryDefinition(definition: WidgetDefinition) {
     } = metric;
     return queryMetric;
   };
-  const {
-    appearance: _appearance,
-    title: _title,
-    titleStyle: _titleStyle,
-    textStyle: _textStyle,
-    ...query
-  } = definition as WidgetDefinition & {
-    title?: string;
-    titleStyle?: unknown;
-    textStyle?: unknown;
-  };
+  const query = withoutCardPresentation(definition);
   if ('metric' in query) return { ...query, metric: withoutMetricPresentation(query.metric) };
   if ('metrics' in query)
     return { ...query, metrics: query.metrics.map(withoutMetricPresentation) };

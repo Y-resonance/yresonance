@@ -11,6 +11,7 @@ import {
 } from '#/domain/schema';
 import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { createSerialQueue } from '#/domain/serial-queue';
+import { withoutCardPresentation } from '#/domain/cache';
 import { stableStringify } from '#/domain/hash';
 import { type Layout, type LayoutItem } from 'react-grid-layout';
 import { sameDateRange } from '#/domain/date-range-search';
@@ -111,9 +112,9 @@ function Builder({
   );
   const draggedType = useRef<BuilderType | undefined>(undefined);
   const saving = pendingOperations > 0;
-  // Appearance fields save on blur, so locking the inspector for those saves would take focus from
-  // the next field and drop what is typed there. Their saves are queued and never change a query,
-  // so only other saves lock it.
+  // Style controls save on every press or blur, so locking the inspector for those saves would drop
+  // the next press and take focus from the next field. Their saves are queued and never change a
+  // query, so only other saves lock it.
   const inspectorLocked = pendingOperations > pendingRestyles;
   useEffect(() => {
     setControlState((current) => reconcileDashboardControls(dashboard, current));
@@ -196,6 +197,11 @@ function Builder({
     return mutationQueueRef.current(operation);
   }
 
+  // A newer edit runs its own refresh, and a read started before it can't know about that edit.
+  function refreshUnlessOutdated(revision: number) {
+    return refresh(() => revision === mutationRevisionRef.current);
+  }
+
   function startSaving(restyle = false) {
     setPendingOperations((current) => current + 1);
     if (restyle) setPendingRestyles((current) => current + 1);
@@ -250,7 +256,7 @@ function Builder({
       });
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh();
+        await refreshUnlessOutdated(revision);
       }
     } catch (caught) {
       if (revision === mutationRevisionRef.current)
@@ -322,7 +328,7 @@ function Builder({
         );
       else if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh();
+        await refreshUnlessOutdated(revision);
       }
     } catch (caught) {
       if (revision === undefined || revision === mutationRevisionRef.current)
@@ -356,10 +362,10 @@ function Builder({
       ),
     }));
     // A pending widget previews its unsaved definition with an uncached query. Restyling alone
-    // keeps the saved result, because appearance never changes what the query returns.
+    // keeps the saved result, because it never changes what the query returns.
     const queryChanged =
-      stableStringify({ ...widget.definition, appearance: undefined }) !==
-      stableStringify({ ...definition, appearance: undefined });
+      stableStringify(withoutCardPresentation(widget.definition)) !==
+      stableStringify(withoutCardPresentation(definition));
     if (queryChanged)
       setPendingWidgets((current) => ({
         ...current,
@@ -394,7 +400,7 @@ function Builder({
       }));
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh(() => revision === mutationRevisionRef.current);
+        await refreshUnlessOutdated(revision);
       }
       return true;
     } catch (caught) {
@@ -436,7 +442,7 @@ function Builder({
           return rest;
         });
       finishSaving(!queryChanged);
-      if (saveFailed) void refresh();
+      if (saveFailed) void refreshUnlessOutdated(revision);
     }
   }
 
@@ -469,7 +475,7 @@ function Builder({
       setSelectedId((current) => (current === widget.id ? undefined : current));
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh();
+        await refreshUnlessOutdated(revision);
       }
       return true;
     } catch (caught) {
@@ -481,6 +487,7 @@ function Builder({
   }
 
   async function restackWidget(widget: DashboardWidget, stacking: WidgetStacking) {
+    const revision = mutationRevisionRef.current;
     startSaving();
     setError(undefined);
     try {
@@ -496,7 +503,7 @@ function Builder({
           stacking,
         }),
       );
-      await refresh();
+      await refreshUnlessOutdated(revision);
     } catch (caught) {
       setError(message(caught));
     } finally {

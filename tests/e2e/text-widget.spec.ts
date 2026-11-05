@@ -39,6 +39,28 @@ async function openTextWidget(page: Page, document: string, entry = '/dashboards
   return { state, widget, editor };
 }
 
+test('the bold format reaches headings, which are semibold by default', async ({ page }) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.dashboard.pages[0]!.widgets.push({
+    id: 'w_notes',
+    layout: { x: 0, y: 7, width: 6, height: 3 },
+    definition: { type: 'text', content: { schemaVersion: 'markdown-v1', document: '## Heading' } },
+    definitionHash: 'hash_notes',
+  });
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+  const widget = page.locator('[data-widget-id="w_notes"]');
+  await widget.click({ position: { x: 40, y: 20 } });
+  const heading = widget.getByRole('heading', { name: 'Heading' });
+  await expect(heading).toHaveCSS('font-weight', '600');
+  await page
+    .getByRole('complementary')
+    .getByRole('group', { name: 'Text style: format' })
+    .getByRole('button', { name: 'Bold' })
+    .click();
+  await expect(heading).toHaveCSS('font-weight', '700');
+});
+
 test('editors format text and add links in the inspector', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
   state.dashboard.pages[0]!.widgets.push({
