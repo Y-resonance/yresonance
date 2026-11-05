@@ -199,7 +199,8 @@ function Builder({
     return mutationQueueRef.current(operation);
   }
 
-  // A newer edit runs its own refresh, and a read started before it can't know about that edit.
+  // A newer edit runs its own refresh, even when it fails, and a read started before it can't know
+  // about that edit.
   function refreshUnlessOutdated(revision: number) {
     return refresh(() => revision === mutationRevisionRef.current);
   }
@@ -271,6 +272,7 @@ function Builder({
           ),
         }));
       if (revision === mutationRevisionRef.current) setError(message(caught));
+      void refreshUnlessOutdated(revision);
     } finally {
       finishSaving();
     }
@@ -335,6 +337,7 @@ function Builder({
     } catch (caught) {
       if (revision === undefined || revision === mutationRevisionRef.current)
         setError(message(caught));
+      if (revision !== undefined) void refreshUnlessOutdated(revision);
     } finally {
       setPendingAddition((current) => (current?.id === pendingId ? undefined : current));
       finishSaving();
@@ -484,6 +487,7 @@ function Builder({
       return true;
     } catch (caught) {
       if (revision === mutationRevisionRef.current) setError(message(caught));
+      void refreshUnlessOutdated(revision);
       return false;
     } finally {
       finishSaving();

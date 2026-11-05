@@ -421,6 +421,54 @@ test.describe('desktop', () => {
       .toEqual({ borderRadius: 20 });
   });
 
+  test('a failed removal still loads the style saved before it', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo');
+    await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+
+    const saveSent = Promise.withResolvers<void>();
+    const releaseSave = Promise.withResolvers<void>();
+    await page.route('**/api/yresonance', async (route) => {
+      const { action } = route.request().postDataJSON();
+      if (action === 'removeWidget') return route.fulfill(conflict);
+      if (action === 'updateWidget') {
+        saveSent.resolve();
+        await releaseSave.promise;
+      }
+      await route.fallback();
+    });
+
+    const corner = page.getByRole('complementary').getByRole('spinbutton', {
+      name: 'Style: border radius',
+    });
+    await corner.fill('20');
+    await corner.blur();
+    await saveSent.promise;
+
+    // The removal is newer, so the save leaves the refresh to it.
+    await page.getByRole('button', { name: 'Remove Media spend' }).click();
+    const dialog = page.getByRole('dialog');
+    const failed = page.waitForResponse(
+      (response) => response.request().postDataJSON()?.action === 'removeWidget',
+    );
+    const refreshed = page.waitForResponse(
+      (response) =>
+        response.request().postDataJSON()?.action === 'getDashboard' && response.status() === 200,
+    );
+    await dialog.getByRole('button', { name: 'Remove widget' }).click();
+    releaseSave.resolve();
+    await failed;
+    await refreshed;
+    await dialog.getByRole('button', { name: 'Keep widget' }).click();
+
+    await page.getByRole('switch', { name: 'Viewer mode' }).click();
+    await expect
+      .poll(() => radius(page.locator('[data-slot="card"]').filter({ hasText: 'Media spend' })))
+      .toBe('20px');
+  });
+
   // Saving the first field must neither take focus from the second one nor let the refresh that
   // follows the first save overwrite the second edit.
   test('widget fields keep edits made one after the other', async ({ page }) => {
