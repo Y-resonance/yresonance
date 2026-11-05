@@ -740,6 +740,62 @@ test.describe('desktop', () => {
     await expect(page.getByRole('heading', { name: state.dashboard.name })).toBeVisible();
   });
 
+  test('a read still running from settings does not undo an edit being saved', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-ui', 'The inspector sits beside the canvas.');
+    const state = await mockYresonanceApi(page, { role: 'editor' });
+    await page.goto('/dashboards/dash_demo/settings');
+    const themeWeight = page.getByLabel('Style: border weight');
+    await expect(themeWeight).toBeVisible();
+
+    const readSent = Promise.withResolvers<void>();
+    const releaseRead = Promise.withResolvers<void>();
+    const saveSent = Promise.withResolvers<void>();
+    const releaseSave = Promise.withResolvers<void>();
+    await page.route('**/api/yresonance', async (route) => {
+      const { action } = route.request().postDataJSON();
+      // Leaving settings cancels its read, and the builder starts its own in the same state.
+      if (action === 'getDashboard') {
+        readSent.resolve();
+        await releaseRead.promise;
+      }
+      if (action === 'updateWidget') {
+        saveSent.resolve();
+        await releaseSave.promise;
+      }
+      await route.fallback();
+    });
+
+    await themeWeight.fill('6');
+    await themeWeight.blur();
+    await readSent.promise;
+    await page.getByRole('link', { name: state.dashboard.name }).click();
+    await page.getByRole('button', { name: 'Edit Media spend' }).click();
+    const corner = page.getByRole('complementary').getByRole('spinbutton', {
+      name: 'Style: border radius',
+    });
+    await corner.fill('20');
+    await corner.blur();
+    await saveSent.promise;
+
+    // The read carries a change from elsewhere, but not the radius, which is still saving.
+    state.dashboard.name = 'Renamed elsewhere';
+    releaseRead.resolve();
+    await expect(page.getByRole('heading', { name: 'Renamed elsewhere' })).toBeVisible();
+    // The builder takes in the read after the heading renders it, so give that time to happen.
+    await page.waitForTimeout(300);
+    await expect(corner).toHaveValue('20');
+
+    releaseSave.resolve();
+    await expect
+      .poll(
+        () =>
+          state.dashboard.pages[0].widgets.find((widget) => widget.id === 'w_spend')?.definition
+            .appearance,
+      )
+      .toEqual({ borderRadius: 20 });
+    await expect(corner).toHaveValue('20');
+  });
+
   test('leaving settings waits for a running save', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-ui', 'One viewport covers the settings form.');
     const state = await mockYresonanceApi(page, { role: 'editor' });

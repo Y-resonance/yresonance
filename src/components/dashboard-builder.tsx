@@ -107,6 +107,8 @@ function Builder({
   const dashboardRef = useRef(dashboard);
   const mutationQueueRef = useRef(createSerialQueue());
   const mutationRevisionRef = useRef(0);
+  // Widgets with a save running. Separate from pendingWidgets, which only marks an uncached preview.
+  const savingWidgetsRef = useRef<Record<string, number>>({});
   const appliedDefaultDateRangeRef = useRef<DateRange | undefined>(
     dashboardDateControlRange(initialDashboard),
   );
@@ -125,7 +127,7 @@ function Builder({
     // A load can predate a save still running, and the inspector saves whole definitions. So a
     // widget being saved keeps what the builder has, or a later save would write older settings.
     const widgets = canvas.widgets.map((widget) => {
-      const local = pendingWidgets[widget.id]
+      const local = savingWidgetsRef.current[widget.id]
         ? dashboardRef.current.widgets.find((item) => item.id === widget.id)
         : undefined;
       return local
@@ -371,6 +373,7 @@ function Builder({
         ...current,
         [widget.id]: (current[widget.id] ?? 0) + 1,
       }));
+    savingWidgetsRef.current[widget.id] = (savingWidgetsRef.current[widget.id] ?? 0) + 1;
     startSaving(!queryChanged);
     setError(undefined);
     try {
@@ -434,6 +437,7 @@ function Builder({
       saveFailed = true;
       return false;
     } finally {
+      savingWidgetsRef.current[widget.id] = (savingWidgetsRef.current[widget.id] ?? 1) - 1;
       if (queryChanged)
         setPendingWidgets((current) => {
           const next = (current[widget.id] ?? 1) - 1;
