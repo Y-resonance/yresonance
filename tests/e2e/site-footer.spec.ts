@@ -21,5 +21,8 @@ test('a tall imprint page rests the footer at the bottom without scrolling', asy
     () => document.documentElement.scrollHeight - document.documentElement.clientHeight,
   );
   expect(overflow).toBe(0);
-  await expect(page.getByRole('contentinfo')).toBeInViewport({ ratio: 1 });
+  const gapBelowFooter = await page
+    .getByRole('contentinfo')
+    .evaluate((footer) => window.innerHeight - footer.getBoundingClientRect().bottom);
+  expect(gapBelowFooter).toBe(0);
 });
