@@ -137,7 +137,8 @@ export function withComparisonSeries(
           comparisonSeries[metricIndex],
           (alignment === 'key'
             ? comparisonsByDimension.get(valueKey(row[dimension]))
-            : comparisonRows[index])?.[metric],
+            : comparisonRows[index]
+          )?.[metric],
         ]),
       ),
     })),
