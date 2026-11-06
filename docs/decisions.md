@@ -91,6 +91,14 @@ explain. Update it when a decision changes, not when an implementation detail do
 - Bars and lines on two explicit axes are a separate `combo` widget, so `line` and `bar`
   definitions keep their shape. Each axis is formatted from one data type, so mixing units on one
   axis is rejected.
+- Widget backgrounds and borders resolve field by field: the widget's `appearance`, then the
+  dashboard theme's `widgetDefaults`, then the app default, which matches the plain card. Colours
+  are theme references that follow the brand and dark mode, or hex values rendered as stored. The
+  brand chart palette leaves semantic colours alone. Themes belong to the dashboard; a later
+  workspace theme should be copied into new dashboards, never inherited live, so finished client
+  reports never restyle silently.
+- Dashboard-wide settings live on their own page, `/dashboards/:id/settings`, opened next to Share.
+  The builder's inspector only edits the selected widget.
 - `updateWidget` takes a full definition. No deep patches, because patches on arrays such as
   `metrics` are ambiguous.
 - `addWidget` accepts only width and height and appends at the bottom. Agents do not compute

@@ -1,14 +1,5 @@
 import { DashboardAssetsProvider, dashboardDateControlRange } from '#/components/dashboard-view';
 import type { ImageAsset } from '#/domain/image-assets';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from './ui/select';
-import { Field, FieldLabel } from './ui/field';
 import { dashboardCanvas, type DashboardCanvas } from '#/domain/dashboard-pages';
 import { dashboardControlWidgets, dashboardWidgets } from '#/domain/schema';
 import {
@@ -20,6 +11,8 @@ import {
 } from '#/domain/schema';
 import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { createSerialQueue } from '#/domain/serial-queue';
+import { withoutCardPresentation } from '#/domain/cache';
+import { stableStringify } from '#/domain/hash';
 import { type Layout, type LayoutItem } from 'react-grid-layout';
 import { sameDateRange } from '#/domain/date-range-search';
 import { useApi } from '#/api/query';
@@ -95,7 +88,7 @@ function Builder({
   controlState: ControlState;
   setControlState: Dispatch<SetStateAction<ControlState>>;
   dataSources: BuilderDataSource[];
-  refresh: () => Promise<void>;
+  refresh: (isCurrent?: () => boolean) => Promise<void>;
   onSaveStatusChange: (status: DashboardSaveStatus) => void;
 }) {
   const callApi = useApi();
@@ -103,6 +96,7 @@ function Builder({
   const [selectedId, setSelectedId] = useState<string>();
   const [error, setError] = useState<string>();
   const [pendingOperations, setPendingOperations] = useState(0);
+  const [pendingRestyles, setPendingRestyles] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingAddition, setPendingAddition] = useState<PendingCanvasWidget>();
   const [pendingWidgets, setPendingWidgets] = useState<Record<string, number>>({});
@@ -113,11 +107,17 @@ function Builder({
   const dashboardRef = useRef(dashboard);
   const mutationQueueRef = useRef(createSerialQueue());
   const mutationRevisionRef = useRef(0);
+  // Widgets with a save running. Separate from pendingWidgets, which only marks an uncached preview.
+  const savingWidgetsRef = useRef<Record<string, number>>({});
   const appliedDefaultDateRangeRef = useRef<DateRange | undefined>(
     dashboardDateControlRange(initialDashboard),
   );
   const draggedType = useRef<BuilderType | undefined>(undefined);
   const saving = pendingOperations > 0;
+  // Style controls save on every press or blur, so locking the inspector for those saves would drop
+  // the next press and take focus from the next field. Their saves are queued and never change a
+  // query, so only other saves lock it.
+  const inspectorLocked = pendingOperations > pendingRestyles;
   useEffect(() => {
     setControlState((current) => reconcileDashboardControls(dashboard, current));
   }, [dashboard.pages]);
@@ -127,7 +127,7 @@ function Builder({
     // A load can predate a save still running, and the inspector saves whole definitions. So a
     // widget being saved keeps what the builder has, or a later save would write older settings.
     const widgets = canvas.widgets.map((widget) => {
-      const local = pendingWidgets[widget.id]
+      const local = savingWidgetsRef.current[widget.id]
         ? dashboardRef.current.widgets.find((item) => item.id === widget.id)
         : undefined;
       return local
@@ -199,12 +199,20 @@ function Builder({
     return mutationQueueRef.current(operation);
   }
 
-  function startSaving() {
-    setPendingOperations((current) => current + 1);
+  // A newer edit runs its own refresh, even when it fails, and a read started before it can't know
+  // about that edit.
+  function refreshUnlessOutdated(revision: number) {
+    return refresh(() => revision === mutationRevisionRef.current);
   }
 
-  function finishSaving() {
+  function startSaving(restyle = false) {
+    setPendingOperations((current) => current + 1);
+    if (restyle) setPendingRestyles((current) => current + 1);
+  }
+
+  function finishSaving(restyle = false) {
     setPendingOperations((current) => Math.max(0, current - 1));
+    if (restyle) setPendingRestyles((current) => Math.max(0, current - 1));
   }
 
   const selected = dashboard.widgets.find((widget) => widget.id === selectedId);
@@ -251,7 +259,7 @@ function Builder({
       });
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh();
+        await refreshUnlessOutdated(revision);
       }
     } catch (caught) {
       if (revision === mutationRevisionRef.current)
@@ -264,6 +272,7 @@ function Builder({
           ),
         }));
       if (revision === mutationRevisionRef.current) setError(message(caught));
+      void refreshUnlessOutdated(revision);
     } finally {
       finishSaving();
     }
@@ -323,11 +332,12 @@ function Builder({
         );
       else if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh();
+        await refreshUnlessOutdated(revision);
       }
     } catch (caught) {
       if (revision === undefined || revision === mutationRevisionRef.current)
         setError(message(caught));
+      if (revision !== undefined) void refreshUnlessOutdated(revision);
     } finally {
       setPendingAddition((current) => (current?.id === pendingId ? undefined : current));
       finishSaving();
@@ -356,11 +366,18 @@ function Builder({
         item.id === widget.id ? { ...item, definition } : item,
       ),
     }));
-    setPendingWidgets((current) => ({
-      ...current,
-      [widget.id]: (current[widget.id] ?? 0) + 1,
-    }));
-    startSaving();
+    // A pending widget previews its unsaved definition with an uncached query. Restyling alone
+    // keeps the saved result, because it never changes what the query returns.
+    const queryChanged =
+      stableStringify(withoutCardPresentation(widget.definition)) !==
+      stableStringify(withoutCardPresentation(definition));
+    if (queryChanged)
+      setPendingWidgets((current) => ({
+        ...current,
+        [widget.id]: (current[widget.id] ?? 0) + 1,
+      }));
+    savingWidgetsRef.current[widget.id] = (savingWidgetsRef.current[widget.id] ?? 0) + 1;
+    startSaving(!queryChanged);
     setError(undefined);
     try {
       const result = await enqueueMutation(() =>
@@ -389,7 +406,7 @@ function Builder({
       }));
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh();
+        await refreshUnlessOutdated(revision);
       }
       return true;
     } catch (caught) {
@@ -423,14 +440,16 @@ function Builder({
       saveFailed = true;
       return false;
     } finally {
-      setPendingWidgets((current) => {
-        const next = (current[widget.id] ?? 1) - 1;
-        if (next > 0) return { ...current, [widget.id]: next };
-        const { [widget.id]: _removed, ...rest } = current;
-        return rest;
-      });
-      finishSaving();
-      if (saveFailed) void refresh();
+      savingWidgetsRef.current[widget.id] = (savingWidgetsRef.current[widget.id] ?? 1) - 1;
+      if (queryChanged)
+        setPendingWidgets((current) => {
+          const next = (current[widget.id] ?? 1) - 1;
+          if (next > 0) return { ...current, [widget.id]: next };
+          const { [widget.id]: _removed, ...rest } = current;
+          return rest;
+        });
+      finishSaving(!queryChanged);
+      if (saveFailed) void refreshUnlessOutdated(revision);
     }
   }
 
@@ -463,47 +482,20 @@ function Builder({
       setSelectedId((current) => (current === widget.id ? undefined : current));
       if (revision === mutationRevisionRef.current) {
         setError(undefined);
-        await refresh();
+        await refreshUnlessOutdated(revision);
       }
       return true;
     } catch (caught) {
       if (revision === mutationRevisionRef.current) setError(message(caught));
+      void refreshUnlessOutdated(revision);
       return false;
     } finally {
       finishSaving();
     }
   }
 
-  async function moveToPage(widget: DashboardWidget, targetPageId: string) {
-    const target = dashboardRef.current.pages.find((page) => page.id === targetPageId);
-    if (!target) return;
-    startSaving();
-    setError(undefined);
-    try {
-      await enqueueMutation(() =>
-        callApi({
-          action: 'moveWidget',
-          dashboardId: dashboardRef.current.id,
-          widgetId: widget.id,
-          pageId: target.id,
-          placement: appendPlacement(
-            target.widgets,
-            widget.layout.width,
-            widget.layout.height,
-            dashboardRef.current.columns,
-          ),
-        }),
-      );
-      setSelectedId(undefined);
-      await refresh();
-    } catch (caught) {
-      setError(message(caught));
-    } finally {
-      finishSaving();
-    }
-  }
-
   async function restackWidget(widget: DashboardWidget, stacking: WidgetStacking) {
+    const revision = mutationRevisionRef.current;
     startSaving();
     setError(undefined);
     try {
@@ -519,7 +511,7 @@ function Builder({
           stacking,
         }),
       );
-      await refresh();
+      await refreshUnlessOutdated(revision);
     } catch (caught) {
       setError(message(caught));
     } finally {
@@ -542,7 +534,7 @@ function Builder({
   const inspectorPanel = (
     // Text autosaves while the editor is in use, which would otherwise keep graying out its toolbar.
     <fieldset
-      disabled={saving && selected?.definition.type !== 'text'}
+      disabled={inspectorLocked && selected?.definition.type !== 'text'}
       className="min-w-0 border-0 p-0"
     >
       {selected ? (
@@ -551,6 +543,7 @@ function Builder({
             key={selected.id}
             dashboardId={dashboard.id}
             dashboardDefaultDateRange={dashboard.defaultDateRange}
+            theme={dashboard.theme}
             timezone={dashboard.timezone}
             widget={selected}
             dataSources={dataSources}
@@ -579,32 +572,6 @@ function Builder({
             onSelect={setSelectedId}
             onRestack={(stacking) => void restackWidget(selected, stacking)}
           />
-          {dashboard.pages.length > 1 ? (
-            <Field className="mt-4">
-              <FieldLabel htmlFor="move-widget-page">Move to page</FieldLabel>
-              <Select
-                value={null}
-                onValueChange={(value) => {
-                  if (value) void moveToPage(selected, value);
-                }}
-              >
-                <SelectTrigger id="move-widget-page">
-                  <SelectValue placeholder="Choose page" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {dashboard.pages
-                      .filter((page) => page.id !== pageId)
-                      .map((page) => (
-                        <SelectItem key={page.id} value={page.id}>
-                          {page.name}
-                        </SelectItem>
-                      ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-          ) : null}
         </>
       ) : (
         <p className="text-sm text-muted-foreground">Select a widget to edit it.</p>
@@ -630,7 +597,7 @@ function Builder({
   return (
     <div className="flex flex-col gap-4">
       {desktop === false ? (
-        <div className="flex items-center justify-end">
+        <div className="sticky top-0 z-40 -mx-2 -my-2 flex items-center justify-end bg-background p-2">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger render={<Button variant="outline" size="sm" />}>
               {selected ? (
@@ -661,7 +628,9 @@ function Builder({
         <div>
           {desktop !== false ? (
             <>
-              <div className="mb-2 flex items-center gap-2">
+              {/* Pinned so a widget can be added from the bottom of a long canvas. z-40 sits above
+                the canvas row controls (z-30) and below the catalog popover (z-50). */}
+              <div className="sticky top-0 z-40 -mt-2 flex items-center gap-2 bg-background py-2">
                 <Popover open={catalogOpen} onOpenChange={setCatalogOpen}>
                   <PopoverTrigger render={<Button variant="outline" size="sm" />}>
                     <Grid2X2PlusIcon data-icon="inline-start" />

@@ -90,7 +90,7 @@ export function DateRangePicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] overflow-y-auto p-0"
+        className="max-h-(--available-height) w-auto max-w-[calc(100vw-2rem)] overflow-y-auto p-0"
       >
         <div className="flex flex-col md:flex-row">
           <div className="flex min-w-36 flex-col gap-1 p-2">

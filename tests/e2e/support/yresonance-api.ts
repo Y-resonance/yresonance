@@ -236,6 +236,13 @@ export async function mockYresonanceApi(page: Page, options: MockOptions = {}) {
           targetPage.widgets = restack(targetPage.widgets, moved.id, request.stacking);
         return ok(route, moved);
       }
+      case 'updateDashboard':
+        state.dashboard = {
+          ...state.dashboard,
+          name: request.name ?? state.dashboard.name,
+          theme: request.theme ?? state.dashboard.theme,
+        };
+        return ok(route, state.dashboard);
       case 'trackPageView':
         return ok(route, { pageId: request.pageId });
       case 'bootstrap':

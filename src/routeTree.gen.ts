@@ -24,6 +24,7 @@ import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiConnectorFileTokenRouteImport } from './routes/api.connector-file.$token'
 import { Route as ApiDatasourceUploadTokenRouteImport } from './routes/api.datasource-upload.$token'
+import { Route as DashboardsDashboardIdSettingsRouteImport } from './routes/dashboards.$dashboardId_.settings'
 import { Route as ApiDashboardsDashboardIdAssetsRouteImport } from './routes/api.dashboards.$dashboardId.assets'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 import { Route as ApiDashboardsDashboardIdAssetsAssetIdRouteImport } from './routes/api.dashboards.$dashboardId.assets.$assetId'
@@ -104,6 +105,12 @@ const ApiDatasourceUploadTokenRoute =
     path: '/api/datasource-upload/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardsDashboardIdSettingsRoute =
+  DashboardsDashboardIdSettingsRouteImport.update({
+    id: '/dashboards/$dashboardId_/settings',
+    path: '/dashboards/$dashboardId/settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDashboardsDashboardIdAssetsRoute =
   ApiDashboardsDashboardIdAssetsRouteImport.update({
     id: '/api/dashboards/$dashboardId/assets',
@@ -138,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/dashboards/$dashboardId/settings': typeof DashboardsDashboardIdSettingsRoute
   '/api/dashboards/$dashboardId/assets': typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/dashboards/$dashboardId/assets/$assetId': typeof ApiDashboardsDashboardIdAssetsAssetIdRoute
@@ -158,6 +166,7 @@ export interface FileRoutesByTo {
   '/datasources': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/dashboards/$dashboardId/settings': typeof DashboardsDashboardIdSettingsRoute
   '/api/dashboards/$dashboardId/assets': typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/dashboards/$dashboardId/assets/$assetId': typeof ApiDashboardsDashboardIdAssetsAssetIdRoute
@@ -179,6 +188,7 @@ export interface FileRoutesById {
   '/datasources/': typeof DatasourcesIndexRoute
   '/api/connector-file/$token': typeof ApiConnectorFileTokenRoute
   '/api/datasource-upload/$token': typeof ApiDatasourceUploadTokenRoute
+  '/dashboards/$dashboardId_/settings': typeof DashboardsDashboardIdSettingsRoute
   '/api/dashboards/$dashboardId/assets': typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/dashboards/$dashboardId/assets/$assetId': typeof ApiDashboardsDashboardIdAssetsAssetIdRoute
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/dashboards/$dashboardId/settings'
     | '/api/dashboards/$dashboardId/assets'
     | '/api/oauth/google/callback'
     | '/api/dashboards/$dashboardId/assets/$assetId'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/datasources'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/dashboards/$dashboardId/settings'
     | '/api/dashboards/$dashboardId/assets'
     | '/api/oauth/google/callback'
     | '/api/dashboards/$dashboardId/assets/$assetId'
@@ -241,6 +253,7 @@ export interface FileRouteTypes {
     | '/datasources/'
     | '/api/connector-file/$token'
     | '/api/datasource-upload/$token'
+    | '/dashboards/$dashboardId_/settings'
     | '/api/dashboards/$dashboardId/assets'
     | '/api/oauth/google/callback'
     | '/api/dashboards/$dashboardId/assets/$assetId'
@@ -262,6 +275,7 @@ export interface RootRouteChildren {
   DatasourcesIndexRoute: typeof DatasourcesIndexRoute
   ApiConnectorFileTokenRoute: typeof ApiConnectorFileTokenRoute
   ApiDatasourceUploadTokenRoute: typeof ApiDatasourceUploadTokenRoute
+  DashboardsDashboardIdSettingsRoute: typeof DashboardsDashboardIdSettingsRoute
   ApiDashboardsDashboardIdAssetsRoute: typeof ApiDashboardsDashboardIdAssetsRouteWithChildren
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
 }
@@ -373,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDatasourceUploadTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboards/$dashboardId_/settings': {
+      id: '/dashboards/$dashboardId_/settings'
+      path: '/dashboards/$dashboardId/settings'
+      fullPath: '/dashboards/$dashboardId/settings'
+      preLoaderRoute: typeof DashboardsDashboardIdSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/dashboards/$dashboardId/assets': {
       id: '/api/dashboards/$dashboardId/assets'
       path: '/api/dashboards/$dashboardId/assets'
@@ -428,6 +449,7 @@ const rootRouteChildren: RootRouteChildren = {
   DatasourcesIndexRoute: DatasourcesIndexRoute,
   ApiConnectorFileTokenRoute: ApiConnectorFileTokenRoute,
   ApiDatasourceUploadTokenRoute: ApiDatasourceUploadTokenRoute,
+  DashboardsDashboardIdSettingsRoute: DashboardsDashboardIdSettingsRoute,
   ApiDashboardsDashboardIdAssetsRoute:
     ApiDashboardsDashboardIdAssetsRouteWithChildren,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,

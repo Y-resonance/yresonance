@@ -159,6 +159,32 @@ test('the toolbar adds a widget while another one is being edited', async ({ pag
   await expect(page.getByRole('button', { name: 'Add Scorecard' })).toHaveCount(0);
 });
 
+test('a widget can be added from the bottom of a long canvas', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 500 });
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('status', { name: 'Changes saved' })).toBeVisible();
+
+  const addWidget = page.getByRole('button', { name: 'Add widget' });
+  const startTop = (await addWidget.boundingBox())!.y;
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(startTop);
+  const scrollY = await page.evaluate(() => window.scrollY);
+
+  await expect(addWidget).toBeInViewport();
+  await addWidget.click();
+  // Clicking must not have needed Playwright to scroll the button back into view.
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+  await page.getByRole('button', { name: 'Add Scorecard' }).click();
+
+  await expect
+    .poll(
+      () =>
+        state.dashboard.pages[0].widgets.filter((widget) => widget.id.startsWith('w_added')).length,
+    )
+    .toBe(1);
+});
+
 // The popover has to survive the drag it starts, and stay clear of the drop target.
 test('a widget dragged out of the toolbar popover lands on the grid', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });

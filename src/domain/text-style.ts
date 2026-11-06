@@ -14,8 +14,11 @@ const weights = {
   normal: 'font-normal',
   medium: 'font-medium',
   semibold: 'font-semibold',
-  bold: 'font-bold',
+  // Headings set their own weight, so bold has to reach them or they end up lighter than the body.
+  bold: 'font-bold [&_:is(h1,h2,h3,h4,h5,h6)]:font-bold!',
 } as const;
+
+const decorations = { underline: 'underline', strikethrough: 'line-through' } as const;
 
 // Uppercase without extra tracking reads as a cramped block, so the two always travel together.
 const transforms = { none: 'normal-case', uppercase: 'uppercase tracking-wide' } as const;
@@ -45,6 +48,8 @@ export function textStyleClasses(style: TextStyle | undefined) {
   const classes = [
     style.size && sizes[style.size],
     style.weight && weights[style.weight],
+    style.italic && 'italic',
+    style.decoration && decorations[style.decoration],
     style.transform && transforms[style.transform],
     style.align && alignments[style.align],
     style.tone && tones[style.tone],

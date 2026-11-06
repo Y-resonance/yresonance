@@ -125,7 +125,7 @@ describe('widget dependency cache state', () => {
     expect(formatted).toBe(before);
   });
 
-  it('keeps cached results across title restyling', async () => {
+  it('keeps cached results across title and box restyling', async () => {
     const metadata = {
       fields: [baseField],
       calculatedFields: [],
@@ -136,7 +136,11 @@ describe('widget dependency cache state', () => {
     const before = await hashJson(widgetDependencyState(definition, metadata));
     const restyled = await hashJson(
       widgetDependencyState(
-        { ...definition, titleStyle: { size: 'lg', transform: 'uppercase' } },
+        {
+          ...definition,
+          titleStyle: { size: 'lg', transform: 'uppercase' },
+          appearance: { background: 'theme:brand', borderWidth: 2 },
+        },
         metadata,
       ),
     );

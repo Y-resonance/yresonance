@@ -14,9 +14,10 @@ import GridLayout, { useContainerWidth, type LayoutItem } from 'react-grid-layou
 import { noOverlapCompactor } from 'react-grid-layout/core';
 import { GridBackground } from 'react-grid-layout/extras';
 import { DashboardWidgetView } from '#/components/dashboard-view';
-import type { ControlState } from '#/domain/schema';
+import type { ControlState, DashboardTheme } from '#/domain/schema';
 import { isRowEmpty, rowInsertionCuts } from '#/domain/layout';
 import { widgetLabel } from '#/domain/widget-label';
+import { dashboardCanvasStyle, widgetBoxStyle } from '#/domain/appearance';
 import { cn } from '#/lib/utils';
 import { GripVerticalIcon, Trash2Icon } from 'lucide-react';
 import { catalog } from './catalog';
@@ -43,6 +44,23 @@ function PendingWidget({ widget }: { widget: PendingCanvasWidget }) {
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * The builder frame around a widget. A styled widget paints its own box, so its frame only follows
+ * the radius, carries the shadow (the frame clips the card's own) as a class that composes with the
+ * selection ring, and sits on the canvas colour so a translucent background looks as viewers see it.
+ */
+function widgetFrame(theme: DashboardTheme | undefined, widget: DashboardWidget) {
+  const box = widgetBoxStyle(theme, widget.definition.appearance);
+  if (!box) return { className: 'bg-card shadow-sm ring-1 ring-foreground/10' };
+  return {
+    className: box.boxShadow === 'none' ? undefined : 'shadow-md',
+    style: {
+      borderRadius: box.borderRadius,
+      backgroundColor: dashboardCanvasStyle(theme).backgroundColor ?? 'var(--background)',
+    },
+  };
 }
 
 export function layoutFor(widgets: DashboardWidget[]): Layout {
@@ -206,13 +224,16 @@ export function BuilderCanvas({
   const canvasHeight =
     gridRows * (DASHBOARD_GRID.rowHeight + DASHBOARD_GRID.margin[1]) + DASHBOARD_GRID.margin[1];
   const insertionCuts = rowInsertionCuts(dashboard.widgets, dashboard.canvasRows);
+  const frames = new Map(
+    dashboard.widgets.map((widget) => [widget.id, widgetFrame(dashboard.theme, widget)]),
+  );
   return (
     <>
       {desktop !== false ? (
         <div
           ref={containerRef}
           className="relative"
-          style={{ minHeight: canvasHeight }}
+          style={{ ...dashboardCanvasStyle(dashboard.theme), minHeight: canvasHeight }}
           onPointerDownCapture={() => {
             gridGestureRef.current = false;
           }}
@@ -302,9 +323,11 @@ export function BuilderCanvas({
                     key={widget.id}
                     data-widget-id={widget.id}
                     className={cn(
-                      'group overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-foreground/10 focus-within:ring-2 focus-within:ring-ring',
+                      'group overflow-hidden rounded-xl focus-within:ring-2 focus-within:ring-ring',
+                      frames.get(widget.id)?.className,
                       selectedId === widget.id && 'ring-2 ring-primary',
                     )}
+                    style={frames.get(widget.id)?.style}
                     onClick={(event) => {
                       // Keeps the canvas background click from deselecting again.
                       event.stopPropagation();
@@ -358,7 +381,7 @@ export function BuilderCanvas({
         </div>
       ) : null}
       {desktop === false ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4" style={dashboardCanvasStyle(dashboard.theme)}>
           {pendingAddition ? (
             <div data-pending-widget-id={pendingAddition.id}>
               <PendingWidget widget={pendingAddition} />
@@ -370,7 +393,12 @@ export function BuilderCanvas({
               <div
                 key={widget.id}
                 data-widget-id={widget.id}
-                className="relative rounded-xl ring-1 ring-foreground/10 focus-within:ring-2 focus-within:ring-ring"
+                className={cn(
+                  'relative rounded-xl focus-within:ring-2 focus-within:ring-ring',
+                  // This frame does not clip, so a styled card shows its own border and shadow.
+                  !frames.get(widget.id)?.style && 'ring-1 ring-foreground/10',
+                )}
+                style={frames.get(widget.id)?.style}
               >
                 <div className="absolute top-2 right-2 z-10 flex gap-1">
                   <Button
