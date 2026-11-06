@@ -26,8 +26,8 @@ export const Route = createFileRoute('/imprint')({
 function Imprint() {
   return (
     <AppShell>
-      {/* Fills the viewport below the 3.5rem header so the footer rests at the bottom. */}
-      <div className="flex min-h-[calc(100svh-3.5rem)] flex-col">
+      {/* Fills the viewport below the header (3.5rem plus its 1px border) so the footer rests at the bottom. */}
+      <div className="flex min-h-[calc(100svh-3.5rem-1px)] flex-col">
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-16 sm:px-6 sm:py-24">
           <article className="max-w-2xl">
             <nav aria-label="Breadcrumb" className="mb-8 text-sm text-muted-foreground">

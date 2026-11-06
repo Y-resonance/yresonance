@@ -48,6 +48,10 @@ test('the signed-out header fits every width and offers the star link once there
 }) => {
   await page.goto('/');
   const star = page.getByRole('banner').getByRole('link', { name: 'Star yresonance on GitHub' });
+  // The widest header item only appears once Clerk reports the sign-up mode.
+  await expect(
+    page.getByRole('banner').getByRole('button', { name: 'Create account' }),
+  ).toBeVisible();
 
   for (const [width, starVisible] of [
     [320, false],
