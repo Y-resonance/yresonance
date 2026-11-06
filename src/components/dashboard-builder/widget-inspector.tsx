@@ -23,9 +23,6 @@ import { calculatedFieldRow, DatasourceDialog } from './datasource-dialog';
 import { widgetLabel } from '#/domain/widget-label';
 import { Button } from '#/components/ui/button';
 import {
-  AlignVerticalJustifyCenterIcon,
-  AlignVerticalJustifyEndIcon,
-  AlignVerticalJustifyStartIcon,
   BoldIcon,
   CaseSensitiveIcon,
   CaseUpperIcon,
@@ -208,38 +205,29 @@ export function WidgetSettings({
               onCommit={(title) => void commit({ ...definition, title })}
             />
           </Field>
-          <TextStyleSettings
-            legend="Title style"
+          <TitleStyleSettings
             value={definition.titleStyle}
             onChange={(titleStyle) => void commit({ ...definition, titleStyle })}
           />
         </>
       ) : null}
       {definition.type === 'text' ? (
-        <>
-          <Field>
-            <FieldLabel>Text</FieldLabel>
-            <Suspense fallback={<div className="min-h-34 rounded-lg border border-input" />}>
-              <RichTextEditor
-                key={widget.id}
-                widgetId={widget.id}
-                label="Text"
-                value={definition.content.document}
-                onCommit={(document, trigger) => {
-                  const next = { ...definition, content: { ...definition.content, document } };
-                  setLocalDefinition(next);
-                  return onChange(next, undefined, trigger);
-                }}
-              />
-            </Suspense>
-          </Field>
-          <TextStyleSettings
-            legend="Text style"
-            value={definition.textStyle}
-            onChange={(textStyle) => void commit({ ...definition, textStyle })}
-            hasFreeHeight
-          />
-        </>
+        <Field>
+          <FieldLabel>Text</FieldLabel>
+          <Suspense fallback={<div className="min-h-34 rounded-lg border border-input" />}>
+            <RichTextEditor
+              key={widget.id}
+              widgetId={widget.id}
+              label="Text"
+              value={definition.content.document}
+              onCommit={(document, trigger) => {
+                const next = { ...definition, content: { ...definition.content, document } };
+                setLocalDefinition(next);
+                return onChange(next, undefined, trigger);
+              }}
+            />
+          </Suspense>
+        </Field>
       ) : null}
       {definition.type === 'image' ? (
         <ImageSettings
@@ -660,7 +648,7 @@ function TitleInput({
   );
 }
 
-const textStyleFields = [
+const titleStyleFields = [
   {
     key: 'size',
     label: 'Size',
@@ -680,17 +668,6 @@ const textStyleFields = [
     icons: { left: TextAlignStartIcon, center: TextAlignCenterIcon, right: TextAlignEndIcon },
   },
   {
-    key: 'verticalAlign',
-    label: 'Vertical',
-    options: { top: 'Top', center: 'Middle', bottom: 'Bottom' },
-    icons: {
-      top: AlignVerticalJustifyStartIcon,
-      center: AlignVerticalJustifyCenterIcon,
-      bottom: AlignVerticalJustifyEndIcon,
-    },
-    needsFreeHeight: true,
-  },
-  {
     // Stored as `tone` so existing dashboards and WebMCP clients keep working.
     key: 'tone',
     label: 'Font color',
@@ -703,11 +680,9 @@ const textStyleFields = [
   // Options without an icon show sample text styled with their own value.
   icons?: Record<string, LucideIcon>;
   fullWidth?: boolean;
-  // Set on properties that only make sense when the element can grow taller than its text.
-  needsFreeHeight?: boolean;
 }>;
 
-const textFormats = [
+const titleFormats = [
   { value: 'bold', label: 'Bold', Icon: BoldIcon },
   { value: 'italic', label: 'Italic', Icon: ItalicIcon },
   { value: 'underline', label: 'Underline', Icon: UnderlineIcon },
@@ -722,20 +697,15 @@ function textStylePreview(key: keyof TextStyle, option: string) {
 }
 
 /**
- * Presentation controls for a text widget or a card title. Every property can stay unset, in which
- * case the widget renders with the app defaults, and a style with nothing set is stored as absent.
+ * Presentation controls for a card title. Every property can stay unset, in which case the title
+ * renders with the app defaults, and a style with nothing set is stored as absent.
  */
-function TextStyleSettings({
-  legend,
+function TitleStyleSettings({
   value,
   onChange,
-  hasFreeHeight = false,
 }: {
-  legend: string;
   value: TextStyle | undefined;
   onChange: (style: TextStyle | undefined) => void;
-  /** Whether the styled element fills its widget, which is what makes vertical alignment do anything. */
-  hasFreeHeight?: boolean;
 }) {
   const update = (changes: Record<string, string | boolean | undefined>) => {
     const parsed = textStyleSchema.safeParse(
@@ -767,14 +737,14 @@ function TextStyleSettings({
       <span className="text-xs text-muted-foreground">Format</span>
       <ToggleGroup
         multiple
-        aria-label={`${legend}: format`}
+        aria-label="Title style: format"
         variant="outline"
         spacing={0}
         className="w-full"
         value={format}
         onValueChange={updateFormat}
       >
-        {textFormats.map(({ value: option, label, Icon }) => (
+        {titleFormats.map(({ value: option, label, Icon }) => (
           <ToggleGroupItem
             key={option}
             value={option}
@@ -790,52 +760,50 @@ function TextStyleSettings({
   );
   return (
     <Field>
-      <FieldLabel>{legend}</FieldLabel>
+      <FieldLabel>Title style</FieldLabel>
       <div className="grid grid-cols-2 gap-2">
-        {textStyleFields
-          .filter((setting) => hasFreeHeight || !('needsFreeHeight' in setting))
-          .flatMap((setting) => {
-            const icons: Record<string, LucideIcon> | undefined =
-              'icons' in setting ? setting.icons : undefined;
-            const selected = value?.[setting.key];
-            const group = (
-              <div
-                key={setting.key}
-                className={cn('grid gap-1', 'fullWidth' in setting && 'col-span-2')}
+        {titleStyleFields.flatMap((setting) => {
+          const icons: Record<string, LucideIcon> | undefined =
+            'icons' in setting ? setting.icons : undefined;
+          const selected = value?.[setting.key];
+          const group = (
+            <div
+              key={setting.key}
+              className={cn('grid gap-1', 'fullWidth' in setting && 'col-span-2')}
+            >
+              <span className="text-xs text-muted-foreground">{setting.label}</span>
+              {/* Pressing the selected option again unsets the property, back to the app default. */}
+              <ToggleGroup
+                aria-label={`Title style: ${setting.label.toLowerCase()}`}
+                variant="outline"
+                spacing={0}
+                className="w-full"
+                value={selected ? [selected] : []}
+                onValueChange={([next]) => update({ [setting.key]: next })}
               >
-                <span className="text-xs text-muted-foreground">{setting.label}</span>
-                {/* Pressing the selected option again unsets the property, back to the app default. */}
-                <ToggleGroup
-                  aria-label={`${legend}: ${setting.label.toLowerCase()}`}
-                  variant="outline"
-                  spacing={0}
-                  className="w-full"
-                  value={selected ? [selected] : []}
-                  onValueChange={([next]) => update({ [setting.key]: next })}
-                >
-                  {Object.entries(setting.options).map(([option, name]) => {
-                    const Icon = icons?.[option];
-                    return (
-                      <ToggleGroupItem
-                        key={option}
-                        value={option}
-                        aria-label={name}
-                        title={name}
-                        className="min-w-0 flex-1 px-0"
-                      >
-                        {Icon ? (
-                          <Icon aria-hidden="true" />
-                        ) : (
-                          <span className={textStylePreview(setting.key, option)}>Aa</span>
-                        )}
-                      </ToggleGroupItem>
-                    );
-                  })}
-                </ToggleGroup>
-              </div>
-            );
-            return setting.key === 'size' ? [group, formatGroup] : [group];
-          })}
+                {Object.entries(setting.options).map(([option, name]) => {
+                  const Icon = icons?.[option];
+                  return (
+                    <ToggleGroupItem
+                      key={option}
+                      value={option}
+                      aria-label={name}
+                      title={name}
+                      className="min-w-0 flex-1 px-0"
+                    >
+                      {Icon ? (
+                        <Icon aria-hidden="true" />
+                      ) : (
+                        <span className={textStylePreview(setting.key, option)}>Aa</span>
+                      )}
+                    </ToggleGroupItem>
+                  );
+                })}
+              </ToggleGroup>
+            </div>
+          );
+          return setting.key === 'size' ? [group, formatGroup] : [group];
+        })}
       </div>
     </Field>
   );
