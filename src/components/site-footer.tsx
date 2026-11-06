@@ -1,3 +1,4 @@
+import { Show } from '@clerk/tanstack-react-start';
 import { Link } from '@tanstack/react-router';
 import { GitHubIcon, githubUrl, trackGitHubClick } from '#/components/github-link';
 
@@ -23,26 +24,29 @@ export function SiteFooter() {
           <p className="mt-2">Client reporting dashboards.</p>
         </div>
 
-        <nav aria-label="Product">
-          <p className={heading}>Product</p>
-          <ul className="mt-3 flex flex-col gap-2">
-            <li>
-              <Link className={link} to="/" hash="agent-tools">
-                Agent tools
-              </Link>
-            </li>
-            <li>
-              <Link className={link} to="/" hash="reports">
-                Reports
-              </Link>
-            </li>
-            <li>
-              <Link className={link} to="/" hash="faq-title">
-                FAQ
-              </Link>
-            </li>
-          </ul>
-        </nav>
+        {/* These jump to landing sections, and signed-in visitors get dashboards at / instead. */}
+        <Show when="signed-out">
+          <nav aria-label="Product">
+            <p className={heading}>Product</p>
+            <ul className="mt-3 flex flex-col gap-2">
+              <li>
+                <Link className={link} to="/" hash="agent-tools">
+                  Agent tools
+                </Link>
+              </li>
+              <li>
+                <Link className={link} to="/" hash="reports">
+                  Reports
+                </Link>
+              </li>
+              <li>
+                <Link className={link} to="/" hash="faq-title">
+                  FAQ
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        </Show>
 
         <nav aria-label="Open source">
           <p className={heading}>Open source</p>
@@ -85,7 +89,15 @@ export function SiteFooter() {
         </nav>
 
         <div className="col-span-2 flex items-center justify-between sm:col-span-4">
-          <span>© {new Date().getFullYear()} Patrik Simms</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>© {new Date().getFullYear()} Patrik Simms</span>
+            <Link className={link} to="/privacy">
+              Privacy
+            </Link>
+            <Link className={link} to="/terms">
+              Terms
+            </Link>
+          </div>
           <a
             className={link}
             href={githubUrl}

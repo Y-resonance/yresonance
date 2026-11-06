@@ -13,7 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as ImprintRouteImport } from './routes/imprint'
 import { Route as MetricsRouteImport } from './routes/metrics'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ReadyRouteImport } from './routes/ready'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiYresonanceRouteImport } from './routes/api.yresonance'
 import { Route as DashboardsDashboardIdRouteImport } from './routes/dashboards.$dashboardId'
 import { Route as DatasourcesIndexRouteImport } from './routes/datasources.index'
@@ -49,9 +51,19 @@ const MetricsRoute = MetricsRouteImport.update({
   path: '/metrics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReadyRoute = ReadyRouteImport.update({
   id: '/ready',
   path: '/ready',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiYresonanceRoute = ApiYresonanceRouteImport.update({
@@ -134,7 +146,9 @@ export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/imprint': typeof ImprintRoute
   '/metrics': typeof MetricsRoute
+  '/privacy': typeof PrivacyRoute
   '/ready': typeof ReadyRoute
+  '/terms': typeof TermsRoute
   '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
@@ -155,7 +169,9 @@ export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/imprint': typeof ImprintRoute
   '/metrics': typeof MetricsRoute
+  '/privacy': typeof PrivacyRoute
   '/ready': typeof ReadyRoute
+  '/terms': typeof TermsRoute
   '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
@@ -177,7 +193,9 @@ export interface FileRoutesById {
   '/health': typeof HealthRoute
   '/imprint': typeof ImprintRoute
   '/metrics': typeof MetricsRoute
+  '/privacy': typeof PrivacyRoute
   '/ready': typeof ReadyRoute
+  '/terms': typeof TermsRoute
   '/api/yresonance': typeof ApiYresonanceRoute
   '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/datasources/$datasourceId': typeof DatasourcesDatasourceIdRoute
@@ -200,7 +218,9 @@ export interface FileRouteTypes {
     | '/health'
     | '/imprint'
     | '/metrics'
+    | '/privacy'
     | '/ready'
+    | '/terms'
     | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
@@ -221,7 +241,9 @@ export interface FileRouteTypes {
     | '/health'
     | '/imprint'
     | '/metrics'
+    | '/privacy'
     | '/ready'
+    | '/terms'
     | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
@@ -242,7 +264,9 @@ export interface FileRouteTypes {
     | '/health'
     | '/imprint'
     | '/metrics'
+    | '/privacy'
     | '/ready'
+    | '/terms'
     | '/api/yresonance'
     | '/dashboards/$dashboardId'
     | '/datasources/$datasourceId'
@@ -264,7 +288,9 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   ImprintRoute: typeof ImprintRoute
   MetricsRoute: typeof MetricsRoute
+  PrivacyRoute: typeof PrivacyRoute
   ReadyRoute: typeof ReadyRoute
+  TermsRoute: typeof TermsRoute
   ApiYresonanceRoute: typeof ApiYresonanceRoute
   DashboardsDashboardIdRoute: typeof DashboardsDashboardIdRoute
   DatasourcesDatasourceIdRoute: typeof DatasourcesDatasourceIdRoute
@@ -310,11 +336,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MetricsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ready': {
       id: '/ready'
       path: '/ready'
       fullPath: '/ready'
       preLoaderRoute: typeof ReadyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/yresonance': {
@@ -438,7 +478,9 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   ImprintRoute: ImprintRoute,
   MetricsRoute: MetricsRoute,
+  PrivacyRoute: PrivacyRoute,
   ReadyRoute: ReadyRoute,
+  TermsRoute: TermsRoute,
   ApiYresonanceRoute: ApiYresonanceRoute,
   DashboardsDashboardIdRoute: DashboardsDashboardIdRoute,
   DatasourcesDatasourceIdRoute: DatasourcesDatasourceIdRoute,
