@@ -74,8 +74,13 @@ export function AppShell({
           </nav>
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <GlobalSearch />
-            {/* Below md the signed-in bar has no room for it. Public pages also link it in the footer. */}
-            <GitHubStarButton className="hidden md:inline-flex" />
+            {/* The signed-in bar also holds navigation and the wide search box, so it needs md. */}
+            <Show when="signed-out">
+              <GitHubStarButton className="hidden sm:inline-flex" />
+            </Show>
+            <Show when="signed-in">
+              <GitHubStarButton className="hidden md:inline-flex" />
+            </Show>
             <ThemeToggle />
             <Show when="signed-out">
               <SignInAction>

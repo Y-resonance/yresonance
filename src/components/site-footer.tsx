@@ -89,7 +89,15 @@ export function SiteFooter() {
         </nav>
 
         <div className="col-span-2 flex items-center justify-between sm:col-span-4">
-          <span>© {new Date().getFullYear()} Patrik Simms</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>© {new Date().getFullYear()} Patrik Simms</span>
+            <Link className={link} to="/privacy">
+              Privacy
+            </Link>
+            <Link className={link} to="/terms">
+              Terms
+            </Link>
+          </div>
           <a
             className={link}
             href={githubUrl}

@@ -36,6 +36,13 @@ export const landingFaqs = [
   },
 ];
 
+// Placeholder pages stay out of search results and, by skipping publicPages, out of the sitemap.
+export function wipPageHead(title: string) {
+  return {
+    meta: [{ title: `${title} | yresonance` }, { name: 'robots', content: 'noindex' }],
+  };
+}
+
 export function publicPageHead(path: keyof typeof publicPages) {
   const page = publicPages[path];
   const url = `${siteUrl}${path}`;

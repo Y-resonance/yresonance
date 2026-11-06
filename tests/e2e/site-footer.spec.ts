@@ -12,6 +12,19 @@ test('signed-in visitors get no footer links to landing sections they cannot see
   await expect(footer.getByRole('navigation', { name: 'Product' })).toHaveCount(0);
 });
 
+for (const title of ['Privacy', 'Terms']) {
+  test(`the footer reaches the ${title} placeholder, which stays out of search results`, async ({
+    page,
+  }) => {
+    await page.goto('/imprint');
+    await page.getByRole('contentinfo').getByRole('link', { name: title }).click();
+
+    await expect(page).toHaveTitle(`${title} | yresonance`);
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+  });
+}
+
 test('a tall imprint page rests the footer at the bottom without scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1400 });
   await page.goto('/imprint');

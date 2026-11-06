@@ -56,9 +56,8 @@ test('the signed-out header fits every width and offers the star link once there
   for (const [width, starVisible] of [
     [320, false],
     [360, false],
-    [640, false],
-    [767, false],
-    [768, true],
+    [639, false],
+    [640, true],
     [1280, true],
   ] as const) {
     await page.setViewportSize({ width, height: 800 });
