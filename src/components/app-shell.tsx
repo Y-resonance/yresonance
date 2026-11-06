@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { MenuIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { GetAccessButton, SignInAction } from '#/components/auth-actions';
+import { GitHubStarButton } from '#/components/github-link';
 import { ThemeToggle } from '#/components/theme-toggle';
 import { Button } from '#/components/ui/button';
 import {
@@ -73,6 +74,8 @@ export function AppShell({
           </nav>
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <GlobalSearch />
+            {/* Below md the signed-in bar has no room for it. Public pages also link it in the footer. */}
+            <GitHubStarButton className="hidden md:inline-flex" />
             <ThemeToggle />
             <Show when="signed-out">
               <SignInAction>

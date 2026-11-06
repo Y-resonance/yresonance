@@ -6,7 +6,6 @@ import { useInView } from '#/components/landing/motion';
 import { Button } from '#/components/ui/button';
 import { cn } from '#/lib/utils';
 import { landingFaqs } from '#/lib/seo';
-import { Link } from '@tanstack/react-router';
 import { ArrowRightIcon } from 'lucide-react';
 import dashboard from '#/assets/landing/dashboard.png?format=webp&lossless';
 import dashboardDark from '#/assets/landing/dashboard-dark.png?format=webp&lossless';
@@ -273,7 +272,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 sm:py-28">
+      <section id="agent-tools" className="py-20 sm:py-28">
         <div className={cn(section, 'reveal-on-scroll')}>
           <h2 className={sectionTitle}>Every click is also a tool</h2>
           <p className={sectionBody}>
@@ -284,7 +283,7 @@ export function LandingPage() {
         <ToolMarquee />
       </section>
 
-      <section className={cn(section, 'py-20 sm:py-28')}>
+      <section id="reports" className={cn(section, 'py-20 sm:py-28')}>
         <div className="reveal-on-scroll">
           <h2 className={sectionTitle}>Every breakdown the report needs</h2>
           <p className={sectionBody}>
@@ -396,16 +395,6 @@ export function LandingPage() {
           </div>
         </div>
       </section>
-      <footer
-        className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 py-8 text-sm text-muted-foreground sm:px-6"
-        role="contentinfo"
-      >
-        <span>yresonance</span>
-        <span aria-hidden="true">·</span>
-        <Link className="hover:text-foreground hover:underline" to="/imprint">
-          Imprint and creator
-        </Link>
-      </footer>
     </main>
   );
 }

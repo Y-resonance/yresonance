@@ -4,6 +4,7 @@ import { lazy, Suspense } from 'react';
 import { AppShell } from '#/components/app-shell';
 import { LandingPage } from '#/components/landing-page';
 import { LoadingState } from '#/components/request-state';
+import { SiteFooter } from '#/components/site-footer';
 import { landingFaqs, publicPageHead } from '#/lib/seo';
 
 const DashboardIndex = lazy(() => import('#/components/dashboard-index'));
@@ -34,6 +35,7 @@ function Home() {
     <AppShell requireWorkspace>
       <Show when="signed-out">
         <LandingPage />
+        <SiteFooter />
       </Show>
       <Show when="signed-in">
         <Suspense fallback={<LoadingState />}>

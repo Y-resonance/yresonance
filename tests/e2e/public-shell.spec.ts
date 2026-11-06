@@ -39,13 +39,44 @@ test('the signed-out product shell is usable', async ({ page }) => {
     page.getByRole('main').getByRole('button', { name: 'Create account' }).first(),
   ).toBeVisible();
   await expect(
-    page.getByRole('contentinfo').getByRole('link', { name: 'Imprint and creator' }),
+    page.getByRole('contentinfo').getByRole('link', { name: 'Imprint', exact: true }),
   ).toBeVisible();
+});
+
+test('the signed-out header fits every width and offers the star link once there is room', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const star = page.getByRole('banner').getByRole('link', { name: 'Star yresonance on GitHub' });
+
+  for (const [width, starVisible] of [
+    [320, false],
+    [360, false],
+    [640, false],
+    [767, false],
+    [768, true],
+    [1280, true],
+  ] as const) {
+    await page.setViewportSize({ width, height: 800 });
+    await expect(star).toBeVisible({ visible: starVisible });
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBe(0);
+  }
+});
+
+test('footer links reach landing sections from other pages', async ({ page }) => {
+  await page.goto('/imprint');
+  await page.getByRole('contentinfo').getByRole('link', { name: 'FAQ' }).click();
+
+  await expect(page).toHaveURL('/#faq-title');
+  await expect(page.getByRole('heading', { name: 'Frequently asked questions' })).toBeInViewport();
 });
 
 test('the footer links to the imprint', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('contentinfo').getByRole('link', { name: 'Imprint and creator' }).click();
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Imprint', exact: true }).click();
 
   await expect(page).toHaveURL('/imprint');
   await expect(page).toHaveTitle('Imprint and creator | yresonance');

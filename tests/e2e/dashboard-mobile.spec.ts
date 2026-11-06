@@ -7,6 +7,20 @@ test.use({ viewport: { width: 375, height: 780 } });
 const documentOverflow = () =>
   document.documentElement.scrollWidth - document.documentElement.clientWidth;
 
+test('the signed-in header fits around the width where the star link appears', async ({ page }) => {
+  await mockYresonanceApi(page, { role: 'viewer' });
+  await page.goto('/dashboards/dash_demo');
+  await expect(page.getByRole('heading', { name: 'Client weekly' })).toBeVisible();
+
+  for (const width of [640, 767, 768]) {
+    await page.setViewportSize({ width, height: 780 });
+    await expect(page.getByRole('link', { name: 'Star yresonance on GitHub' })).toBeVisible({
+      visible: width >= 768,
+    });
+    expect(await page.evaluate(documentOverflow), `overflow at ${width}px`).toBeLessThanOrEqual(0);
+  }
+});
+
 test('a phone viewer reaches the controls from a sticky bar and never scrolls sideways', async ({
   page,
 }) => {
