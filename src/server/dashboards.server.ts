@@ -348,6 +348,7 @@ export async function updateDashboard(request: Extract<ApiRequest, { action: 'up
     name: request.name ?? access.document.name,
     timezone: request.timezone ?? access.document.timezone,
     defaultDateRange: request.defaultDateRange ?? access.document.defaultDateRange,
+    theme: request.theme ?? access.document.theme,
     updatedAt: nextDashboardTimestamp(access.row.updatedAt),
   };
   await persistDashboard(updated, access.row.updatedAt);

@@ -71,6 +71,9 @@ const stylingSchema = z.record(z.string(), z.unknown()).optional();
 export const textStyleSchema = z.object({
   size: z.enum(['xs', 'sm', 'base', 'lg', 'xl', '2xl']).optional(),
   weight: z.enum(['normal', 'medium', 'semibold', 'bold']).optional(),
+  italic: z.boolean().optional(),
+  // One value because the classes for each line set the same CSS property, so they can't combine.
+  decoration: z.enum(['underline', 'strikethrough']).optional(),
   transform: z.enum(['none', 'uppercase']).optional(),
   align: z.enum(['left', 'center', 'right']).optional(),
   // Only meaningful for elements that own free vertical space, which today is the text widget.
@@ -80,6 +83,38 @@ export const textStyleSchema = z.object({
 // One shared instance so the emitted WebMCP JSON Schema references it instead of inlining a copy
 // into every widget variant.
 const optionalTextStyle = textStyleSchema.optional();
+
+// A theme reference or a fixed colour. Theme references follow the dashboard brand and dark mode;
+// hex values render as stored in both modes.
+export const themeColorSchema = z.enum([
+  'theme:brand',
+  'theme:surface',
+  'theme:muted',
+  'theme:foreground',
+]);
+const hexColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
+export const colorSchema = z.union([themeColorSchema, hexColorSchema]);
+
+// Background and border of a widget box. Used on a widget and as the dashboard theme's widget
+// defaults; resolveAppearance in ./appearance merges the two field by field.
+export const appearanceSchema = z.object({
+  background: colorSchema.optional(),
+  backgroundOpacity: z.number().int().min(0).max(100).optional(),
+  borderColor: colorSchema.optional(),
+  borderRadius: z.number().int().min(0).max(32).optional(),
+  borderWidth: z.number().int().min(0).max(16).optional(),
+  borderStyle: z.enum(['solid', 'dashed', 'dotted']).optional(),
+  shadow: z.boolean().optional(),
+});
+const optionalAppearance = appearanceSchema.optional();
+
+export const dashboardThemeSchema = z.object({
+  brandColor: hexColorSchema.optional(),
+  canvasBackground: colorSchema.optional(),
+  widgetDefaults: optionalAppearance,
+  // 'brand' derives the chart series colours from brandColor.
+  chartPalette: z.enum(['default', 'brand']).optional(),
+});
 
 export const dateGranularitySchema = z.enum([
   'auto',
@@ -213,7 +248,7 @@ const cardBase = {
   dataSourceId: z.string().min(1),
   dateRangeFieldId: z.string().min(1),
   filter: filterSchema.optional(),
-  styling: stylingSchema,
+  appearance: optionalAppearance,
 };
 
 export const widgetDefinitionSchema = z.discriminatedUnion('type', [
@@ -226,17 +261,18 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
     allowMultiple: z.boolean().default(true),
     filter: filterSchema.optional(),
     optionsSortDirection: z.enum(['asc', 'desc']).optional(),
-    styling: stylingSchema,
+    appearance: optionalAppearance,
   }),
   z.object({
     type: z.literal('dateControl'),
     defaultDateRange: dateRangeSchema.optional(),
-    styling: stylingSchema,
+    appearance: optionalAppearance,
   }),
   z.object({
     type: z.literal('text'),
     content: textContentSchema,
     textStyle: optionalTextStyle,
+    appearance: optionalAppearance,
   }),
   // An uploaded workspace image, such as a client logo. `assetId` comes from `listAssets`. Without
   // one the widget is a placeholder in the builder, and viewers don't see it.
@@ -249,6 +285,7 @@ export const widgetDefinitionSchema = z.discriminatedUnion('type', [
       // Clickable logos and creatives open in a new tab. Only https links are stored.
       href: z.url({ protocol: /^https$/u }).optional(),
       title: z.string().trim().min(1).optional(),
+      appearance: optionalAppearance,
     })
     .refine((definition) => !definition.assetId || definition.alt, {
       message: 'An image needs alt text.',
@@ -362,6 +399,7 @@ const dashboardFields = {
   timezone: z.string().min(1).default('Europe/Berlin'),
   defaultDateRange: dateRangeSchema,
   columns: z.number().int().positive().default(12),
+  theme: dashboardThemeSchema.optional(),
   createdBy: z.string().min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -529,5 +567,7 @@ export type Aggregation = z.infer<typeof aggregationSchema>;
 export type DataSourceLocation = z.infer<typeof dataSourceLocationSchema>;
 export type TextStyle = z.infer<typeof textStyleSchema>;
 export type BarColorBy = z.infer<typeof barColorBySchema>;
+export type Appearance = z.infer<typeof appearanceSchema>;
+export type DashboardTheme = z.infer<typeof dashboardThemeSchema>;
 
 export const defaultDateRange: DateRange = lastThirtyDaysRange;

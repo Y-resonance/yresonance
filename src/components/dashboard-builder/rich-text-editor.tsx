@@ -324,7 +324,11 @@ function Toolbar({
   });
   const chain = () => editor.chain().focus();
   return (
-    <div className="flex items-center gap-0.5 border-b border-input p-1">
+    <div
+      role="group"
+      aria-label="Text formatting"
+      className="flex items-center gap-0.5 border-b border-input p-1"
+    >
       <ToolbarButton label="Bold" pressed={active.bold} onClick={() => chain().toggleBold().run()}>
         <BoldIcon />
       </ToolbarButton>

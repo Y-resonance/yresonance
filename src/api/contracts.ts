@@ -5,6 +5,7 @@ import {
   bigqueryDatasetIdSchema,
   bigqueryProjectIdSchema,
   controlStateSchema,
+  dashboardThemeSchema,
   dataSourceLocationSchema,
   datasourceCachePolicySchema,
   dateRangeSchema,
@@ -56,6 +57,8 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
     name: z.string().trim().min(1).optional(),
     timezone: timezoneSchema.optional(),
     defaultDateRange: dateRangeSchema.optional(),
+    // Replaces the whole stored theme, like updateWidget replaces a definition. {} clears it.
+    theme: dashboardThemeSchema.optional(),
   }),
   z.object({ action: z.literal('deleteDashboard'), dashboardId: z.string().min(1) }),
   z.object({

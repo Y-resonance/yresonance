@@ -22,7 +22,24 @@ import { changeSource } from './datasource';
 import { calculatedFieldRow, DatasourceDialog } from './datasource-dialog';
 import { widgetLabel } from '#/domain/widget-label';
 import { Button } from '#/components/ui/button';
-import { XIcon, MinusIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import {
+  BoldIcon,
+  CaseSensitiveIcon,
+  CaseUpperIcon,
+  ItalicIcon,
+  MinusIcon,
+  PencilIcon,
+  PlusIcon,
+  StrikethroughIcon,
+  TextAlignCenterIcon,
+  TextAlignEndIcon,
+  TextAlignStartIcon,
+  Trash2Icon,
+  UnderlineIcon,
+  XIcon,
+  type LucideIcon,
+} from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group';
 import { Alert, AlertDescription } from '#/components/ui/alert';
 import { Field, FieldLabel, FieldDescription } from '#/components/ui/field';
 import { Input } from '#/components/ui/input';
@@ -30,15 +47,8 @@ import { DateRangePicker } from '#/components/date-range-picker';
 import { CalculatedFieldDialog } from '#/components/calculated-field-dialog';
 import { textStyleClasses } from '#/domain/text-style';
 import { cn } from '#/lib/utils';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from '#/components/ui/select';
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select';
+import { Separator } from '#/components/ui/separator';
 import {
   patchFilterCondition,
   filterInputValue,
@@ -53,6 +63,8 @@ import {
   EditFormulaButton,
 } from './field-picker';
 import { MetricSettings } from './metric-settings';
+import { AppearanceSettings } from './appearance-settings';
+import { resolveAppearance } from '#/domain/appearance';
 import { ImageSettings } from './image-asset-picker';
 
 // Tiptap only loads once an editor opens a text widget, never for viewers or share links.
@@ -61,6 +73,7 @@ const RichTextEditor = lazy(() => import('./rich-text-editor'));
 export function WidgetSettings({
   dashboardId,
   dashboardDefaultDateRange,
+  theme,
   timezone,
   widget,
   dataSources,
@@ -71,6 +84,7 @@ export function WidgetSettings({
 }: {
   dashboardId: string;
   dashboardDefaultDateRange: DashboardDocument['defaultDateRange'];
+  theme: DashboardDocument['theme'];
   timezone: string;
   widget: DashboardWidget;
   dataSources: BuilderDataSource[];
@@ -185,45 +199,35 @@ export function WidgetSettings({
         <>
           <Field>
             <FieldLabel htmlFor={`title-${widget.id}`}>Title</FieldLabel>
-            <Input
+            <TitleInput
               id={`title-${widget.id}`}
-              value={definition.title}
-              onChange={(event) => setLocalDefinition({ ...definition, title: event.target.value })}
-              onBlur={() => void commit(definition)}
+              title={definition.title}
+              onCommit={(title) => void commit({ ...definition, title })}
             />
           </Field>
-          <TextStyleSettings
-            legend="Title style"
+          <TitleStyleSettings
             value={definition.titleStyle}
             onChange={(titleStyle) => void commit({ ...definition, titleStyle })}
           />
         </>
       ) : null}
       {definition.type === 'text' ? (
-        <>
-          <Field>
-            <FieldLabel>Text</FieldLabel>
-            <Suspense fallback={<div className="min-h-34 rounded-lg border border-input" />}>
-              <RichTextEditor
-                key={widget.id}
-                widgetId={widget.id}
-                label="Text"
-                value={definition.content.document}
-                onCommit={(document, trigger) => {
-                  const next = { ...definition, content: { ...definition.content, document } };
-                  setLocalDefinition(next);
-                  return onChange(next, undefined, trigger);
-                }}
-              />
-            </Suspense>
-          </Field>
-          <TextStyleSettings
-            legend="Text style"
-            value={definition.textStyle}
-            onChange={(textStyle) => void commit({ ...definition, textStyle })}
-            hasFreeHeight
-          />
-        </>
+        <Field>
+          <FieldLabel>Text</FieldLabel>
+          <Suspense fallback={<div className="min-h-34 rounded-lg border border-input" />}>
+            <RichTextEditor
+              key={widget.id}
+              widgetId={widget.id}
+              label="Text"
+              value={definition.content.document}
+              onCommit={(document, trigger) => {
+                const next = { ...definition, content: { ...definition.content, document } };
+                setLocalDefinition(next);
+                return onChange(next, undefined, trigger);
+              }}
+            />
+          </Suspense>
+        </Field>
       ) : null}
       {definition.type === 'image' ? (
         <ImageSettings
@@ -336,6 +340,13 @@ export function WidgetSettings({
           ) : null}
         </>
       ) : null}
+      <Separator />
+      <AppearanceSettings
+        value={definition.appearance}
+        inherited={resolveAppearance(theme, undefined)}
+        theme={theme}
+        onChange={(appearance) => void commit({ ...definition, appearance })}
+      />
     </div>
   );
 }
@@ -612,134 +623,187 @@ function dimensionForField(
   return date ? { ...rest, fieldId, dateGranularity: dateDefault } : { ...rest, fieldId };
 }
 
-const textStyleFields = [
+// Typing stays here until blur, because a style save finishing meanwhile replaces the definition.
+function TitleInput({
+  id,
+  title,
+  onCommit,
+}: {
+  id: string;
+  title: string;
+  onCommit: (title: string) => void;
+}) {
+  const [draft, setDraft] = useState<string>();
+  return (
+    <Input
+      id={id}
+      value={draft ?? title}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        if (draft === undefined) return;
+        setDraft(undefined);
+        onCommit(draft);
+      }}
+    />
+  );
+}
+
+const titleStyleFields = [
   {
     key: 'size',
     label: 'Size',
-    // Short labels because each option renders at its own size, so a long word would overflow the
-    // popup at the larger steps. The preview carries the meaning, not the wording.
     options: { xs: 'XS', sm: 'S', base: 'M', lg: 'L', xl: 'XL', '2xl': '2XL' },
+    fullWidth: true,
   },
   {
-    key: 'weight',
-    label: 'Weight',
-    options: { normal: 'Normal', medium: 'Medium', semibold: 'Semibold', bold: 'Bold' },
-  },
-  { key: 'transform', label: 'Case', options: { none: 'As typed', uppercase: 'Uppercase' } },
-  { key: 'align', label: 'Align', options: { left: 'Left', center: 'Center', right: 'Right' } },
-  {
-    key: 'verticalAlign',
-    label: 'Vertical',
-    options: { top: 'Top', center: 'Middle', bottom: 'Bottom' },
-    needsFreeHeight: true,
+    key: 'transform',
+    label: 'Case',
+    options: { none: 'As typed', uppercase: 'Uppercase' },
+    icons: { none: CaseSensitiveIcon, uppercase: CaseUpperIcon },
   },
   {
+    key: 'align',
+    label: 'Align',
+    options: { left: 'Left', center: 'Center', right: 'Right' },
+    icons: { left: TextAlignStartIcon, center: TextAlignCenterIcon, right: TextAlignEndIcon },
+  },
+  {
+    // Stored as `tone` so existing dashboards and WebMCP clients keep working.
     key: 'tone',
-    label: 'Tone',
+    label: 'Font color',
     options: { default: 'Normal', muted: 'Muted', primary: 'Accent' },
-    // A swatch rather than coloured label text: the highlighted option recolours its own text and
-    // every descendant, which would hide exactly the preview the user is looking at.
-    swatches: { default: 'bg-foreground', muted: 'bg-muted-foreground', primary: 'bg-primary' },
   },
 ] as const satisfies ReadonlyArray<{
   key: keyof TextStyle;
   label: string;
   options: Record<string, string>;
-  swatches?: Record<string, string>;
-  // Set on properties that only make sense when the element can grow taller than its text.
-  needsFreeHeight?: boolean;
+  // Options without an icon show sample text styled with their own value.
+  icons?: Record<string, LucideIcon>;
+  fullWidth?: boolean;
 }>;
 
+const titleFormats = [
+  { value: 'bold', label: 'Bold', Icon: BoldIcon },
+  { value: 'italic', label: 'Italic', Icon: ItalicIcon },
+  { value: 'underline', label: 'Underline', Icon: UnderlineIcon },
+  { value: 'strikethrough', label: 'Strikethrough', Icon: StrikethroughIcon },
+];
+
 // The option previews itself by running through the same mapping that styles the real widget, so a
-// preview can never drift from the render. Unknown values (the unset "Default") produce no classes.
+// preview can never drift from the render.
 function textStylePreview(key: keyof TextStyle, option: string) {
   const parsed = textStyleSchema.safeParse({ [key]: option });
   return parsed.success ? textStyleClasses(parsed.data) : undefined;
 }
 
 /**
- * Presentation controls for a text widget or a card title. Every property can stay unset, in which
- * case the widget renders with the app defaults, and a style with nothing set is stored as absent.
+ * Presentation controls for a card title. Every property can stay unset, in which case the title
+ * renders with the app defaults, and a style with nothing set is stored as absent.
  */
-function TextStyleSettings({
-  legend,
+function TitleStyleSettings({
   value,
   onChange,
-  hasFreeHeight = false,
 }: {
-  legend: string;
   value: TextStyle | undefined;
   onChange: (style: TextStyle | undefined) => void;
-  /** Whether the styled element fills its widget, which is what makes vertical alignment do anything. */
-  hasFreeHeight?: boolean;
 }) {
-  const update = (key: keyof TextStyle, selected: string | null) => {
-    const draft: Record<string, string | undefined> = { ...value };
-    if (selected) draft[key] = selected;
-    else delete draft[key];
-    const parsed = textStyleSchema.safeParse(draft);
-    onChange(parsed.success && Object.keys(draft).length ? parsed.data : undefined);
+  const update = (changes: Record<string, string | boolean | undefined>) => {
+    const parsed = textStyleSchema.safeParse(
+      Object.fromEntries(
+        Object.entries({ ...value, ...changes }).filter(([, setting]) => setting !== undefined),
+      ),
+    );
+    onChange(parsed.success && Object.keys(parsed.data).length ? parsed.data : undefined);
   };
+  const updateFormat = (pressed: string[]) =>
+    update({
+      // Tools can still store other weights, which stay until someone presses Bold.
+      weight: pressed.includes('bold')
+        ? 'bold'
+        : value?.weight === 'bold'
+          ? undefined
+          : value?.weight,
+      italic: pressed.includes('italic') || undefined,
+      // The latest press is last, so choosing one line replaces the other.
+      decoration: pressed.filter((line) => line === 'underline' || line === 'strikethrough').at(-1),
+    });
+  const format = [
+    value?.weight === 'bold' && 'bold',
+    value?.italic && 'italic',
+    value?.decoration,
+  ].filter((pressed) => typeof pressed === 'string');
+  const formatGroup = (
+    <div key="format" className="grid gap-1">
+      <span className="text-xs text-muted-foreground">Format</span>
+      <ToggleGroup
+        multiple
+        aria-label="Title style: format"
+        variant="outline"
+        spacing={0}
+        className="w-full"
+        value={format}
+        onValueChange={updateFormat}
+      >
+        {titleFormats.map(({ value: option, label, Icon }) => (
+          <ToggleGroupItem
+            key={option}
+            value={option}
+            aria-label={label}
+            title={label}
+            className="min-w-0 flex-1 px-0"
+          >
+            <Icon aria-hidden="true" />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
+  );
   return (
     <Field>
-      <FieldLabel>{legend}</FieldLabel>
+      <FieldLabel>Title style</FieldLabel>
       <div className="grid grid-cols-2 gap-2">
-        {textStyleFields
-          .filter((setting) => hasFreeHeight || !('needsFreeHeight' in setting))
-          .map((setting) => {
-            const options: Record<string, string> = setting.options;
-            const swatches: Record<string, string> | undefined =
-              'swatches' in setting ? setting.swatches : undefined;
-            // `w-full` is what lets the align preview work: the label fills the row, so `text-right`
-            // actually moves it. The other properties are unaffected by the extra width.
-            const optionContent = (option: string, preview: boolean) => (
-              <>
-                {/* The empty slot for the unset option keeps every label in the list on one line. */}
-                {swatches ? (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'size-2.5 shrink-0 rounded-full',
-                      swatches[option] ?? 'bg-transparent',
-                    )}
-                  />
-                ) : null}
-                <span className={cn('w-full', preview && textStylePreview(setting.key, option))}>
-                  {options[option] ?? 'Default'}
-                </span>
-              </>
-            );
-            return (
-              <div key={setting.key} className="grid gap-1">
-                <span className="text-xs text-muted-foreground">{setting.label}</span>
-                <Select
-                  value={value?.[setting.key] ?? ''}
-                  onValueChange={(selected) => update(setting.key, selected)}
-                >
-                  <SelectTrigger
-                    aria-label={`${legend}: ${setting.label.toLowerCase()}`}
-                    className="w-full"
-                  >
-                    {/* The trigger stays at the control's own size so the two columns keep an even
-                      height. Only the options preview themselves. */}
-                    <SelectValue>
-                      {(selected: string | null) => optionContent(selected ?? '', false)}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="min-w-40" align="start" alignItemWithTrigger={false}>
-                    <SelectGroup>
-                      <SelectItem value="">{optionContent('', false)}</SelectItem>
-                      {Object.keys(options).map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {optionContent(option, true)}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-            );
-          })}
+        {titleStyleFields.flatMap((setting) => {
+          const icons: Record<string, LucideIcon> | undefined =
+            'icons' in setting ? setting.icons : undefined;
+          const selected = value?.[setting.key];
+          const group = (
+            <div
+              key={setting.key}
+              className={cn('grid gap-1', 'fullWidth' in setting && 'col-span-2')}
+            >
+              <span className="text-xs text-muted-foreground">{setting.label}</span>
+              {/* Pressing the selected option again unsets the property, back to the app default. */}
+              <ToggleGroup
+                aria-label={`Title style: ${setting.label.toLowerCase()}`}
+                variant="outline"
+                spacing={0}
+                className="w-full"
+                value={selected ? [selected] : []}
+                onValueChange={([next]) => update({ [setting.key]: next })}
+              >
+                {Object.entries(setting.options).map(([option, name]) => {
+                  const Icon = icons?.[option];
+                  return (
+                    <ToggleGroupItem
+                      key={option}
+                      value={option}
+                      aria-label={name}
+                      title={name}
+                      className="min-w-0 flex-1 px-0"
+                    >
+                      {Icon ? (
+                        <Icon aria-hidden="true" />
+                      ) : (
+                        <span className={textStylePreview(setting.key, option)}>Aa</span>
+                      )}
+                    </ToggleGroupItem>
+                  );
+                })}
+              </ToggleGroup>
+            </div>
+          );
+          return setting.key === 'size' ? [group, formatGroup] : [group];
+        })}
       </div>
     </Field>
   );

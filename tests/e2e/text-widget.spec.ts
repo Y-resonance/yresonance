@@ -39,6 +39,33 @@ async function openTextWidget(page: Page, document: string, entry = '/dashboards
   return { state, widget, editor };
 }
 
+// Saves through a setting other than the text, which sends the widget's whole definition.
+async function saveWidgetAppearance(page: Page) {
+  const radius = page.getByRole('complementary').getByLabel('Style: border radius');
+  await radius.fill('20');
+  await radius.press('Enter');
+}
+
+test('a bold text style from a tool reaches headings, which are semibold by default', async ({
+  page,
+}) => {
+  const state = await mockYresonanceApi(page, { role: 'editor' });
+  state.dashboard.pages[0]!.widgets.push({
+    id: 'w_notes',
+    layout: { x: 0, y: 7, width: 6, height: 3 },
+    definition: {
+      type: 'text',
+      content: { schemaVersion: 'markdown-v1', document: '## Heading' },
+      textStyle: { weight: 'bold' },
+    },
+    definitionHash: 'hash_notes',
+  });
+  await page.goto('/dashboards/dash_demo');
+  await expect(
+    page.locator('[data-widget-id="w_notes"]').getByRole('heading', { name: 'Heading' }),
+  ).toHaveCSS('font-weight', '700');
+});
+
 test('editors format text and add links in the inspector', async ({ page }) => {
   const state = await mockYresonanceApi(page, { role: 'editor' });
   state.dashboard.pages[0]!.widgets.push({
@@ -67,9 +94,12 @@ test('editors format text and add links in the inspector', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.press('Enter');
   await page.keyboard.type('Budget ');
-  await settings.getByRole('button', { name: 'Bold' }).click();
+  const toolbarBold = settings
+    .getByRole('group', { name: 'Text formatting' })
+    .getByRole('button', { name: 'Bold' });
+  await toolbarBold.click();
   await page.keyboard.type('up');
-  await settings.getByRole('button', { name: 'Bold' }).click();
+  await toolbarBold.click();
   await page.keyboard.type(', see ');
   await settings.getByRole('button', { name: 'Link' }).click();
   await page.getByLabel('Link URL').fill('javascript:alert(1)');
@@ -196,7 +226,11 @@ test('text saves after a pause in typing, without leaving the editor', async ({ 
   await expect(editor).toBeFocused();
 
   // Saving neither moves the cursor nor interrupts the toolbar.
-  await page.getByRole('complementary').getByRole('button', { name: 'Bold' }).click();
+  await page
+    .getByRole('complementary')
+    .getByRole('group', { name: 'Text formatting' })
+    .getByRole('button', { name: 'Bold' })
+    .click();
   await page.keyboard.type(' two');
   await expect.poll(() => documents.at(-1)).toBe('Old one **two**');
   await expect(editor).toBeFocused();
@@ -298,10 +332,9 @@ test('a refresh landing during a newer save does not undo it, even if the next r
   await expect(widget).toContainText('Old one two');
   await expect(editor).toContainText('Old one two');
 
-  // Changing a style saves the whole definition, which must hold the newest text.
+  // Changing the appearance saves the whole definition, which must hold the newest text.
   const saves = documents.length;
-  await page.getByRole('complementary').getByRole('combobox', { name: 'Size' }).click();
-  await page.getByRole('option').nth(1).click();
+  await saveWidgetAppearance(page);
   await expect.poll(() => documents.length).toBe(saves + 1);
   expect(documents.at(-1)).toBe('Old one two');
 
@@ -401,8 +434,7 @@ test('a stale refresh does not bring back older text when the next refresh fails
 
   // The save has finished, so this must not save the stale refresh's older text.
   const saves = documents.length;
-  await page.getByRole('complementary').getByRole('combobox', { name: 'Size' }).click();
-  await page.getByRole('option').nth(1).click();
+  await saveWidgetAppearance(page);
   await expect.poll(() => documents.length).toBe(saves + 1);
   expect(documents.at(-1)).toBe('Old one two');
   await editor.click();
@@ -636,10 +668,9 @@ test('a save that fails because someone else changed the text loads their change
   await expect(widget).toContainText('Agent text');
   await expect(editor).toContainText('Old written');
 
-  // A style change sends the whole definition, which now holds the other writer's text.
+  // An appearance change sends the whole definition, which now holds the other writer's text.
   const saves = documents.length;
-  await page.getByRole('complementary').getByRole('combobox', { name: 'Size' }).click();
-  await page.getByRole('option').nth(1).click();
+  await saveWidgetAppearance(page);
   await expect.poll(() => documents.length).toBe(saves + 1);
   expect(documents.at(-1)).toBe('Agent text');
 });

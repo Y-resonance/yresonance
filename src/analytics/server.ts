@@ -9,6 +9,7 @@ import type { WidgetDefinition } from '#/domain/schema';
 import { markdownFeatures } from '#/domain/text-content';
 import { analyticsConfig } from './config.server';
 import { sanitizeAnalyticsProperties } from './config';
+import { appearanceFieldNames } from '#/domain/appearance';
 
 export function trackApiRequest(options: Parameters<typeof exportApiRequest>[0]) {
   try {
@@ -92,6 +93,14 @@ function exportApiRequest({
     ...(input?.action === 'registerDatasource'
       ? { datasource_provider: input.provider ?? input.backend ?? 'duckdb-file' }
       : {}),
+    // Which styling options people use: theme fields set on save, and per-widget overrides.
+    ...(input?.action === 'updateDashboard' && input.theme
+      ? { theme_fields: appearanceFieldNames(input.theme) }
+      : {}),
+    ...((input?.action === 'addWidget' || input?.action === 'updateWidget') &&
+    input.definition.appearance
+      ? { appearance_fields: appearanceFieldNames(input.definition.appearance) }
+      : {}),
     ...(input?.action === 'addWidget' || input?.action === 'updateWidget'
       ? widgetProperties(input.definition)
       : {}),
@@ -136,10 +145,18 @@ function exportApiRequest({
 // Widget writes record their type; text widgets also whether they use links or formatting, to
 // see whether rich text gets adopted. Never the text itself.
 function widgetProperties(definition: WidgetDefinition) {
-  if (definition.type !== 'text') return { widget_type: definition.type };
+  const style =
+    definition.type === 'text'
+      ? definition.textStyle
+      : 'titleStyle' in definition
+        ? definition.titleStyle
+        : undefined;
+  const styles = style ? { text_style_fields: appearanceFieldNames(style) } : {};
+  if (definition.type !== 'text') return { widget_type: definition.type, ...styles };
   const features = markdownFeatures(definition.content.document);
   return {
     widget_type: definition.type,
+    ...styles,
     text_has_links: features.hasLinks,
     text_has_formatting: features.hasFormatting,
   };

@@ -11,7 +11,8 @@ GUI go through one validated path. Ids the page already knows, like the open das
 filled in by the page and removed from the schema the agent sees. The registered action,
 dashboard ID, and share context are fixed by the page even when tool arguments contain those keys.
 
-Tools by page, read-only first, then writes:
+Tools by page, read-only first, then writes. Dashboard settings registers the same tools as the
+dashboard editor, so an agent can set the theme from either page:
 
 - Dashboards list: `listDashboards`, `listLibraryMetrics`. Writes: `createDashboard`,
   `updateDashboard`, `duplicateDashboard`, `shareDashboard`, `deleteDashboard`.
@@ -55,6 +56,12 @@ Placements may overlap; later widgets on a page paint on top. `moveWidget` and e
 entry accept `stacking: 'front' | 'back'` to move a widget to the top or bottom of that order. A
 widget moved to another page lands on top.
 View tools on shared links and viewer grants can read and query only published pages.
+
+Styling goes through the same generic writes. `updateDashboard` takes a `theme` that replaces the
+stored one (`{}` clears it): `brandColor`, `canvasBackground`, `chartPalette` (`brand` derives the
+series colours from `brandColor`), and `widgetDefaults`. Every widget definition takes an optional
+`appearance` with the same fields as `widgetDefaults`, and each field it sets wins over the theme.
+Colours are `theme:brand`, `theme:surface`, `theme:muted`, `theme:foreground`, or `#rrggbb`.
 
 Text widgets take Markdown in `content.document` with `schemaVersion: "markdown-v1"`: headings,
 bold, italic, bullet and numbered lists, links, and horizontal rules. Links must use https: or

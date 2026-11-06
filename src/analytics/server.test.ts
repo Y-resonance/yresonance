@@ -140,6 +140,27 @@ describe('server analytics delivery', () => {
     },
   );
 
+  it('records which theme fields a dashboard save sets', async () => {
+    trackApiRequest({
+      request: new Request('https://yresonance.com/api/yresonance'),
+      input: {
+        action: 'updateDashboard',
+        dashboardId: 'dash_123',
+        theme: { brandColor: '#7c3aed', widgetDefaults: { borderWidth: 0 } },
+      },
+      userId: 'user_authenticated',
+      status: 200,
+      durationMs: 1,
+    });
+    await Promise.all(state.pending);
+
+    const batch = requests.find((request) => request.url.startsWith('/batch/'));
+    expect(JSON.parse(batch!.body).batch[0].properties.theme_fields).toEqual([
+      'brandColor',
+      'widgetDefaults.borderWidth',
+    ]);
+  });
+
   it('reports text widget formatting without the text itself', async () => {
     trackApiRequest({
       request: new Request('https://yresonance.com/api/yresonance'),
@@ -153,6 +174,7 @@ describe('server analytics delivery', () => {
             schemaVersion: 'markdown-v1',
             document: 'Read the [secret plan](https://x.io)',
           },
+          textStyle: { size: 'lg', italic: true },
         },
       },
       userId: 'user_authenticated',
@@ -167,6 +189,7 @@ describe('server analytics delivery', () => {
       widget_type: 'text',
       text_has_links: true,
       text_has_formatting: false,
+      text_style_fields: ['size', 'italic'],
     });
     expect(JSON.stringify(requests)).not.toContain('secret plan');
   });

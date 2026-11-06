@@ -34,6 +34,18 @@ describe('WebMCP input schemas', () => {
     expect(bytes).toBeLessThan(48 * 1024);
   });
 
+  it('keeps schema shapes while compacting descriptor noise', () => {
+    const widget = JSON.stringify(inputSchemaFor('addWidget', { dashboardId: 'dashboard' }));
+    const { definitions } = JSON.parse(widget) as { definitions: Record<string, unknown> };
+    for (const [, name] of widget.matchAll(/"\$ref":"#\/definitions\/([^"]+)"/g))
+      expect(definitions).toHaveProperty([name!]);
+    expect(widget).toContain('"format":"date"');
+    expect(widget).not.toContain('"pattern":"^(?:(?:');
+    expect(widget).toContain('"pattern":"^#[0-9a-f]{6}$"');
+    const location = inputSchemaFor('registerDatasource').properties as Record<string, unknown>;
+    expect(JSON.stringify(location.location)).toContain('"format":{"type":"string"');
+  });
+
   it('derives viewer query inputs without exposing SQL or datasource locations', () => {
     const schema = inputSchemaFor('queryWidget', {
       dashboardId: 'dashboard',
