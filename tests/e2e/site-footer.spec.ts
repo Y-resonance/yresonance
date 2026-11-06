@@ -22,6 +22,11 @@ for (const title of ['Privacy', 'Terms']) {
     await expect(page).toHaveTitle(`${title} | yresonance`);
     await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+
+    // Crawlers read the server's HTML, which the click above never requested.
+    const served = await page.request.get(page.url());
+    expect(served.ok()).toBe(true);
+    expect(await served.text()).toMatch(/<meta name="robots" content="noindex"/);
   });
 }
 
