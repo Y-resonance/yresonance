@@ -1,4 +1,7 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
@@ -146,6 +149,45 @@ describe('cascading foreign key migration', () => {
       expect(after[table]).toEqual(
         removedTables.some((removed) => removed === table) ? records.slice(1) : records,
       );
+    }
+  });
+});
+
+// `db:migrate:check` and every deploy trust Wrangler to find the migrations. Its exit code stays 0
+// when it finds none, so check what it recorded. Runs against a throwaway local database.
+describe('wrangler d1 migrations', () => {
+  test('apply records every migration in drizzle/', { timeout: 120_000 }, () => {
+    const persistTo = mkdtempSync(join(tmpdir(), 'yresonance-d1-migrations-'));
+    const wrangler = (...args: string[]) =>
+      execFileSync(
+        'node_modules/.bin/wrangler',
+        ['d1', ...args, '--local', '--persist-to', persistTo],
+        {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+          env: {
+            ...process.env,
+            CI: '1',
+            CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false',
+            WRANGLER_SEND_METRICS: 'false',
+          },
+        },
+      );
+
+    try {
+      wrangler('migrations', 'apply', 'DB');
+      const [{ results }] = JSON.parse(
+        wrangler(
+          'execute',
+          'DB',
+          '--json',
+          '--command',
+          'SELECT name FROM d1_migrations ORDER BY id',
+        ),
+      );
+      expect(results).toEqual(migrationFiles.map((name) => ({ name })));
+    } finally {
+      rmSync(persistTo, { recursive: true, force: true });
     }
   });
 });
