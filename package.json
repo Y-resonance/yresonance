@@ -101,7 +101,7 @@
     "@vitejs/plugin-react": "6.2.1",
     "drizzle-kit": "^0.31.10",
     "oxc-transform-react": "^0.157.0",
-    "oxfmt": "0.76.0",
+    "oxfmt": "0.77.0",
     "oxlint": "1.92.0",
     "tailwindcss": "4.3.4",
     "typescript": "7.0.2",
