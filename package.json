@@ -88,7 +88,7 @@
   },
   "devDependencies": {
     "@clerk/testing": "^2.2.31",
-    "@cloudflare/vite-plugin": "1.68.0",
+    "@cloudflare/vite-plugin": "1.69.0",
     "@cloudflare/vitest-plugin": "^1.4.12",
     "@duckdb/node-api": "^1.5.5-r.4",
     "@playwright/test": "^1.58.2",
@@ -108,7 +108,7 @@
     "vite": "8.3.7",
     "vite-imagetools": "^12.0.1",
     "vitest": "5.1.0",
-    "wrangler": "4.160.0"
+    "wrangler": "4.160.1"
   },
   "packageManager": "bun@1.4.4"
 }
