@@ -1,3 +1,5 @@
+import { writeFileSync } from 'node:fs';
+import { experimental_readRawConfig } from 'wrangler';
 import { fileURLToPath } from 'node:url';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
@@ -27,10 +29,28 @@ function resolveDevPort(value: string | undefined) {
   return port;
 }
 
-if (process.env.CLOUDFLARE_ENV === 'preview' && !process.env.HYPERDRIVE_PREVIEW_ID)
-  throw new Error(
-    'Set HYPERDRIVE_PREVIEW_ID to the shared preview Hyperdrive configuration before building.',
+let workerConfigPath = process.env.YRESONANCE_PREVIEW_CONFIG;
+if (process.env.CLOUDFLARE_ENV === 'preview') {
+  const id = process.env.HYPERDRIVE_PREVIEW_ID;
+  if (!id || !/^[a-f0-9]{32}$/u.test(id))
+    throw new Error(
+      'Set HYPERDRIVE_PREVIEW_ID to the shared preview Hyperdrive configuration before building.',
+    );
+  // The plugin merges binding arrays from its config callback. Resolve the raw binding before
+  // loading it instead, so the shared build contains exactly one HYPERDRIVE binding.
+  const { rawConfig } = experimental_readRawConfig({ config: 'wrangler.jsonc' });
+  workerConfigPath = '.wrangler-shared-preview.json';
+  writeFileSync(
+    workerConfigPath,
+    JSON.stringify({
+      ...rawConfig,
+      env: {
+        ...rawConfig.env,
+        preview: { ...rawConfig.env?.preview, hyperdrive: [{ binding: 'HYPERDRIVE', id }] },
+      },
+    }),
   );
+}
 
 export default defineConfig(({ command, mode }) => ({
   build: {
@@ -70,14 +90,9 @@ export default defineConfig(({ command, mode }) => ({
     fileDataPlugin(),
     queryEnginePlugin(),
     cloudflare({
-      ...(process.env.YRESONANCE_PREVIEW_CONFIG
-        ? { configPath: process.env.YRESONANCE_PREVIEW_CONFIG }
-        : {}),
+      ...(workerConfigPath ? { configPath: workerConfigPath } : {}),
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
-        ...(command === 'build' && process.env.CLOUDFLARE_ENV === 'preview'
-          ? { hyperdrive: [{ binding: 'HYPERDRIVE', id: process.env.HYPERDRIVE_PREVIEW_ID! }] }
-          : {}),
         vars: {
           ...config.vars,
           POSTHOG_ENABLED: process.env.POSTHOG_ENABLED ?? config.vars?.POSTHOG_ENABLED ?? 'false',

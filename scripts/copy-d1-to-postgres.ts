@@ -30,6 +30,7 @@ const tables = [
   schema.dashboardGrants,
   schema.shareLinks,
   schema.dashboardAssets,
+  schema.queryReadBudgets,
 ];
 try {
   await target.connect();
@@ -52,6 +53,10 @@ try {
       if ((maximum !== null && maximum > 2147483647) || (minimum !== null && minimum < -2147483648))
         throw new Error(`${config.name}.${column.name} exceeds Postgres integer range`);
       console.log(`${config.name}.${column.name}: min=${minimum}, max=${maximum}`);
+    }
+    if (table === schema.queryReadBudgets) {
+      console.log('query_read_budgets: integer range checked; in-flight rows skipped');
+      continue;
     }
     const decoded = records.map((record) =>
       Object.fromEntries(

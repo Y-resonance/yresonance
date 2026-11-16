@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { database } from './server/database.server';
 
 const testState = vi.hoisted(() => ({
   handler: vi.fn<() => void>(),
@@ -29,4 +30,8 @@ describe('QueryEngineContainer', () => {
     ]);
     expect(Object.hasOwn(QueryEngineContainer, 'outboundByHost')).toBe(false);
   });
+});
+
+it('database access outside an invocation fails before opening a connection', () => {
+  expect(() => database()).toThrow('database() requires an invocation scope.');
 });

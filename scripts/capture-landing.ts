@@ -8,7 +8,7 @@
  *   bun run dev                     # in another shell, or set YRESONANCE_BASE_URL
  *   bun run scripts/capture-landing.ts
  *
- * Every run creates a fresh datasource and dashboard in the local workspace; the local Postgres database is
+ * Every run creates a fresh datasource and dashboard in the local workspace; the local D1 file is
  * scratch state, so nothing cleans up after it.
  */
 import { chromium, type Browser, type Page } from '@playwright/test';

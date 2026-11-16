@@ -7,6 +7,8 @@ import { previewClickhouseDatabase } from '../../scripts/preview-config';
 const url =
   process.env.TEST_DATABASE_URL ??
   'postgres://yresonance:yresonance@localhost:5432/yresonance_test';
+if (!new URL(url).pathname.endsWith('_test'))
+  throw new Error('Provisioning tests require a dedicated _test database.');
 const branches: string[] = [];
 const configurations: Array<{
   id: string;
@@ -16,7 +18,7 @@ const configurations: Array<{
   origin_connection_limit: number;
 }> = [];
 const api = async (path: string, method = 'GET', body?: unknown) => {
-  if (method === 'GET') return configurations;
+  if (method === 'GET') return structuredClone(configurations);
   if (method === 'POST') {
     const config = {
       ...(body as Omit<(typeof configurations)[number], 'id'>),
@@ -42,7 +44,14 @@ afterEach(async () => {
 test('prepare retries preserve rows and cleanup forcibly closes pooled connections after removing Hyperdrive', async () => {
   process.env.POSTGRES_PREVIEW_URL = url;
   process.env.POSTGRES_PREVIEW_RUNTIME_PASSWORD = 'preview-test-only';
-  const branch = await prepare();
+  const branch = `postgres-test-${crypto.randomUUID()}`;
+  branches.push(branch);
+  const ids = await Promise.all([
+    managePreviewPostgres('prepare', branch, api),
+    managePreviewPostgres('prepare', branch, api),
+  ]);
+  expect(ids[0]).toBe(ids[1]);
+  expect(configurations).toHaveLength(1);
   const config = configurations[0]!;
   expect(config).toMatchObject({
     caching: { disabled: true },

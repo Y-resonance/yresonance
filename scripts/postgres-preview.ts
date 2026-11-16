@@ -24,8 +24,6 @@ export async function managePreviewPostgres(
 ) {
   const database = previewClickhouseDatabase(branch);
   const name = `yresonance-postgres-${database.slice('yresonance_preview_'.length)}`;
-  const configs = configurationsSchema.parse(await api('/hyperdrive/configs'));
-  const config = configs.find((item) => item.name === name);
   const url = process.env.POSTGRES_PREVIEW_URL;
   if (!url)
     throw new PreviewProvisioningError(
@@ -36,6 +34,8 @@ export async function managePreviewPostgres(
     await admin.connect();
     // Serialize prepare/cleanup across builds, including capacity checks and partial retries.
     await admin.query("SELECT pg_advisory_lock(hashtext('yresonance-preview-provisioning'))");
+    const configs = configurationsSchema.parse(await api('/hyperdrive/configs'));
+    const config = configs.find((item) => item.name === name);
     if (action === 'cleanup') {
       // Delete the pool before forcibly closing its origin connections.
       if (config) await api(`/hyperdrive/configs/${config.id}`, 'DELETE');
