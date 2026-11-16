@@ -963,7 +963,7 @@ async function replacementFixture() {
     name: 'Replace sales',
     location,
     connection: { authorizationId: grant.id },
-  })) as DataSourceRecord;
+  })) as DataSourceRecord & { fields: Array<{ id: string; columnName: string }> };
   return { owner, grant, source };
 }
 
@@ -978,13 +978,27 @@ test.each(['unreadable', 'missing'])(
       location,
       connection: { authorizationId: grant.id },
     })) as DataSourceRecord;
-    const originalGrant = await database().query.datasourceAuthorizations.findFirst({
-      where: eq(datasourceAuthorizations.id, grant.id),
-    });
     const siblingConnection = await database().query.datasourceConnections.findFirst({
       where: eq(datasourceConnections.datasourceId, sibling.id),
     });
-    const dashboard = await createDashboard(source.id);
+    const dashboard = await createDashboard('Sales dashboard');
+    await addWidget(dashboard.id, {
+      type: 'scorecard',
+      title: 'Revenue',
+      dataSourceId: source.id,
+      dateRangeFieldId: source.fields.find((field) => field.columnName === 'day')!.id,
+      metric: {
+        source: {
+          kind: 'field',
+          fieldId: source.fields.find((field) => field.columnName === 'revenue')!.id,
+          aggregation: 'sum',
+        },
+        dataType: 'number',
+      },
+    });
+    const originalGrant = await database().query.datasourceAuthorizations.findFirst({
+      where: eq(datasourceAuthorizations.id, grant.id),
+    });
     const originalDashboard = await database().query.dashboards.findFirst({
       where: eq(dashboards.id, dashboard.id),
     });
