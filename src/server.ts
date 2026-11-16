@@ -5,12 +5,15 @@ import { searchDiscoveryResponse } from './search-discovery';
 import { handleResetRequest } from './reset.server';
 import { trackApiRequest } from './analytics/server';
 import { proxyAnalyticsRequest } from './analytics/proxy.server';
+import { maintenanceResponse } from './maintenance';
 
 export { QueryEngineContainer } from './query-engine-container';
 export { ContainerProxy } from '@cloudflare/containers';
 
 export default createServerEntry({
   async fetch(request) {
+    const maintenance = maintenanceResponse(request, env.MAINTENANCE_MODE);
+    if (maintenance) return maintenance;
     return withDatabaseScope(env.HYPERDRIVE.connectionString, async () => {
       const discoveryResponse = searchDiscoveryResponse(request, env.APP_ENV);
       if (discoveryResponse) return discoveryResponse;
