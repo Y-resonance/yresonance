@@ -29,8 +29,8 @@ instructions. The accompanying raw files in `benchmarks/` support those measurem
 
 - `native-previews.md`: build configuration, verification, cleanup, and recovery moved into
   [the deployment guide](preview-environments.md). The one-time activation checklist is retired.
-- `d1-migrations.md`: the preflight for databases predating migration 0010 moved into
-  [development](development.md#d1-foreign-key-preflight). Dated remote database observations are retired.
+- `d1-migrations.md`: the D1 preflight retired with the Postgres port. Use
+  [the cutover runbook](postgres-cutover.md) for offline exports and verification.
 - `httpfs-proof.md`: local test instructions and the platform verification boundary moved into
   [development](development.md#query-container-http-checks); the executable proof remains in
   `container/httpfs.test.ts`.
