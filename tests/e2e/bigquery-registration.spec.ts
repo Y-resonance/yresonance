@@ -337,8 +337,89 @@ test('another member cannot manage or substitute the saved Google connection', a
   await page.goto('/datasources/src_reporting');
   await expect(page.getByText('Connected by Alice Smith', { exact: true })).toBeVisible();
   await expect(page.getByText('bob@example.test')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Replace connection', exact: true })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Google account actions' })).toBeHidden();
   await expect(
     page.getByRole('button', { name: /Connect Google account|Reconnect Google account/ }),
   ).toBeHidden();
+});
+
+test('admin can replace an unreadable Google connection after confirming the shared impact', async ({
+  page,
+}) => {
+  const state = await mockYresonanceApi(page);
+  let attempts = 0;
+  await page.route('**/api/yresonance', async (route) => {
+    const request = route.request().postDataJSON();
+    if (request.action === 'describeDatasource')
+      return route.fulfill({
+        json: {
+          ok: true,
+          data: {
+            ...state.source,
+            connectorType: 'bigquery',
+            location: {
+              kind: 'bigquery',
+              project: 'customer-project',
+              dataset: 'reporting',
+              table: 'sales',
+              location: 'EU',
+              maximumBytesBilled: '1000000000',
+            },
+            defaultCacheTtlSeconds: 300,
+          },
+        },
+      });
+    if (request.action === 'listDatasourceConnections')
+      return route.fulfill({
+        json: {
+          ok: true,
+          data: {
+            configured: true,
+            canManageCurrentConnection: false,
+            canReplaceConnection: true,
+            connectionUnavailable: true,
+            connections: [],
+          },
+        },
+      });
+    if (request.action === 'beginDatasourceConnection') {
+      attempts += 1;
+      expect(request).toEqual({
+        action: 'beginDatasourceConnection',
+        provider: 'bigquery',
+        dataSourceId: 'src_reporting',
+        replace: true,
+      });
+      return route.fulfill({
+        json: {
+          ok: true,
+          data: {
+            authorizationUrl: `${new URL(page.url()).origin}/datasources/src_reporting?consent=started`,
+          },
+        },
+      });
+    }
+    return route.fallback();
+  });
+  await page.goto('/datasources/src_reporting');
+  const replace = page.getByRole('button', { name: 'Replace connection', exact: true });
+  await expect(replace).toBeEnabled();
+  await expect(
+    page.getByText('The saved Google connection cannot be opened. Replace it to restore queries.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await replace.click();
+  expect(attempts).toBe(0);
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain(
+      'All dashboard viewers will query through the account you authorize.',
+    );
+    await dialog.accept();
+  });
+  await replace.click();
+  await expect(page).toHaveURL(/consent=started$/);
+  expect(attempts).toBe(1);
 });

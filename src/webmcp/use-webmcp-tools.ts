@@ -319,13 +319,13 @@ export function useWebMcpTools(options: WebMcpOptions) {
           {
             action: 'listDatasourceConnections',
             description:
-              'List your personal OAuth connections in this workspace and their status. Tokens are never returned. Optional dataSourceId identifies its current connection only if you own it; canManageCurrentConnection is false otherwise, with currentConnectionOwnerName showing their yresonance profile name when available.',
+              'List your personal OAuth connections in this workspace and their status. Tokens are never returned. Optional dataSourceId identifies its current connection only if you own it; canManageCurrentConnection is false otherwise, with currentConnectionOwnerName showing their yresonance profile name when available. connectionUnavailable reports an unreadable saved reference; canReplaceConnection allows workspace admins to replace it.',
             readOnly: true,
           },
           {
             action: 'beginDatasourceConnection',
             description:
-              'Start or reconnect your personal datasource authorization in this workspace. Returns an authorizationUrl for the human to open and consent. All permitted dashboard viewers use this account.',
+              'Start or reconnect your personal datasource authorization in this workspace. Returns an authorizationUrl for the human to open and consent. All permitted dashboard viewers use this account. For workspace admins, replace: true with dataSourceId creates a new personal grant and replaces only that datasource connection after consent; omit connectionId.',
             readOnly: false,
           },
           {

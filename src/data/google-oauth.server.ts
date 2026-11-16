@@ -2,9 +2,14 @@ import { env } from 'cloudflare:workers';
 import { clerkClient } from '@clerk/tanstack-react-start/server';
 import { and, eq, lt, inArray, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
-import { datasourceAuthorizations, workspaces } from '#/db/schema';
+import {
+  dataSources,
+  datasourceConnections,
+  datasourceAuthorizations,
+  workspaces,
+} from '#/db/schema';
 import { database } from '#/server/database.server';
-import { requireSession, type SessionContext } from '#/server/auth.server';
+import { requireAdmin, requireSession, type SessionContext } from '#/server/auth.server';
 import { loadDataSource } from '#/server/records.server';
 import { ApiError } from '#/server/errors';
 import { datasourceOperation } from '#/server/datasource-operations.server';
@@ -23,6 +28,9 @@ const stateSchema = z.object({
   expiresAt: z.number(),
   returnTo: z.string(),
   targetId: z.string().optional(),
+  replacement: z
+    .object({ dataSourceId: z.string(), encryptedConfig: z.string().nullable() })
+    .optional(),
 });
 const grantSchema = z.object({
   refreshToken: z.string().min(1),
@@ -156,9 +164,20 @@ async function connectionOwnerName(workspaceId: string, authorizationId: string)
 export async function listDatasourceConnections(provider: string, dataSourceId?: string) {
   oauthProvider(provider);
   const session = await requireSession();
-  const savedConnectionId = dataSourceId
-    ? (await currentAuthorizationReference(dataSourceId, session.workspace.id)).authorizationId
-    : undefined;
+  let savedConnectionId: string | undefined;
+  let connectionUnavailable = false;
+  if (dataSourceId) {
+    const source = await loadDataSource(dataSourceId, session.workspace.id);
+    oauthProvider(source.connectorType);
+    try {
+      savedConnectionId = authorizationReferenceSchema.parse(
+        await loadConnection(source),
+      ).authorizationId;
+    } catch (error) {
+      if (!(error instanceof DatasourceError || error instanceof z.ZodError)) throw error;
+      connectionUnavailable = true;
+    }
+  }
   const rows = await database()
     .select({
       id: datasourceAuthorizations.id,
@@ -182,6 +201,8 @@ export async function listDatasourceConnections(provider: string, dataSourceId?:
   const canManageCurrentConnection = !dataSourceId || Boolean(currentConnectionId);
   return {
     configured: configured(),
+    canReplaceConnection: Boolean(dataSourceId && session.isAdmin),
+    connectionUnavailable,
     connections: rows,
     currentConnectionId,
     canManageCurrentConnection,
@@ -200,7 +221,25 @@ export async function beginDatasourceConnection(
   if (request.connectionId) await requireOwnedGoogleConnection(session, request.connectionId);
   const config = configuration();
   const db = database();
-  if (request.dataSourceId) {
+  let replacement: z.infer<typeof stateSchema>['replacement'];
+  if (request.replace) {
+    requireAdmin(session);
+    if (!request.dataSourceId || request.connectionId)
+      throw new ApiError(
+        400,
+        'invalid_connection',
+        'Select a datasource to replace its connection.',
+      );
+    const source = await loadDataSource(request.dataSourceId, session.workspace.id);
+    oauthProvider(source.connectorType);
+    const connection = await db.query.datasourceConnections.findFirst({
+      where: and(
+        eq(datasourceConnections.datasourceId, source.id),
+        eq(datasourceConnections.workspaceId, session.workspace.id),
+      ),
+    });
+    replacement = { dataSourceId: source.id, encryptedConfig: connection?.encryptedConfig ?? null };
+  } else if (request.dataSourceId) {
     const reference = await currentAuthorizationReference(
       request.dataSourceId,
       session.workspace.id,
@@ -245,6 +284,7 @@ export async function beginDatasourceConnection(
       userId: session.userId,
       expiresAt: Date.now() + 600_000,
       targetId: request.connectionId,
+      replacement,
       returnTo: request.dataSourceId
         ? `/datasources/${encodeURIComponent(request.dataSourceId)}`
         : '/datasources/new?provider=bigquery',
@@ -322,6 +362,7 @@ export async function completeGoogleConnection(request: Request) {
   const targetId = state.targetId ?? state.id;
   let phase = 'exchange';
   try {
+    if (state.replacement) requireAdmin(session);
     const code = new URL(request.url).searchParams.get('code');
     if (!code) throw new Error('Consent declined.');
     const { verifier } = z
@@ -373,33 +414,85 @@ export async function completeGoogleConnection(request: Request) {
       `${state.workspaceId}/${targetId}`,
       'oauth',
     );
-    const updated = await db
-      .update(datasourceAuthorizations)
-      .set({
-        encryptedConfig,
-        account: account.email,
-        status: 'connected',
-        updatedAt: new Date().toISOString(),
-      })
-      .where(
-        and(
-          eq(datasourceAuthorizations.id, targetId),
-          eq(datasourceAuthorizations.workspaceId, state.workspaceId),
-          eq(datasourceAuthorizations.createdBy, session.userId),
-          inArray(
-            datasourceAuthorizations.status,
-            state.targetId ? ['connected', 'reconnect_required', 'disconnected'] : ['connecting'],
+    await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(datasourceAuthorizations)
+        .set({
+          encryptedConfig,
+          account: account.email,
+          status: 'connected',
+          updatedAt: new Date().toISOString(),
+        })
+        .where(
+          and(
+            eq(datasourceAuthorizations.id, targetId),
+            eq(datasourceAuthorizations.workspaceId, state.workspaceId),
+            eq(datasourceAuthorizations.createdBy, session.userId),
+            inArray(
+              datasourceAuthorizations.status,
+              state.targetId ? ['connected', 'reconnect_required', 'disconnected'] : ['connecting'],
+            ),
           ),
-        ),
-      )
-      .returning({ id: datasourceAuthorizations.id });
-    if (!updated.length) throw new Error('Connection removed.');
-    if (state.targetId)
-      await db.delete(datasourceAuthorizations).where(eq(datasourceAuthorizations.id, state.id));
+        )
+        .returning({ id: datasourceAuthorizations.id });
+      if (!updated.length) throw new Error('Connection removed.');
+      if (state.targetId)
+        await tx.delete(datasourceAuthorizations).where(eq(datasourceAuthorizations.id, state.id));
+      if (state.replacement) {
+        const { dataSourceId, encryptedConfig: previousConfig } = state.replacement;
+        const [source] = await tx
+          .select({ id: dataSources.id })
+          .from(dataSources)
+          .where(
+            and(
+              eq(dataSources.id, dataSourceId),
+              eq(dataSources.workspaceId, state.workspaceId),
+              eq(dataSources.connectorType, 'bigquery'),
+            ),
+          )
+          .for('update');
+        if (!source) throw new Error('Datasource removed.');
+        const reference = await sealConnection(
+          { authorizationId: state.id },
+          env.UPLOAD_SIGNING_SECRET,
+          `${state.workspaceId}/${dataSourceId}`,
+        );
+        // Compare the original encrypted reference without needing its old encryption key.
+        // A second consent flow must not overwrite a replacement that has already completed.
+        const saved =
+          previousConfig === null
+            ? await tx
+                .insert(datasourceConnections)
+                .values({
+                  datasourceId: dataSourceId,
+                  workspaceId: state.workspaceId,
+                  encryptedConfig: reference,
+                })
+                .onConflictDoNothing()
+                .returning({ id: datasourceConnections.datasourceId })
+            : await tx
+                .update(datasourceConnections)
+                .set({ encryptedConfig: reference })
+                .where(
+                  and(
+                    eq(datasourceConnections.datasourceId, dataSourceId),
+                    eq(datasourceConnections.workspaceId, state.workspaceId),
+                    eq(datasourceConnections.encryptedConfig, previousConfig),
+                  ),
+                )
+                .returning({ id: datasourceConnections.datasourceId });
+        if (!saved.length) throw new Error('Datasource connection changed. Start again.');
+        await tx
+          .update(dataSources)
+          .set({ version: crypto.randomUUID(), updatedAt: new Date().toISOString() })
+          .where(eq(dataSources.id, dataSourceId));
+      }
+    });
     console.info('yresonance.datasource_connection', {
       workspaceId: state.workspaceId,
       provider: 'bigquery',
-      result: 'connected',
+      result: state.replacement ? 'replaced' : 'connected',
+      dataSourceId: state.replacement?.dataSourceId,
     });
     return oauthRedirect(state.returnTo);
   } catch {

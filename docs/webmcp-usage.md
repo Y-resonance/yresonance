@@ -97,6 +97,11 @@ Permitted viewers still query shared datasources through their saved grant witho
 Beginning returns an `authorizationUrl` for a human to open and consent; tools do not perform Google
 sign-in. Registration references a completed grant with `connection: { authorizationId }`.
 Reconnect optionally takes `connectionId` and `dataSourceId` to return to the existing datasource.
+For workspace admins, `beginDatasourceConnection` also accepts `replace: true` with `dataSourceId`
+and no `connectionId`. It creates a new personal grant and replaces only that datasource's reference
+after Google consent. Listing returns `canReplaceConnection` and `connectionUnavailable`, including
+when the old reference cannot be decrypted. Replacement keeps field and dashboard IDs, invalidates
+cached results, and rejects a callback if the connection changed while consent was open.
 Disconnect stops queries for every source using that personal grant, including shared dashboards.
 
 `browseDatasource` reads connected provider metadata without running queries. For BigQuery, pass

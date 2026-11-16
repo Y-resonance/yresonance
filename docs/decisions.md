@@ -187,6 +187,11 @@ breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.
   encrypted with workspace/authorization binding. Callbacks use expiring, single-use state bound to
   the initiating Clerk user and workspace, plus PKCE. Google verifies the account's hosted domain.
   Disconnecting blocks cached results; reconnecting keeps datasource IDs and changes cache identity.
+- Workspace admins can explicitly replace one datasource's Google connection with a new personal
+  grant after confirmation and consent, even if the original reference cannot be decrypted. This
+  preserves datasource/field/dashboard IDs without transferring ownership of the old grant or
+  changing other datasources. Both OAuth endpoints enforce admin access; the callback atomically
+  saves the new grant and reference only if the original reference is unchanged.
 - Registration inspects metadata without scanning data. Nested/repeated fields require a scalar
   view. Query jobs have a configurable billed-byte ceiling, default 1 GB, a 30-second job timeout,
   and result limits of 20,000 rows / 10 MiB. Failed requests attempt cancellation; Google cancellation
