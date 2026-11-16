@@ -171,3 +171,15 @@ After deployment, create a dashboard, add a widget through both GUI and WebMCP, 
 Check the matching `product_action` and `workspace_action` events, pageviews in Web Analytics, and
 `api_request_completed` in Logs. Verify errors in Error Tracking and check that a shared URL has
 `/share/[redacted]` rather than its token. No production telemetry was sent during local verification.
+
+## Production maintenance
+
+The optional `MAINTENANCE_MODE` Worker secret stops application requests handled by the Worker
+before routing, authentication, analytics and database access. `/ready` remains available.
+Cloudflare may continue serving public build assets directly; those requests cannot access application data. Responses return 503,
+`Retry-After: 60` and `Cache-Control: no-store`.
+
+Set the secret to `1` to enable maintenance; delete it or set it to `0` or `false` to reopen.
+Changes require production authorization. Configure it with `wrangler secret put MAINTENANCE_MODE`
+and `wrangler secret delete MAINTENANCE_MODE` against the intended Worker. Secrets persist across
+normal deployments. Wait for existing requests and container work to finish before exporting data.
