@@ -34,15 +34,17 @@ Provisioning takes an advisory lock and tolerates partial retries. It refuses a 
 preview on the initial 25-connection budget and reports the separate 25-Hyperdrive account cap.
 Legacy D1 cleanup remains until the one-week retention window has passed.
 
+Use a node-postgres-compatible `POSTGRES_PREVIEW_URL` in both Workers Builds and the GitHub
+cleanup secret: set `sslmode=verify-full` and remove libpq’s `sslrootcert=system` parameter
+(Node uses its system CA store by default). Never use this admin URL in a Hyperdrive origin or
+Worker variable. Do not print database error details, which may contain credentials.
+
 Before the first build, configure:
 
 - Workers Builds preview variables: `POSTGRES_PREVIEW_URL` with the direct provisioning role
   connection on the preview branch (PlanetScale `postgres` permission), and
   `POSTGRES_PREVIEW_RUNTIME_PASSWORD` with a separate, stable runtime-role password.
-- GitHub secret `POSTGRES_PREVIEW_URL` for cleanup. Use a node-postgres-compatible URL with
-  `sslmode=verify-full`; remove libpq’s `sslrootcert=system` parameter (Node uses its system CA
-  store by default). Never use this admin URL in a Hyperdrive
-  origin or Worker variable. Do not print database error details, which may contain credentials.
+- GitHub secret `POSTGRES_PREVIEW_URL` for cleanup, using the same compatible connection URL.
 - `CLOUDFLARE_API_TOKEN` with Hyperdrive edit permission in addition to existing permissions.
 - Shared preview: provision `yresonance_preview_shared`, migrate with
   `POSTGRES_PREVIEW_SHARED_URL`, grant the same runtime role access, and create its own
