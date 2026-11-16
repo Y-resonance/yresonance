@@ -63,8 +63,7 @@ export async function handleExternalFileRequest(
       !response.headers.has('content-length') ||
       !Number.isSafeInteger(length) ||
       length < 0 ||
-      (request.method === 'GET' &&
-        !(await claimQueryReadBytes(environment.DB, read.queryId, length)))
+      (request.method === 'GET' && !(await claimQueryReadBytes(read.queryId, length)))
     ) {
       await response.body?.cancel();
       return new Response('Query read limit exceeded.', { status: 413 });

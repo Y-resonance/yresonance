@@ -159,10 +159,10 @@ export async function createDashboard(request: Extract<ApiRequest, { action: 'cr
   return document;
 }
 
-// Stores a new dashboard and grants its creator editor access in one batch.
+// Stores a new dashboard and grants its creator editor access in one transaction.
 async function insertDashboard(document: DashboardDocument) {
-  await database().batch([
-    database().insert(dashboards).values({
+  await database().transaction(async (tx) => {
+    await tx.insert(dashboards).values({
       id: document.id,
       workspaceId: document.workspaceId,
       name: document.name,
@@ -170,15 +170,15 @@ async function insertDashboard(document: DashboardDocument) {
       createdBy: document.createdBy,
       createdAt: document.createdAt,
       updatedAt: document.updatedAt,
-    }),
-    database().insert(dashboardGrants).values({
+    });
+    await tx.insert(dashboardGrants).values({
       dashboardId: document.id,
       clerkUserId: document.createdBy,
       role: 'editor',
       grantedBy: document.createdBy,
       grantedAt: document.createdAt,
-    }),
-  ]);
+    });
+  });
 }
 
 /**

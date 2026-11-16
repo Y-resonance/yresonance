@@ -26,13 +26,11 @@
       "RESET_ADMIN_TOKEN",
     ],
   },
-  "d1_databases": [
+  "hyperdrive": [
     {
-      "binding": "DB",
-      "database_name": "yresonance-app",
-      "database_id": "6cf6d365-7d3d-4965-b04f-8acaee8c19d6",
-      "preview_database_id": "906b8786-17a4-4068-98c4-c86c069d07ae",
-      "migrations_dir": "drizzle",
+      "binding": "HYPERDRIVE",
+      "id": "ccc3b5bc67314be5b8ee5ddc6a6486bd",
+      "localConnectionString": "postgres://yresonance:yresonance@localhost:5432/yresonance",
     },
   ],
   "kv_namespaces": [
@@ -123,14 +121,7 @@
           "RESET_ADMIN_TOKEN",
         ],
       },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "yresonance-app-preview",
-          "database_id": "906b8786-17a4-4068-98c4-c86c069d07ae",
-          "migrations_dir": "drizzle",
-        },
-      ],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "da428f6707c2447db29ced6da0a723b4" }],
       "kv_namespaces": [
         {
           "binding": "QUERY_CACHE",

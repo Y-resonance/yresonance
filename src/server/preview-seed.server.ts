@@ -11,7 +11,7 @@ import { recordProductMetric } from '#/observability';
 import { database, UPLOAD_CLAIM_LEASE_MS } from './database.server';
 import { seedField } from './datasource-operations.server';
 
-// Requests in one isolate share the import; D1 coordinates claims between isolates.
+// Requests in one isolate share the import; Postgres coordinates claims between isolates.
 const previewSeeds = new Map<string, Promise<void>>();
 
 export async function seedPreviewWorkspace(session: SessionContext) {
@@ -88,8 +88,8 @@ async function importPreviewExample(session: SessionContext) {
     const discovered = previewExample.description.map((column) =>
       seedField(id, column, previewExample.samples),
     );
-    await db.batch([
-      db.insert(dataSources).values({
+    await db.transaction(async (tx) => {
+      await tx.insert(dataSources).values({
         id,
         workspaceId,
         name,
@@ -98,13 +98,13 @@ async function importPreviewExample(session: SessionContext) {
         version,
         createdAt: now,
         updatedAt: now,
-      }),
-      ...discovered.map((field) => db.insert(fields).values({ ...field, workspaceId })),
-      db
+      });
+      await tx.insert(fields).values(discovered.map((field) => ({ ...field, workspaceId })));
+      await tx
         .update(workspaces)
         .set({ previewSeededAt: now, previewSeedClaimedAt: null })
-        .where(and(eq(workspaces.id, workspaceId), eq(workspaces.previewSeedClaimedAt, claim))),
-    ]);
+        .where(and(eq(workspaces.id, workspaceId), eq(workspaces.previewSeedClaimedAt, claim)));
+    });
     console.info('yresonance.preview_seed_prepared', {
       workspaceId,
       exampleEndDate: previewExample.endDate,

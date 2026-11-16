@@ -1,6 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { env } from 'cloudflare:workers';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { calculatedFields, dashboards, dataSources, fields, libraryMetrics } from '#/db/schema';
 import {
   dashboardDocumentSchema,
@@ -17,7 +16,7 @@ import type {
 } from '#/query/types';
 import { ApiError } from './errors';
 
-const db = () => createDatabase(env.DB);
+const db = database;
 
 export async function loadDashboard(id: string) {
   const row = await db().query.dashboards.findFirst({ where: eq(dashboards.id, id) });
@@ -66,14 +65,14 @@ function metadataStatements(
 
 export async function loadQueryMetadata(dataSourceId: string, workspaceId: string) {
   const database = db();
-  const rows = await database.batch([...metadataStatements(database, dataSourceId, workspaceId)]);
+  const rows = await Promise.all([...metadataStatements(database, dataSourceId, workspaceId)]);
   return parseQueryMetadata(...rows);
 }
 
-// One database trip supplies the context shared by validation, hashing and compilation.
+// Hashing and compilation share exactly the context returned by these queries.
 export async function loadQueryContext(dataSourceId: string, workspaceId: string) {
   const database = db();
-  const [sourceRows, ...metadataRows] = await database.batch([
+  const [sourceRows, ...metadataRows] = await Promise.all([
     database
       .select()
       .from(dataSources)

@@ -1,5 +1,29 @@
 # Development tasks
 
+## Local Postgres
+
+Start Postgres separately from the application:
+
+```sh
+docker compose up -d
+bun run db:migrate:local
+bun run dev
+```
+
+`bun run dev` checks connectivity and never starts a database. The default connection is
+`postgres://yresonance:yresonance@localhost:5432/yresonance`. Override the application connection
+with `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`. For a custom migration target,
+use `DATABASE_URL=<direct connection> bunx drizzle-kit migrate`.
+Compose uses Postgres 18, matching the verified PlanetScale preview branch major version.
+The named volume preserves rows across restarts. The initialization SQL creates `yresonance_test`
+on the first start; for an existing volume create that database manually once.
+
+`bun run test:integration` uses the separate `yresonance_test` database on the same service.
+`TEST_DATABASE_URL` may override it, but must name a database ending in `_test`. A global setup
+applies the baseline once before any test workers start. Tests use generated IDs and do not reset
+the database. `bun run check` remains independent of Docker. `bun run db:migrate:check` explicitly
+applies migrations to the local test database when needed.
+
 ## Local data files
 
 Upload CSV and Parquet files from the datasource registration screen or place them in
@@ -84,24 +108,18 @@ YRESONANCE_PREVIEW_URL=https://preview.example bun run reset preview
 bun run reset production
 ```
 
-Development and preview delete yresonance's D1 rows, R2 objects, and query-cache KV keys. Clerk users
+Development and preview delete yresonance's Postgres rows, R2 objects, and query-cache KV keys. Clerk users
 and organizations are outside these bindings and remain untouched. Production always returns the
-exact deletion plan and performs no deletion. Apply the committed D1 migrations before using a
+exact deletion plan and performs no deletion. Apply the committed Postgres baseline before using a
 fresh environment.
 
-## D1 foreign key preflight
+## Database migrations and cutover
 
-When initializing an older database that has not applied `0010_cascading-foreign-keys.sql`, run
-`scripts/check-d1-orphans.sql` against that database first. Once access to the target environment
-is authorized, set `CLOUDFLARE_ACCOUNT_ID` to the `account_id` in `wrangler.jsonc`, then run
-`cf d1 query <database-id> --sql "$(cat scripts/check-d1-orphans.sql)"`. Use the `database_id`
-for the authorized production or preview environment. The `cf` CLI does not select the account
-from Wrangler configuration. Every `orphan_count` must be zero. Resolve orphaned rows before
-applying the migration; the migration refuses them rather than deleting them.
-
-D1 always enables foreign keys. The migration rebuilds parents before children because dropping
-an old parent can cascade even with `PRAGMA defer_foreign_keys`. Foreign keys enforce parent
-existence; workspace filters and validation of references inside dashboard JSON remain necessary.
+Generate changes with `bun run db:generate`. Migrations use `drizzle-kit migrate` over a direct
+Postgres connection, never through Hyperdrive. Production and shared-preview migration commands
+require `POSTGRES_PRODUCTION_URL` and `POSTGRES_PREVIEW_SHARED_URL` respectively.
+See [the cutover runbook](postgres-cutover.md) for offline copying, row verification, maintenance,
+and rollback boundaries. Production migration/deployment is a separate authorized operation.
 
 ## Query container HTTP checks
 

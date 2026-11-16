@@ -2,7 +2,7 @@ import { dashboardWidgets } from '#/domain/schema';
 import type { newLibraryMetricValues } from './formulas.server';
 import { type DashboardDocument, dashboardDocumentSchema } from '#/domain/schema';
 import { dashboards, libraryMetrics } from '#/db/schema';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { ApiError } from './errors';
 import { database } from './database.server';
 
@@ -17,45 +17,21 @@ export async function persistDashboard(
     eq(dashboards.id, document.id),
     eq(dashboards.updatedAt, expectedUpdatedAt),
   );
-  const update = db
-    .update(dashboards)
-    .set({ name: document.name, document, updatedAt: document.updatedAt })
-    .where(expectedVersion)
-    .returning({ id: dashboards.id });
-  let saved;
-  if (libraryMetric) {
-    // Both statements run atomically. A stale snapshot inserts no metric and updates no dashboard.
-    const [, updated] = await db.batch([
-      db.insert(libraryMetrics).select(
-        db
-          .select({
-            id: sql<string>`${libraryMetric.id}`.as('id'),
-            workspaceId: sql<string>`${libraryMetric.workspaceId}`.as('workspaceId'),
-            name: sql<string>`${libraryMetric.name}`.as('name'),
-            canonicalName: sql<string>`${libraryMetric.canonicalName}`.as('canonicalName'),
-            expression: sql<string>`${libraryMetric.expression}`.as('expression'),
-            formulaDialect: sql<string | null>`${libraryMetric.formulaDialect}`.as(
-              'formulaDialect',
-            ),
-            semanticType: sql<string>`${libraryMetric.semanticType}`.as('semanticType'),
-            description: sql<string | null>`${libraryMetric.description}`.as('description'),
-            updatedAt: sql<string>`${libraryMetric.updatedAt}`.as('updatedAt'),
-          })
-          .from(dashboards)
-          .where(expectedVersion),
-      ),
-      update,
-    ]);
-    saved = updated;
-  } else {
-    saved = await update;
-  }
-  if (!saved.length)
-    throw new ApiError(
-      409,
-      'dashboard_conflict',
-      'This dashboard changed while saving. Reload it and retry your edit.',
-    );
+  await db.transaction(async (tx) => {
+    const saved = await tx
+      .update(dashboards)
+      .set({ name: document.name, document, updatedAt: document.updatedAt })
+      .where(expectedVersion)
+      .returning({ id: dashboards.id });
+    if (!saved.length)
+      throw new ApiError(
+        409,
+        'dashboard_conflict',
+        'This dashboard changed while saving. Reload it and retry your edit.',
+      );
+    // The update holds the row lock until the metric and dashboard commit together.
+    if (libraryMetric) await tx.insert(libraryMetrics).values(libraryMetric);
+  });
 }
 
 export function widgetById(document: DashboardDocument, widgetId: string) {

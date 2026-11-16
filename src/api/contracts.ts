@@ -218,6 +218,7 @@ export const apiRequestSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('beginDatasourceConnection'),
     provider: z.string().min(1),
+    replace: z.boolean().optional(),
     connectionId: z.string().min(1).optional(),
     dataSourceId: z.string().min(1).optional(),
   }),

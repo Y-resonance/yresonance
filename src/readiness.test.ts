@@ -9,7 +9,7 @@ import {
 
 function passingChecks(): ReadinessChecks {
   return {
-    d1: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    postgres: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     kv: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     r2: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   };
@@ -27,7 +27,7 @@ describe('readiness', () => {
       service: 'yresonance',
       status: 'ready',
       dependencies: {
-        d1: 'ok',
+        postgres: 'ok',
         kv: 'ok',
         r2: 'ok',
       },
@@ -50,7 +50,7 @@ describe('readiness', () => {
       service: 'yresonance',
       status: 'not_ready',
       dependencies: {
-        d1: 'ok',
+        postgres: 'ok',
         kv: 'ok',
         r2: 'failed',
       },

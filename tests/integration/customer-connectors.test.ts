@@ -1,7 +1,8 @@
+import { queryReadBudgets } from '#/db/schema';
 import { env } from 'cloudflare:workers';
 import { afterEach, expect, test, vi } from 'vitest';
 import { and, eq } from 'drizzle-orm';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { datasourceConnections, dataSources } from '#/db/schema';
 import type { DataSourceRecord } from '#/query/types';
 import { handleExternalFileRequest } from '#/data/external-file';
@@ -20,7 +21,7 @@ interface RegisteredSource extends DataSourceRecord {
 
 afterEach(() => vi.restoreAllMocks());
 
-// Substitute only the customer network endpoint. Registration, encryption, D1 and query compilation are real.
+// Substitute only the customer network endpoint. Registration, encryption, Postgres and query compilation are real.
 test('customer ClickHouse credentials survive registration, remain private, and stay workspace-scoped', async () => {
   const original = globalThis.fetch;
   const requests: Array<{ url: string; headers: Headers }> = [];
@@ -55,7 +56,7 @@ test('customer ClickHouse credentials survive registration, remain private, and 
     },
     location: { kind: 'clickhouse', database: 'customer', table: 'sales', ownership: 'external' },
   })) as RegisteredSource;
-  const db = createDatabase(env.DB);
+  const db = database();
   const stored = await db.query.datasourceConnections.findFirst({
     where: eq(datasourceConnections.datasourceId, source.id),
   });
@@ -148,7 +149,7 @@ test('a failed customer inspection stores neither datasource nor connection', as
     }),
     { code: 'datasource_connector_failed', status: 502 },
   );
-  const db = createDatabase(env.DB);
+  const db = database();
   expect(
     await db
       .select()
@@ -293,17 +294,17 @@ test('external file capabilities relay ranges, enforce read budgets, and reject 
   expect(await response.text()).toBe('1234');
   expect(upstream[1]!.headers.get('range')).toBe('bytes=1-4');
   expect(
-    await env.DB.prepare('SELECT scanned_bytes FROM query_read_budgets WHERE id = ?')
-      .bind(queryId)
-      .first(),
-  ).toMatchObject({ scanned_bytes: 4 });
-  await env.DB.prepare('UPDATE query_read_budgets SET scanned_bytes = ? WHERE id = ?')
-    .bind(MAX_QUERY_SOURCE_BYTES - 3, queryId)
-    .run();
+    await database().query.queryReadBudgets.findFirst({ where: eq(queryReadBudgets.id, queryId) }),
+  ).toMatchObject({ scannedBytes: 4 });
+  await database()
+    .update(queryReadBudgets)
+    .set({ scannedBytes: MAX_QUERY_SOURCE_BYTES - 3 })
+    .where(eq(queryReadBudgets.id, queryId));
   expect((await get()).status).toBe(413);
-  await env.DB.prepare('UPDATE query_read_budgets SET scanned_bytes = 0 WHERE id = ?')
-    .bind(queryId)
-    .run();
+  await database()
+    .update(queryReadBudgets)
+    .set({ scannedBytes: 0 })
+    .where(eq(queryReadBudgets.id, queryId));
   body = '12345';
   await expect((await get()).text()).rejects.toThrow(
     'Storage response exceeded its declared length.',

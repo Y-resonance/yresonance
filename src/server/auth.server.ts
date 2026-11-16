@@ -1,7 +1,6 @@
 import { auth } from '@clerk/tanstack-react-start/server';
 import { eq } from 'drizzle-orm';
-import { env } from 'cloudflare:workers';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { workspaces } from '#/db/schema';
 import { ApiError } from './errors';
 
@@ -33,7 +32,7 @@ export async function requireIdentity() {
 
 export async function requireSession(): Promise<SessionContext> {
   const identity = await requireIdentity();
-  const workspace = await createDatabase(env.DB).query.workspaces.findFirst({
+  const workspace = await database().query.workspaces.findFirst({
     where: eq(workspaces.clerkOrganizationId, identity.orgId),
   });
   return workspaceSession(identity, workspace);
@@ -43,7 +42,7 @@ export async function workspaceSession(
   identity: Awaited<ReturnType<typeof requireIdentity>>,
   workspace: typeof workspaces.$inferSelect | undefined,
 ): Promise<SessionContext> {
-  const db = createDatabase(env.DB);
+  const db = database();
   if (!workspace) {
     const id = `ws_${crypto.randomUUID()}`;
     await db

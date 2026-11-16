@@ -1,7 +1,8 @@
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { env } from 'cloudflare:workers';
 import { afterEach, expect, test, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { dataSources, datasourceUploads } from '#/db/schema';
 import type { DataSourceRecord } from '#/query/types';
 import { callService, signInToNewWorkspace } from './fixtures';
@@ -13,7 +14,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Real service, D1 claims, and R2 staging; only the two engine transports are substituted.
+// Real service, Postgres claims, and R2 staging; only the two engine transports are substituted.
 test.each([
   { backend: 'duckdb', format: 'csv' },
   { backend: 'duckdb', format: 'parquet' },
@@ -86,11 +87,11 @@ test.each([
       location: { kind: 'object', key: upload.key, format },
     };
     const failedRegistration = vi
-      .spyOn(env.DB, 'batch')
+      .spyOn(NodePgDatabase.prototype, 'transaction')
       .mockRejectedValueOnce(new Error('Registration unavailable'));
     await expect(callService(request)).rejects.toThrow('Registration unavailable');
     failedRegistration.mockRestore();
-    const db = createDatabase(env.DB);
+    const db = database();
     expect(await env.DATA.get(upload.key)).not.toBeNull();
     expect((await env.DATA.get(convertedKey)) !== null).toBe(format === 'parquet');
     expect(tables.size).toBe(0);

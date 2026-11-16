@@ -8,10 +8,21 @@ access or R2 credentials.
 Editors register uploaded or existing CSV and Parquet files from tenant-scoped R2 prefixes.
 ClickHouse is also available for managed uploads and authorized external tables. See
 [ClickHouse setup and freshness](clickhouse.md) for server configuration. Auth is
-Clerk, with workspaces mapped to Clerk organizations. Application data lives in D1 with Drizzle.
-Signed dashboard requests batch the dashboard and workspace reads. Widget creation and updates
-load datasource metadata once, then reuse it for validation, hashing, and SQL compilation before
-the conditional dashboard save. Query execution batches datasource and metadata reads too.
+Clerk, with workspaces mapped to Clerk organizations. Application data lives in Postgres with
+Drizzle. Cloudflare reaches PlanetScale Postgres in Frankfurt through Hyperdrive, with query
+caching disabled. Local development uses the separately started Compose Postgres service.
+`database()` lazily creates one node-postgres client per AsyncLocalStorage invocation scope and
+throws outside a scope. Worker fetch scopes stay alive for streaming work; container outbound
+scopes close their clients in `finally`, because Durable Objects outlive requests. Clients never
+live on a Durable Object instance or at module scope.
+
+Read batches become ordinary queries and may observe concurrent metadata changes. Validation,
+hashing and compilation reuse exactly the returned context. Multi-statement writes use
+transactions. Dashboard saves update the expected version first and hold that row lock until an
+optional library metric is inserted; a stale save raises the existing conflict without a metric.
+Timestamps and IDs remain text; four JSON columns use jsonb and `fields.hidden` uses boolean.
+Sample values remove NUL and lone surrogates before storage.
+
 Builder refreshes request `getDashboard` with `includeSharing: false` to avoid Clerk directory
 lookups; initial loads and sharing changes retain the default sharing payload.
 

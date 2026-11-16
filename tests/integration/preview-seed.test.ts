@@ -1,14 +1,15 @@
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { dataSources, workspaces } from '#/db/schema';
 import { queryEngine } from './doubles/query-engine';
 import { callService, seedDataSource, signInToNewWorkspace, withR2Storage } from './fixtures';
 
 const bindings = env as unknown as Record<string, string>;
 const originalEnvironment = bindings.APP_ENV;
-const db = createDatabase(env.DB);
+const db = () => database();
 
 interface Bootstrap {
   workspace: { id: string };
@@ -56,12 +57,12 @@ describe('preview example datasource', () => {
       const objects = await env.DATA.list({ prefix: workspace.r2Prefix });
       expect(objects.objects).toHaveLength(1);
       expect(objects.objects[0]!.key).toMatch(/\.parquet$/u);
-      await db
+      await db()
         .update(dataSources)
         .set({ name: 'My campaigns' })
         .where(eq(dataSources.id, source.id));
       expect((await bootstrap()).dataSources).toEqual([{ id: source.id, name: 'My campaigns' }]);
-      await db.delete(dataSources).where(eq(dataSources.id, source.id));
+      await db().delete(dataSources).where(eq(dataSources.id, source.id));
       expect((await bootstrap()).dataSources).toEqual([]);
       expect(queryEngine.calls).toEqual([]);
     });
@@ -75,7 +76,9 @@ describe('preview example datasource', () => {
       const put = env.DATA.put.bind(env.DATA);
       const failingOperation =
         failure === 'registration'
-          ? vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('Registration unavailable'))
+          ? vi
+              .spyOn(NodePgDatabase.prototype, 'transaction')
+              .mockRejectedValueOnce(new Error('Registration unavailable'))
           : vi.spyOn(env.DATA, 'put').mockImplementationOnce(async (...args) => {
               if (failure === 'upload acknowledgement') await put(...args);
               throw new Error('Storage unavailable');
@@ -85,11 +88,11 @@ describe('preview example datasource', () => {
         failingOperation.mockRestore();
         expect((await env.DATA.list({ prefix: workspace.r2Prefix })).objects).toEqual([]);
         expect(
-          await db.query.dataSources.findMany({
+          await db().query.dataSources.findMany({
             where: eq(dataSources.workspaceId, workspace.workspaceId),
           }),
         ).toEqual([]);
-        const state = await db.query.workspaces.findFirst({
+        const state = await db().query.workspaces.findFirst({
           where: eq(workspaces.id, workspace.workspaceId),
         });
         expect(state?.previewSeededAt).toBeNull();
@@ -102,7 +105,7 @@ describe('preview example datasource', () => {
 
   test('an active claim waits until another isolate persists its datasource', async () => {
     const workspace = await signInToNewWorkspace();
-    await db
+    await db()
       .update(workspaces)
       .set({ previewSeedClaimedAt: new Date().toISOString() })
       .where(eq(workspaces.id, workspace.workspaceId));
@@ -122,7 +125,7 @@ describe('preview example datasource', () => {
     expect(queryEngine.calls).toEqual([]);
     // Simulate the other isolate's atomic registration and completion.
     const source = await seedDataSource(workspace);
-    await db
+    await db()
       .update(workspaces)
       .set({ previewSeededAt: new Date().toISOString(), previewSeedClaimedAt: null })
       .where(eq(workspaces.id, workspace.workspaceId));
@@ -135,13 +138,13 @@ describe('preview example datasource', () => {
 
   test('an abandoned claim recovers, and another workspace gets its own example', async () => {
     const first = await signInToNewWorkspace();
-    await db
+    await db()
       .update(workspaces)
       .set({ previewSeedClaimedAt: new Date().toISOString() })
       .where(eq(workspaces.id, first.workspaceId));
     bindings.APP_ENV = 'preview';
     await withR2Storage(async () => {
-      await db
+      await db()
         .update(workspaces)
         .set({ previewSeedClaimedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() })
         .where(eq(workspaces.id, first.workspaceId));

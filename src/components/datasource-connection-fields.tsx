@@ -16,6 +16,8 @@ import { FieldDescription, FieldError, FieldLegend, FieldSet } from './ui/field'
 
 interface Connections {
   configured: boolean;
+  canReplaceConnection?: boolean;
+  connectionUnavailable?: boolean;
   currentConnectionId?: string;
   canManageCurrentConnection?: boolean;
   currentConnectionOwnerName?: string;
@@ -24,7 +26,8 @@ interface Connections {
 
 // Shows the Google account a datasource queries through. Connected accounts collapse to one line;
 // switching, reconnecting and disconnecting live in a menu. Without an account, only the connect
-// button and the reason it matters are shown.
+// button and the reason it matters are shown. Admins can replace a datasource reference even when
+// its saved connection cannot be opened.
 export function DatasourceConnectionFields({
   provider,
   value,
@@ -59,14 +62,23 @@ export function DatasourceConnectionFields({
     value ??
     connections.find((entry) => entry.status === 'connected')?.id ??
     connections[0]?.id;
-  const selected = connections.find((entry) => entry.id === selectedId);
+  const selected = connections.find(
+    (entry) => entry.id === (dataSourceId ? query.data?.currentConnectionId : selectedId),
+  );
   const connected = selected?.status === 'connected';
   const others = connections.filter((entry) => entry.id !== selectedId);
   useEffect(() => {
     if (onChange) onChange(connected ? (selectedId ?? '') : '');
   }, [onChange, selectedId, connected]);
 
-  async function connect(connectionId?: string) {
+  async function connect(connectionId?: string, replace?: boolean) {
+    if (
+      replace &&
+      !window.confirm(
+        'Replace this datasource’s Google connection? All dashboard viewers will query through the account you authorize. Other datasources keep their connections.',
+      )
+    )
+      return;
     setBusy(true);
     setError(undefined);
     try {
@@ -75,6 +87,7 @@ export function DatasourceConnectionFields({
         provider,
         connectionId,
         dataSourceId,
+        ...(replace ? { replace: true } : {}),
       });
       window.location.assign(result.authorizationUrl);
     } catch (caught) {
@@ -102,13 +115,36 @@ export function DatasourceConnectionFields({
     }
   }
   const configured = Boolean(query.data?.configured);
+  const replaceButton = query.data?.canReplaceConnection ? (
+    <Button
+      type="button"
+      variant="outline"
+      className="w-fit"
+      disabled={busy || !configured}
+      onClick={() => void connect(undefined, true)}
+    >
+      <GoogleIcon data-icon="inline-start" />
+      {busy ? 'Connecting...' : 'Replace connection'}
+    </Button>
+  ) : null;
   if (dataSourceId && query.data?.canManageCurrentConnection === false)
     return (
       <FieldSet>
         <FieldLegend variant={heading.variant}>{heading.text}</FieldLegend>
         <FieldDescription>
-          Connected by {query.data.currentConnectionOwnerName ?? 'a workspace member'}
+          {query.data.connectionUnavailable
+            ? query.data.canReplaceConnection
+              ? 'The saved Google connection cannot be opened. Replace it to restore queries.'
+              : 'The saved Google connection cannot be opened. Ask a workspace admin to replace it.'
+            : `Connected by ${query.data.currentConnectionOwnerName ?? 'a workspace member'}`}
         </FieldDescription>
+        {replaceButton}
+        {!configured ? (
+          <FieldDescription>
+            Google connection is not configured for this environment.
+          </FieldDescription>
+        ) : null}
+        <FieldError>{error ?? query.error?.message}</FieldError>
       </FieldSet>
     );
   return (
@@ -201,6 +237,7 @@ export function DatasourceConnectionFields({
           </Button>
         </>
       )}
+      {replaceButton}
       <FieldError>{error ?? query.error?.message}</FieldError>
     </FieldSet>
   );

@@ -1,14 +1,18 @@
+import { and, eq } from 'drizzle-orm';
+import { database } from '#/server/database.server';
+import { datasourceConnections } from '#/db/schema';
 import { env } from 'cloudflare:workers';
 import type { DataSourceRecord } from '#/query/types';
 import { openConnection } from './connection-secrets';
 import { DatasourceError } from './connectors/contract';
 
 export async function loadConnection(dataSource: Pick<DataSourceRecord, 'id' | 'workspaceId'>) {
-  const row = await env.DB.prepare(
-    'SELECT encrypted_config FROM datasource_connections WHERE datasource_id = ? AND workspace_id = ?',
-  )
-    .bind(dataSource.id, dataSource.workspaceId)
-    .first<{ encrypted_config: string }>();
+  const row = await database().query.datasourceConnections.findFirst({
+    where: and(
+      eq(datasourceConnections.datasourceId, dataSource.id),
+      eq(datasourceConnections.workspaceId, dataSource.workspaceId),
+    ),
+  });
   if (!row)
     throw new DatasourceError(
       'datasource_access_denied',
@@ -16,7 +20,7 @@ export async function loadConnection(dataSource: Pick<DataSourceRecord, 'id' | '
     );
   try {
     return await openConnection(
-      row.encrypted_config,
+      row.encryptedConfig,
       env.UPLOAD_SIGNING_SECRET,
       `${dataSource.workspaceId}/${dataSource.id}`,
     );

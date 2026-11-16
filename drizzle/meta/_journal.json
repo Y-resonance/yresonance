@@ -1,117 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1788015922194,
-      "tag": "0000_initial-workspaces",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1788019114696,
-      "tag": "0001_dashboard-product",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1788111645023,
-      "tag": "0002_tricky_northstar",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1788122250433,
-      "tag": "0003_sticky_pet_avengers",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1788123500734,
-      "tag": "0004_mysterious_romulus",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1788199536882,
-      "tag": "0005_majestic_mister_sinister",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1788203390217,
-      "tag": "0006_narrow-field-roles",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1788265445347,
-      "tag": "0007_early_bastion",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1788268402341,
-      "tag": "0008_illegal_power_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1791033306546,
-      "tag": "0009_quick_killraven",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1791057254249,
-      "tag": "0010_cascading-foreign-keys",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1791139196473,
-      "tag": "0011_mature_captain_marvel",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1791664987609,
-      "tag": "0012_tearful_agent_brand",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "6",
-      "when": 1791723258512,
-      "tag": "0013_rapid_jack_power",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "6",
-      "when": 1793047460339,
-      "tag": "0014_smart_marten_broadcloak",
-      "breakpoints": true
-    },
-    {
-      "idx": 15,
-      "version": "6",
-      "when": 1793730783927,
-      "tag": "0015_dashboard-assets",
+      "version": "7",
+      "when": 1794816944188,
+      "tag": "0000_orange_nightcrawler",
       "breakpoints": true
     }
   ]

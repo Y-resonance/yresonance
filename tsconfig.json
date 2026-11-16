@@ -6,6 +6,10 @@
     "dev/**/*.ts",
     "tests/**/*.ts",
     "tests/**/*.tsx",
+    "scripts/postgres-preview.ts",
+    "scripts/copy-d1-to-postgres.ts",
+    "scripts/check-local-postgres.ts",
+    "scripts/migrate.ts",
     "scripts/preview-resources.ts",
     "scripts/preview-config.ts",
     "scripts/preview-config.test.ts",
@@ -17,6 +21,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
+    "vitest.postgres.config.ts",
     "playwright.config.ts",
     "playwright.ui.config.ts"
   ],

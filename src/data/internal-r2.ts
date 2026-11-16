@@ -1,3 +1,6 @@
+import { and, eq, gte, isNull, lt, sql } from 'drizzle-orm';
+import { database } from '#/server/database.server';
+import { datasourceUploads, ingestionTokens, queryReadBudgets } from '#/db/schema';
 import { z } from 'zod';
 import { MAX_DATASOURCE_FILE_BYTES } from '#/domain/datasource-upload';
 import { isWorkspaceR2Key } from '#/domain/tenancy';
@@ -88,12 +91,14 @@ export async function handleBrowserUploadRequest(
     return new Response('Upload is outside this workspace.', { status: 403 });
   const contentLength = validContentLength(request, MAX_DATASOURCE_FILE_BYTES);
   if (!contentLength) return new Response('A valid Content-Length is required.', { status: 413 });
-  const pending = await environment.DB.prepare(
-    `SELECT 1 FROM datasource_uploads
-     WHERE key = ? AND workspace_id = ? AND clerk_user_id = ? AND status = 'pending'`,
-  )
-    .bind(key, authorization.workspaceId, authorization.userId)
-    .first();
+  const pending = await database().query.datasourceUploads.findFirst({
+    where: and(
+      eq(datasourceUploads.key, key),
+      eq(datasourceUploads.workspaceId, authorization.workspaceId),
+      eq(datasourceUploads.clerkUserId, authorization.userId),
+      eq(datasourceUploads.status, 'pending'),
+    ),
+  });
   if (!pending) return new Response('Upload is not pending.', { status: 409 });
   if (!request.body) return new Response('Upload body is required.', { status: 400 });
   const stored = await environment.DATA.put(key, request.body, {
@@ -134,13 +139,17 @@ export async function handleInternalR2Request(request: Request, environment: Clo
   if (!contentLength) return new Response('A valid Content-Length is required.', { status: 413 });
   if (!request.body) return new Response('Upload body is required.', { status: 400 });
   const claimedAt = new Date().toISOString();
-  const claimed = await environment.DB.prepare(
-    `UPDATE ingestion_tokens SET used_at = ?
-     WHERE id = ? AND used_at IS NULL AND expires_at >= ?
-     RETURNING id`,
-  )
-    .bind(claimedAt, capability.tokenId, claimedAt)
-    .first();
+  const [claimed] = await database()
+    .update(ingestionTokens)
+    .set({ usedAt: claimedAt })
+    .where(
+      and(
+        eq(ingestionTokens.id, capability.tokenId),
+        isNull(ingestionTokens.usedAt),
+        gte(ingestionTokens.expiresAt, claimedAt),
+      ),
+    )
+    .returning({ id: ingestionTokens.id });
   if (!claimed) return new Response('Ingestion token was already used.', { status: 409 });
   let stored: R2Object | null;
   try {
@@ -150,11 +159,12 @@ export async function handleInternalR2Request(request: Request, environment: Clo
     });
   } catch (error) {
     try {
-      await environment.DB.prepare(
-        'UPDATE ingestion_tokens SET used_at = NULL WHERE id = ? AND used_at = ?',
-      )
-        .bind(capability.tokenId, claimedAt)
-        .run();
+      await database()
+        .update(ingestionTokens)
+        .set({ usedAt: null })
+        .where(
+          and(eq(ingestionTokens.id, capability.tokenId), eq(ingestionTokens.usedAt, claimedAt)),
+        );
     } catch (releaseError) {
       console.warn('yresonance.ingestion_token_release_failed', {
         tokenId: capability.tokenId,
@@ -170,35 +180,29 @@ export async function handleInternalR2Request(request: Request, environment: Clo
 export async function createQueryReadBudget(
   queryId: string,
   workspaceId: string,
-  environment: Cloudflare.Env,
+  _environment: Cloudflare.Env,
 ) {
   const now = new Date();
-  await environment.DB.prepare('DELETE FROM query_read_budgets WHERE expires_at < ?')
-    .bind(now.toISOString())
-    .run();
-  await environment.DB.prepare(
-    `INSERT INTO query_read_budgets
-     (id, workspace_id, scanned_bytes, maximum_bytes, expires_at, created_at)
-     VALUES (?, ?, 0, ?, ?, ?)`,
-  )
-    .bind(
-      queryId,
+  await database()
+    .delete(queryReadBudgets)
+    .where(lt(queryReadBudgets.expiresAt, now.toISOString()));
+  await database()
+    .insert(queryReadBudgets)
+    .values({
+      id: queryId,
       workspaceId,
-      MAX_QUERY_SOURCE_BYTES,
-      new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
-      now.toISOString(),
-    )
-    .run();
+      maximumBytes: MAX_QUERY_SOURCE_BYTES,
+      expiresAt: new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
+      createdAt: now.toISOString(),
+    });
 }
 
-export async function finishQueryReadBudget(queryId: string, environment: Cloudflare.Env) {
-  const row = await environment.DB.prepare(
-    'SELECT scanned_bytes FROM query_read_budgets WHERE id = ?',
-  )
-    .bind(queryId)
-    .first<{ scanned_bytes: number }>();
-  await environment.DB.prepare('DELETE FROM query_read_budgets WHERE id = ?').bind(queryId).run();
-  return row?.scanned_bytes ?? 0;
+export async function finishQueryReadBudget(queryId: string, _environment: Cloudflare.Env) {
+  const [row] = await database()
+    .delete(queryReadBudgets)
+    .where(eq(queryReadBudgets.id, queryId))
+    .returning({ scannedBytes: queryReadBudgets.scannedBytes });
+  return row?.scannedBytes ?? 0;
 }
 
 async function serveObject(
@@ -220,7 +224,7 @@ async function serveObject(
   const range = normalizedRange(object.range, object.size);
   if (range) headers.set('content-range', `bytes ${range.start}-${range.end}/${object.size}`);
   const scannedBytes = range ? range.end - range.start + 1 : object.size;
-  if (enforceBudget && !(await claimQueryReadBytes(environment.DB, queryId, scannedBytes)))
+  if (enforceBudget && !(await claimQueryReadBytes(queryId, scannedBytes)))
     return new Response('Query scanned-byte limit exceeded.', { status: 413 });
   headers.set('content-length', String(scannedBytes));
   console.info('yresonance.datasource_read', { queryId, key, scannedBytes });
@@ -231,17 +235,28 @@ async function serveObject(
   return new Response(object.body, { status: range ? 206 : 200, headers });
 }
 
-export async function claimQueryReadBytes(database: D1Database, queryId: string, bytes: number) {
-  const claimed = await database
-    .prepare(
-      `UPDATE query_read_budgets
-       SET scanned_bytes = scanned_bytes + ?
-       WHERE id = ? AND expires_at >= ? AND scanned_bytes + ? <= maximum_bytes
-       RETURNING scanned_bytes`,
+export async function claimQueryReadBytes(queryId: string, bytes: number) {
+  if (bytes > MAX_QUERY_SOURCE_BYTES) return false;
+  const startedAt = performance.now();
+  const claimed = await database()
+    .update(queryReadBudgets)
+    .set({
+      scannedBytes: sql`${queryReadBudgets.scannedBytes} + ${bytes}`,
+    })
+    .where(
+      and(
+        eq(queryReadBudgets.id, queryId),
+        gte(queryReadBudgets.expiresAt, new Date().toISOString()),
+        sql`${queryReadBudgets.scannedBytes} + ${bytes} <= ${queryReadBudgets.maximumBytes}`,
+      ),
     )
-    .bind(bytes, queryId, new Date().toISOString(), bytes)
-    .first();
-  return Boolean(claimed);
+    .returning({ scannedBytes: queryReadBudgets.scannedBytes });
+  console.info('yresonance.query_read_budget', {
+    queryId,
+    durationMs: performance.now() - startedAt,
+    accepted: claimed.length > 0,
+  });
+  return claimed.length > 0;
 }
 
 function objectHeaders(object: R2Object, key: string) {

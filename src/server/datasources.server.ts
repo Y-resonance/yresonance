@@ -282,22 +282,8 @@ export async function registerDatasource(
     const db = database();
     if (managedUploadKey && claimId)
       await renewUploadClaim(session, managedUploadKey, 'registering', claimId);
-    const uploadCompletion =
-      managedUploadKey && claimId
-        ? [
-            db
-              .delete(datasourceUploads)
-              .where(
-                and(
-                  eq(datasourceUploads.key, managedUploadKey),
-                  eq(datasourceUploads.claimId, claimId),
-                  eq(datasourceUploads.status, 'registering'),
-                ),
-              ),
-          ]
-        : [];
-    await db.batch([
-      db.insert(dataSources).values({
+    await db.transaction(async (tx) => {
+      await tx.insert(dataSources).values({
         id: dataSource.id,
         workspaceId: dataSource.workspaceId,
         name: dataSource.name,
@@ -307,25 +293,32 @@ export async function registerDatasource(
         version: dataSource.version,
         createdAt: now,
         updatedAt: now,
-      }),
-      ...(connection
-        ? [
-            db.insert(datasourceConnections).values({
-              datasourceId: dataSource.id,
-              workspaceId: dataSource.workspaceId,
-              encryptedConfig: await sealConnection(
-                connection,
-                env.UPLOAD_SIGNING_SECRET,
-                `${dataSource.workspaceId}/${dataSource.id}`,
-              ),
-            }),
-          ]
-        : []),
-      ...discovered.map((field) =>
-        db.insert(fields).values({ ...field, workspaceId: session.workspace.id }),
-      ),
-      ...uploadCompletion,
-    ]);
+      });
+      if (connection)
+        await tx.insert(datasourceConnections).values({
+          datasourceId: dataSource.id,
+          workspaceId: dataSource.workspaceId,
+          encryptedConfig: await sealConnection(
+            connection,
+            env.UPLOAD_SIGNING_SECRET,
+            `${dataSource.workspaceId}/${dataSource.id}`,
+          ),
+        });
+      if (discovered.length)
+        await tx
+          .insert(fields)
+          .values(discovered.map((field) => ({ ...field, workspaceId: session.workspace.id })));
+      if (managedUploadKey && claimId)
+        await tx
+          .delete(datasourceUploads)
+          .where(
+            and(
+              eq(datasourceUploads.key, managedUploadKey),
+              eq(datasourceUploads.claimId, claimId),
+              eq(datasourceUploads.status, 'registering'),
+            ),
+          );
+    });
     if (imported)
       await imported.cleanup('registered').catch((error: unknown) => {
         console.warn('yresonance.datasource_ingestion_cleanup_failed', {

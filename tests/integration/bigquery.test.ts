@@ -1,8 +1,7 @@
-import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { expect, test, vi } from 'vitest';
-import { createDatabase } from '#/db/client';
-import { datasourceAuthorizations } from '#/db/schema';
+import { database } from '#/server/database.server';
+import { datasourceAuthorizations, datasourceConnections, dashboards } from '#/db/schema';
 import { completeGoogleConnection, googleAccessToken } from '#/data/google-oauth.server';
 import { executeBigquery } from '#/data/bigquery.server';
 import { signOut, removeClerkMembership, setClerkDirectory } from './doubles/clerk';
@@ -203,7 +202,7 @@ test('Google consent is workspace-bound and single-use; queries refresh privatel
   });
   expect(source.fields.find((field) => field.columnName === 'accountId')?.castTo).toBe('VARCHAR');
   expect(requests.filter((entry) => entry.url.pathname.endsWith('/jobs'))).toHaveLength(0);
-  const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+  const stored = await database().query.datasourceAuthorizations.findFirst({
     where: eq(datasourceAuthorizations.id, grant.id),
   });
   expect(stored!.encryptedConfig).not.toContain('private-refresh-token');
@@ -629,6 +628,8 @@ test('personal Google grants reject known IDs from colleagues and other workspac
         }),
       ).toEqual({
         configured: true,
+        canReplaceConnection: false,
+        connectionUnavailable: false,
         connections: [],
         currentConnectionId: undefined,
         canManageCurrentConnection: false,
@@ -690,7 +691,7 @@ test('personal Google grants reject known IDs from colleagues and other workspac
     }),
   ).toMatchObject({ currentConnectionId: grant.id, canManageCurrentConnection: true });
   expect((await completeGoogleConnection(callback)).status).toBe(303);
-  const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+  const stored = await database().query.datasourceAuthorizations.findFirst({
     where: eq(datasourceAuthorizations.id, grant.id),
   });
   const listing = await postApiRequest({
@@ -702,6 +703,8 @@ test('personal Google grants reject known IDs from colleagues and other workspac
     data: {
       configured: true,
       canManageCurrentConnection: true,
+      canReplaceConnection: false,
+      connectionUnavailable: false,
       connections: [{ id: grant.id, account: 'owner@example.test', status: 'connected' }],
     },
   });
@@ -784,7 +787,7 @@ test.each(['membership', 'revocation', 'disconnect_during_verification'] as cons
     expect(requests.filter((entry) => entry.url.pathname.endsWith('/jobs'))).toHaveLength(
       beforeJobs,
     );
-    const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+    const stored = await database().query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
     });
     expect(stored).toMatchObject({
@@ -810,7 +813,7 @@ test.each(['http403', 'network', 'timeout'] as const)(
     const grant = (await connections()).connections[0]!;
     const browse = { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id };
     await callService(browse);
-    const db = createDatabase(env.DB);
+    const db = database();
     const before = await db.query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
     });
@@ -919,7 +922,7 @@ test('membership loss revokes a concurrently refreshed grant until the owner exp
     removeClerkMembership(owner.orgId, owner.userId);
     finishMembership();
     await denied;
-    const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+    const stored = await database().query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
     });
     expect(stored).toMatchObject({ status: 'reconnect_required', encryptedConfig: null });
@@ -935,4 +938,202 @@ test('membership loss revokes a concurrently refreshed grant until the owner exp
     finishMembership();
     lookup.mockRestore();
   }
+});
+
+async function replacementCallback(dataSourceId: string) {
+  const result = (await callService({
+    action: 'beginDatasourceConnection',
+    provider: 'bigquery',
+    dataSourceId,
+    replace: true,
+  })) as { authorizationUrl: string };
+  return new Request(
+    `https://yresonance.test/api/oauth/google/callback?${new URLSearchParams({ state: new URL(result.authorizationUrl).searchParams.get('state')!, code: 'replacement-code' })}`,
+  );
+}
+
+async function replacementFixture() {
+  googleNetwork();
+  const owner = await signInToNewWorkspace();
+  await completeGoogleConnection(await begin());
+  const grant = (await connections()).connections[0]!;
+  const source = (await callService({
+    action: 'registerDatasource',
+    provider: 'bigquery',
+    name: 'Replace sales',
+    location,
+    connection: { authorizationId: grant.id },
+  })) as DataSourceRecord & { fields: Array<{ id: string; columnName: string }> };
+  return { owner, grant, source };
+}
+
+test.each(['unreadable', 'missing'])(
+  'admin replaces a %s connection after consent without changing datasource fields, dashboards or other grants',
+  async (condition) => {
+    const { owner, grant, source } = await replacementFixture();
+    const sibling = (await callService({
+      action: 'registerDatasource',
+      provider: 'bigquery',
+      name: 'Other sales',
+      location,
+      connection: { authorizationId: grant.id },
+    })) as DataSourceRecord;
+    const siblingConnection = await database().query.datasourceConnections.findFirst({
+      where: eq(datasourceConnections.datasourceId, sibling.id),
+    });
+    const dashboard = await createDashboard('Sales dashboard');
+    await addWidget(dashboard.id, {
+      type: 'scorecard',
+      title: 'Revenue',
+      dataSourceId: source.id,
+      dateRangeFieldId: source.fields.find((field) => field.columnName === 'day')!.id,
+      metric: {
+        source: {
+          kind: 'field',
+          fieldId: source.fields.find((field) => field.columnName === 'revenue')!.id,
+          aggregation: 'sum',
+        },
+        dataType: 'number',
+      },
+    });
+    const originalGrant = await database().query.datasourceAuthorizations.findFirst({
+      where: eq(datasourceAuthorizations.id, grant.id),
+    });
+    const originalDashboard = await database().query.dashboards.findFirst({
+      where: eq(dashboards.id, dashboard.id),
+    });
+    const before = await callService({ action: 'describeDatasource', dataSourceId: source.id });
+    if (condition === 'unreadable')
+      await database()
+        .update(datasourceConnections)
+        .set({ encryptedConfig: 'encrypted-with-production-key' })
+        .where(eq(datasourceConnections.datasourceId, source.id));
+    else
+      await database()
+        .delete(datasourceConnections)
+        .where(eq(datasourceConnections.datasourceId, source.id));
+    const admin = signInAsColleague(owner);
+    signInAsUser(owner, admin, { isAdmin: true });
+    const listing = await callService({
+      action: 'listDatasourceConnections',
+      provider: 'bigquery',
+      dataSourceId: source.id,
+    });
+    expect(listing).toMatchObject({
+      configured: true,
+      canReplaceConnection: true,
+      connectionUnavailable: true,
+      canManageCurrentConnection: false,
+      connections: [],
+    });
+    expect(JSON.stringify(listing)).not.toContain(grant.id);
+    const callback = await replacementCallback(source.id);
+    const response = await completeGoogleConnection(callback);
+    expect(response.headers.get('location')).toBe(`/datasources/${source.id}`);
+    const updatedListing = await callService({
+      action: 'listDatasourceConnections',
+      provider: 'bigquery',
+      dataSourceId: source.id,
+    });
+    const newGrant = (await connections()).connections[0]!;
+    expect(newGrant.id).not.toBe(grant.id);
+    expect(updatedListing).toMatchObject({
+      currentConnectionId: newGrant.id,
+      connectionUnavailable: false,
+    });
+    expect((await googleAccessToken(owner.workspaceId, newGrant.id)).accessToken).toBe(
+      'private-access-token',
+    );
+    const after = (await callService({
+      action: 'describeDatasource',
+      dataSourceId: source.id,
+    })) as DataSourceRecord;
+    expect(after.version).not.toBe(source.version);
+    expect({ ...after, version: source.version }).toEqual(before);
+    expect(
+      await database().query.dashboards.findFirst({ where: eq(dashboards.id, dashboard.id) }),
+    ).toEqual(originalDashboard);
+    expect(
+      await database().query.datasourceConnections.findFirst({
+        where: eq(datasourceConnections.datasourceId, sibling.id),
+      }),
+    ).toEqual(siblingConnection);
+    expect(
+      await database().query.datasourceAuthorizations.findFirst({
+        where: eq(datasourceAuthorizations.id, grant.id),
+      }),
+    ).toEqual(originalGrant);
+    await expectApiError(completeGoogleConnection(callback), {
+      status: 400,
+      code: 'invalid_oauth_state',
+    });
+  },
+);
+
+test('replacement requires a same-workspace admin at initiation and callback', async () => {
+  const { owner, source } = await replacementFixture();
+  signInAsColleague(owner);
+  await expectApiError(
+    callService({
+      action: 'beginDatasourceConnection',
+      provider: 'bigquery',
+      dataSourceId: source.id,
+      replace: true,
+    }),
+    { status: 403, code: 'admin_required' },
+  );
+  await signInToNewWorkspace();
+  await expectApiError(replacementCallback(source.id), {
+    status: 404,
+    code: 'datasource_not_found',
+  });
+  signInAsOwner(owner);
+  const previous = await database().query.datasourceConnections.findFirst({
+    where: eq(datasourceConnections.datasourceId, source.id),
+  });
+  const callback = await replacementCallback(source.id);
+  signInAsOwner(owner, { isAdmin: false });
+  expect((await completeGoogleConnection(callback)).headers.get('location')).toContain(
+    'connectionError=',
+  );
+  expect(
+    await database().query.datasourceConnections.findFirst({
+      where: eq(datasourceConnections.datasourceId, source.id),
+    }),
+  ).toEqual(previous);
+});
+
+test('cancelled or superseded replacement never changes the saved connection or retains a new grant', async () => {
+  const { source } = await replacementFixture();
+  const original = await database().query.datasourceConnections.findFirst({
+    where: eq(datasourceConnections.datasourceId, source.id),
+  });
+  const cancelled = new URL((await replacementCallback(source.id)).url);
+  cancelled.searchParams.delete('code');
+  cancelled.searchParams.set('error', 'access_denied');
+  expect(
+    (await completeGoogleConnection(new Request(cancelled))).headers.get('location'),
+  ).toContain('connectionError=');
+  expect(
+    await database().query.datasourceConnections.findFirst({
+      where: eq(datasourceConnections.datasourceId, source.id),
+    }),
+  ).toEqual(original);
+  const stale = await replacementCallback(source.id);
+  const winner = await replacementCallback(source.id);
+  expect((await completeGoogleConnection(winner)).headers.get('location')).toBe(
+    `/datasources/${source.id}`,
+  );
+  const saved = await database().query.datasourceConnections.findFirst({
+    where: eq(datasourceConnections.datasourceId, source.id),
+  });
+  expect((await completeGoogleConnection(stale)).headers.get('location')).toContain(
+    'connectionError=',
+  );
+  expect(
+    await database().query.datasourceConnections.findFirst({
+      where: eq(datasourceConnections.datasourceId, source.id),
+    }),
+  ).toEqual(saved);
+  expect((await connections()).connections).toHaveLength(2);
 });

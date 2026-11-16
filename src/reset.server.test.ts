@@ -36,13 +36,12 @@ describe('environment reset', () => {
       executed: false,
       plan: {
         environment: 'production',
-        d1Tables: expect.arrayContaining(['query_read_budgets']),
+        databaseTables: expect.arrayContaining(['query_read_budgets']),
         r2ObjectKeys: ['workspace/data.parquet'],
         kvNamespace: 'yresonance-query-cache',
         kvKeys: ['query-cache-key'],
       },
     });
-    expect(environment.batch).not.toHaveBeenCalled();
     expect(environment.deleteR2).not.toHaveBeenCalled();
     expect(environment.deleteKv).not.toHaveBeenCalled();
   });
@@ -67,16 +66,14 @@ function resetEnvironment(appEnvironment: 'preview' | 'production') {
     keys: [{ name: 'query-cache-key' }],
     list_complete: true,
   });
-  const batch = vi.fn<() => void>();
   const deleteR2 = vi.fn<() => void>();
   const deleteKv = vi.fn<() => void>();
   const bindings = {
     APP_ENV: appEnvironment,
     RESET_ADMIN_TOKEN: 'reset-secret',
     QUERY_CACHE_NAME: 'yresonance-query-cache',
-    DB: { prepare: vi.fn<() => void>(), batch },
     DATA: { list: listR2, delete: deleteR2 },
     QUERY_CACHE: { list: listKv, delete: deleteKv },
   } as unknown as Cloudflare.Env;
-  return { bindings, listR2, listKv, batch, deleteR2, deleteKv };
+  return { bindings, listR2, listKv, deleteR2, deleteKv };
 }

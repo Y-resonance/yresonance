@@ -17,6 +17,15 @@ dev-data/*
 .dev.vars*
 !.dev.vars.example
 
+# Local database dumps and SQLite state. Keep SQL source files visible.
+*.sql
+!/drizzle/**/*.sql
+!/scripts/**/*.sql
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+
 # Keep installed agent skills local.
 /.agents/skills/
 /skills-lock.json

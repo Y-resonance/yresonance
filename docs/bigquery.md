@@ -67,6 +67,13 @@ against the selected table before saving. Native expressions cannot be reused wi
 
 Reconnect or disconnect from the datasource page. Disconnect affects every source using that
 personal authorization. Only its owner can manage it. Reconnect preserves source IDs and makes old cached results unreachable.
+Workspace admins can use **Replace connection** on an existing datasource, including when its saved
+connection is missing or cannot be decrypted. After confirmation and Google consent, the datasource
+uses a new personal grant owned by that admin. Its ID, fields and dashboards are preserved; other
+datasources and the old grant are unchanged. Cancellation or failed consent leaves the old connection
+in place. A concurrent replacement requires starting again. Admin access is checked both when
+starting and completing authorization. Replacing invalidates this datasource's cached results.
+
 A revoked refresh token marks the connection as requiring reconnection. Losing table access
 produces an access error; restore permissions or connect an account with access.
 
