@@ -39,13 +39,15 @@ Before the first build, configure:
 - Workers Builds preview variables: `POSTGRES_PREVIEW_URL` with the direct provisioning role
   connection on the preview branch (PlanetScale `postgres` permission), and
   `POSTGRES_PREVIEW_RUNTIME_PASSWORD` with a separate, stable runtime-role password.
-- GitHub secret `POSTGRES_PREVIEW_URL` for cleanup. Never use this admin URL in a Hyperdrive
+- GitHub secret `POSTGRES_PREVIEW_URL` for cleanup. Use a node-postgres-compatible URL with
+  `sslmode=verify-full`; remove libpq’s `sslrootcert=system` parameter (Node uses its system CA
+  store by default). Never use this admin URL in a Hyperdrive
   origin or Worker variable. Do not print database error details, which may contain credentials.
 - `CLOUDFLARE_API_TOKEN` with Hyperdrive edit permission in addition to existing permissions.
 - Shared preview: provision `yresonance_preview_shared`, migrate with
   `POSTGRES_PREVIEW_SHARED_URL`, grant the same runtime role access, and create its own
-  Hyperdrive with caching disabled and five origin connections. Supply that configuration ID as
-  `HYPERDRIVE_PREVIEW_ID` when building `CLOUDFLARE_ENV=preview`. The build refuses a missing ID.
+  Hyperdrive with caching disabled and five origin connections. Its ID is recorded in
+  `wrangler.jsonc` under `env.preview`; update that binding when recreating it.
 
 Runtime-password rotation requires changing the Postgres role and every preview Hyperdrive
 credential together. The helper does not reset an existing role's password on every build.

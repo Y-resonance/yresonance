@@ -39,10 +39,7 @@ export function database() {
       // still reject their caller; idle failures need a listener to avoid an uncaught event.
       if (!scope.closing) console.error('yresonance.database_connection_failed');
     });
-    // pg queues queries behind connection setup. Report connection errors through those queries.
-    const connecting = scope.client.connect();
     scope.database = createDatabase(scope.client);
-    void connecting.catch(() => undefined);
   }
   return scope.database;
 }

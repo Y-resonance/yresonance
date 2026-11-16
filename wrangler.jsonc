@@ -121,8 +121,7 @@
           "RESET_ADMIN_TOKEN",
         ],
       },
-      // Replaced by HYPERDRIVE_PREVIEW_ID at build time; never use the production pool here.
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "da428f6707c2447db29ced6da0a723b4" }],
       "kv_namespaces": [
         {
           "binding": "QUERY_CACHE",

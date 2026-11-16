@@ -14,7 +14,7 @@ bun run dev
 `postgres://yresonance:yresonance@localhost:5432/yresonance`. Override the application connection
 with `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`. For a custom migration target,
 use `DATABASE_URL=<direct connection> bunx drizzle-kit migrate`.
-Compose uses Postgres 17; verify that major version against the PlanetScale branch before cutover.
+Compose uses Postgres 18, matching the verified PlanetScale preview branch major version.
 The named volume preserves rows across restarts. The initialization SQL creates `yresonance_test`
 on the first start; for an existing volume create that database manually once.
 

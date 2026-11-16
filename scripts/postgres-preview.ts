@@ -34,7 +34,14 @@ export async function managePreviewPostgres(
     await admin.connect();
     // Serialize prepare/cleanup across builds, including capacity checks and partial retries.
     await admin.query("SELECT pg_advisory_lock(hashtext('yresonance-preview-provisioning'))");
-    const configs = configurationsSchema.parse(await api('/hyperdrive/configs'));
+    const configs: z.infer<typeof configurationsSchema> = [];
+    for (let page = 1; ; page++) {
+      const batch = configurationsSchema.parse(
+        await api(`/hyperdrive/configs?page=${page}&per_page=20`),
+      );
+      configs.push(...batch);
+      if (batch.length < 20) break;
+    }
     const config = configs.find((item) => item.name === name);
     if (action === 'cleanup') {
       // Delete the pool before forcibly closing its origin connections.
@@ -100,7 +107,10 @@ export async function managePreviewPostgres(
           host: directUrl.hostname,
           port: Number(directUrl.port || 5432),
           database,
-          user: runtimeRole,
+          // PlanetScale routes connections by the branch suffix in the login name.
+          user: [runtimeRole, ...decodeURIComponent(directUrl.username).split('.').slice(1)].join(
+            '.',
+          ),
           password,
         },
         caching: { disabled: true },

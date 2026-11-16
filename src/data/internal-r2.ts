@@ -236,6 +236,7 @@ async function serveObject(
 }
 
 export async function claimQueryReadBytes(queryId: string, bytes: number) {
+  if (bytes > MAX_QUERY_SOURCE_BYTES) return false;
   const startedAt = performance.now();
   const claimed = await database()
     .update(queryReadBudgets)

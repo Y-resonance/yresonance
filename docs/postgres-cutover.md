@@ -7,8 +7,8 @@ No production data or configuration is changed by local validation.
 ## Required external configuration
 
 - PlanetScale Postgres in AWS Frankfurt, with the production Hyperdrive configuration already
-  referenced by `wrangler.jsonc`. Keep query caching disabled. Verify Postgres major version 17
-  matches Compose/CI; change both images together if the origin differs.
+  referenced by `wrangler.jsonc`. Keep query caching disabled. The preview origin is verified as
+  Postgres 18, matching Compose/CI; verify production also uses that major before cutover.
 - GitHub repository secret `POSTGRES_PRODUCTION_URL`: direct production migration connection,
   available only in the production deploy step. Never migrate through Hyperdrive.
 - Preview provisioning secrets, shared database and Hyperdrive as listed in

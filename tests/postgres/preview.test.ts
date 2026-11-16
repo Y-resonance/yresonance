@@ -18,7 +18,10 @@ const configurations: Array<{
   origin_connection_limit: number;
 }> = [];
 const api = async (path: string, method = 'GET', body?: unknown) => {
-  if (method === 'GET') return structuredClone(configurations);
+  if (method === 'GET') {
+    const page = Number(new URL(path, 'https://cloudflare.test').searchParams.get('page') ?? 1);
+    return structuredClone(configurations.slice((page - 1) * 20, page * 20));
+  }
   if (method === 'POST') {
     const config = {
       ...(body as Omit<(typeof configurations)[number], 'id'>),
@@ -39,6 +42,7 @@ async function prepare() {
 }
 afterEach(async () => {
   for (const branch of branches.splice(0)) await managePreviewPostgres('cleanup', branch, api);
+  configurations.length = 0;
 });
 
 test('prepare retries preserve rows and cleanup forcibly closes pooled connections after removing Hyperdrive', async () => {
@@ -75,14 +79,21 @@ test('prepare retries preserve rows and cleanup forcibly closes pooled connectio
     await expect(client.query('CREATE TABLE forbidden (id text)')).rejects.toMatchObject({
       code: '42501',
     });
+    configurations.unshift(
+      ...Array.from({ length: 20 }, (_, index) => ({
+        ...config,
+        id: `unrelated-${index}`,
+        name: `unrelated-${index}`,
+      })),
+    );
     await managePreviewPostgres('prepare', branch, api);
-    expect(configurations).toHaveLength(1);
+    expect(configurations).toHaveLength(21);
     expect((await client.query('SELECT id FROM workspaces')).rows).toEqual([{ id: 'retry' }]);
     await managePreviewPostgres('cleanup', branch, async (...args) => {
       expect((await client.query('SELECT 1')).rowCount).toBe(1);
       return api(...args);
     });
-    expect(configurations).toHaveLength(0);
+    expect(configurations).toHaveLength(20);
     await expect(client.query('SELECT 1')).rejects.toThrow();
     await managePreviewPostgres('cleanup', branch, api);
   } finally {

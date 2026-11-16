@@ -7,6 +7,7 @@ import { seedField } from '#/server/datasource-operations.server';
 import {
   browserUploadPath,
   capabilityUrl,
+  claimQueryReadBytes,
   createR2Capability,
   createQueryReadBudget,
   handleBrowserUploadRequest,
@@ -196,6 +197,7 @@ describe('Postgres application storage', () => {
       .update(schema.queryReadBudgets)
       .set({ maximumBytes: 4 })
       .where(eq(schema.queryReadBudgets.id, id));
+    await expect(claimQueryReadBytes(id, 2 ** 31)).resolves.toBe(false);
     const readToken = await createR2Capability(
       { kind: 'read', key, queryId: id },
       env.INTERNAL_R2_SIGNING_SECRET,

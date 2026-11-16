@@ -30,5 +30,3 @@ dev-data/*
 /docs/discovery/
 /screenshots/
 /evidence/
-
-.wrangler-shared-preview.json

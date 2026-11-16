@@ -44,7 +44,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_USER: yresonance
           POSTGRES_PASSWORD: yresonance
@@ -78,7 +78,7 @@ jobs:
         shard: [1, 2]
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_USER: yresonance
           POSTGRES_PASSWORD: yresonance
@@ -120,7 +120,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_USER: yresonance
           POSTGRES_PASSWORD: yresonance
