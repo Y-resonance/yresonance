@@ -30,7 +30,7 @@ export function seedField(
     castTo: semantics.castTo ?? column.cast_to ?? null,
     description: null,
     hidden: false,
-    sampleValues: values,
+    sampleValues: values.map(sanitizeSample),
     cardinality: null,
   };
 }
@@ -106,5 +106,17 @@ export function normalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalize);
   if (value && typeof value === 'object')
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, normalize(item)]));
+  return value;
+}
+
+// Postgres jsonb rejects NUL and lone surrogates, including nested object keys.
+function sanitizeSample(value: unknown): unknown {
+  if (typeof value === 'string')
+    return value.replaceAll(String.fromCharCode(0), '').replace(/[\uD800-\uDFFF]/gu, '');
+  if (Array.isArray(value)) return value.map(sanitizeSample);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [sanitizeSample(key), sanitizeSample(item)]),
+    );
   return value;
 }

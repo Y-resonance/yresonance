@@ -1,1 +1,0 @@
-ALTER TABLE `data_sources` ADD `cache_policy` text;

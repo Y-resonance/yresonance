@@ -42,8 +42,19 @@ explain. Update it when a decision changes, not when an implementation detail do
 
 ## Platform
 
-- One Cloudflare deploy: Worker (TanStack Start app and API) plus the query container. D1 with
+- One Cloudflare deploy: Worker (TanStack Start app and API) plus the query container. Postgres through Hyperdrive with
   Drizzle for application data, R2 for data files, KV for query results, Clerk for auth.
+- Postgres is the only application database, including customer-hosted deployments. Keeping a
+  second SQLite dialect would require two schemas and migration histories. Hosted environments
+  use PlanetScale in Frankfurt. Hyperdrive query caching stays disabled because dashboard
+  `updated_at` values enforce optimistic concurrency.
+- Previews share one PlanetScale branch, with one database per preview and a shared restricted
+  runtime role. Cross-preview database access is accepted for synthetic data. Provisioning uses
+  separate admin credentials. The initial cap is three branch previews plus the shared preview,
+  allowing five pooled connections each on a branch with 25 connections.
+- Production cutover uses downtime and a prior maintenance-switch release. Rollback is permitted
+  only before reopening; afterwards we fix forward. Retain D1 and its offline export for one week
+  for manual recovery. See [the cutover runbook](postgres-cutover.md).
 - DuckDB remains the default analytics backend, running natively in a Bun container per workspace.
   DuckDB inside the Worker (Ducklings) hit the Worker memory limit on real datasources. Datasources
   can also use ClickHouse through its HTTPS endpoint, with credentials kept on the Worker.
@@ -154,7 +165,7 @@ breakdowns in combo charts. Manual axis ranges. Per-workspace R2 buckets.
   inspection, query execution, validation, cache identity, cache defaults, and optional managed
   uploads. Registration and dashboard services call these interfaces. Provider definitions supply
   setup fields and capabilities to the UI and WebMCP discovery.
-- Customer connections are encrypted in a separate D1 table, bound to the workspace and datasource.
+- Customer connections are encrypted in a separate Postgres table, bound to the workspace and datasource.
   They never enter datasource records, API responses, or telemetry. AES-GCM uses a purpose-separated
   HKDF key derived from `UPLOAD_SIGNING_SECRET`; preserve that secret across deployments. Changing
   it requires re-encrypting existing connections before switching keys.

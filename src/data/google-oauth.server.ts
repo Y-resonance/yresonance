@@ -91,7 +91,7 @@ function oauthProvider(provider: string) {
 // Interactive setup always requires the caller's own grant. Execution resolves the saved
 // datasource reference instead, after authorizing access to that datasource/dashboard.
 export async function requireOwnedGoogleConnection(session: SessionContext, connectionId: string) {
-  const row = await database()
+  const [row] = await database()
     .select({ id: datasourceAuthorizations.id })
     .from(datasourceAuthorizations)
     .where(
@@ -107,7 +107,7 @@ export async function requireOwnedGoogleConnection(session: SessionContext, conn
         ]),
       ),
     )
-    .get();
+    .limit(1);
   if (!row) throw new ApiError(404, 'connection_not_found', 'Connection not found.');
 }
 
@@ -127,7 +127,7 @@ async function clerkLookup<T>(request: Promise<T>) {
 }
 
 async function connectionOwnerName(workspaceId: string, authorizationId: string) {
-  const owner = await database()
+  const [owner] = await database()
     .select({ userId: datasourceAuthorizations.createdBy })
     .from(datasourceAuthorizations)
     .where(
@@ -137,7 +137,7 @@ async function connectionOwnerName(workspaceId: string, authorizationId: string)
         eq(datasourceAuthorizations.provider, 'bigquery'),
       ),
     )
-    .get();
+    .limit(1);
   if (!owner) return undefined;
   try {
     const users = await clerkLookup(
@@ -510,7 +510,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
         'Google authorization is unavailable.',
       );
     // Disconnect or reconnect may have completed while the external checks were pending.
-    const current = await db
+    const [current] = await db
       .select({ id: datasourceAuthorizations.id })
       .from(datasourceAuthorizations)
       .where(
@@ -523,7 +523,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
           eq(datasourceAuthorizations.updatedAt, revision),
         ),
       )
-      .get();
+      .limit(1);
     if (!current) throw reconnectError();
     return { accessToken, revision };
   }

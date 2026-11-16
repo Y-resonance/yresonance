@@ -1,9 +1,9 @@
-export type ReadinessDependency = 'd1' | 'kv' | 'r2';
+export type ReadinessDependency = 'postgres' | 'kv' | 'r2';
 
 type DependencyStatus = 'ok' | 'failed';
 
 export interface ReadinessChecks {
-  d1: () => Promise<void>;
+  postgres: () => Promise<void>;
   kv: () => Promise<void>;
   r2: () => Promise<void>;
 }
@@ -17,13 +17,13 @@ export async function checkReadiness(
   checks: ReadinessChecks,
   onFailure?: (dependency: ReadinessDependency, error: unknown) => void,
 ): Promise<ReadinessResult> {
-  const [d1, kv, r2] = await Promise.all([
-    checkDependency('d1', checks.d1, onFailure),
+  const [postgres, kv, r2] = await Promise.all([
+    checkDependency('postgres', checks.postgres, onFailure),
     checkDependency('kv', checks.kv, onFailure),
     checkDependency('r2', checks.r2, onFailure),
   ]);
   const dependencies = {
-    d1: d1[1],
+    postgres: postgres[1],
     kv: kv[1],
     r2: r2[1],
   };

@@ -1,3 +1,5 @@
+import { sql } from 'drizzle-orm';
+import { database } from '#/server/database.server';
 import { env } from 'cloudflare:workers';
 import { z } from 'zod';
 
@@ -44,7 +46,7 @@ export async function handleResetRequest(request: Request, environment: Cloudfla
   ]);
   const plan = {
     environment: parsed.data.environment,
-    d1Tables: [...applicationTables],
+    databaseTables: [...applicationTables],
     r2ObjectKeys: r2Keys,
     kvNamespace: environment.QUERY_CACHE_NAME,
     kvKeys,
@@ -52,9 +54,9 @@ export async function handleResetRequest(request: Request, environment: Cloudfla
   if (parsed.data.environment === 'production')
     return Response.json({ executed: false, reason: 'Production resets are manual.', plan });
 
-  await environment.DB.batch(
-    applicationTables.map((table) => environment.DB.prepare(`DELETE FROM ${table}`)),
-  );
+  await database().transaction(async (tx) => {
+    for (const table of applicationTables) await tx.execute(sql.raw(`DELETE FROM "${table}"`));
+  });
   for (let index = 0; index < r2Keys.length; index += 1_000)
     await environment.DATA.delete(r2Keys.slice(index, index + 1_000));
   for (let index = 0; index < kvKeys.length; index += 50)

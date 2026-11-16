@@ -42,6 +42,20 @@ jobs:
   integration:
     name: Worker integration tests
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: yresonance
+          POSTGRES_PASSWORD: yresonance
+          POSTGRES_DB: yresonance_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U yresonance"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://yresonance:yresonance@localhost:5432/yresonance_test
     steps:
       - uses: useblacksmith/checkout@v1
         with:
@@ -62,6 +76,20 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: yresonance
+          POSTGRES_PASSWORD: yresonance
+          POSTGRES_DB: yresonance_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U yresonance"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://yresonance:yresonance@localhost:5432/yresonance_test
     steps:
       - uses: useblacksmith/checkout@v1
         with:
@@ -73,6 +101,7 @@ jobs:
         with:
           node-version: 26.13.1
       - run: bun install --frozen-lockfile
+      - run: bun run db:migrate:check
       - run: bunx playwright install --with-deps --only-shell chromium
       - run: bun run test:e2e:ui --shard=${{ matrix.shard }}/2
       - if: ${{ !cancelled() }}
@@ -89,6 +118,20 @@ jobs:
     # Forks never receive the Clerk secrets, so the job would fail for reasons a contributor
     # cannot act on.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: yresonance
+          POSTGRES_PASSWORD: yresonance
+          POSTGRES_DB: yresonance_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U yresonance"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://yresonance:yresonance@localhost:5432/yresonance_test
     steps:
       - uses: useblacksmith/checkout@v1
         with:
@@ -124,7 +167,7 @@ jobs:
             echo "CLERK_TELEMETRY_DISABLED=1"
           } > .env.local
       - run: bun install --frozen-lockfile
-      - run: bun run db:migrate:local
+      - run: bun run db:migrate:check
       - run: bunx playwright install --with-deps --only-shell chromium
       - run: bun run test:e2e:clerk
         env:
@@ -206,6 +249,7 @@ jobs:
       - run: bun run build
       - name: Migrate and deploy the current main commit
         env:
+          POSTGRES_PRODUCTION_URL: ${{ secrets.POSTGRES_PRODUCTION_URL }}
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |

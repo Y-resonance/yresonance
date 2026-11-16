@@ -260,10 +260,10 @@ describe('widget queries', () => {
       ((await callService({ action: 'queryWidget', dashboardId, widgetId })) as QueryResult).cache,
     ).toBe('hit');
 
-    const { createDatabase } = await import('#/db/client');
+    const { database } = await import('#/server/database.server');
     const { dataSources } = await import('#/db/schema');
     const { eq } = await import('drizzle-orm');
-    await createDatabase(env.DB)
+    await database()
       .update(dataSources)
       .set({ version: 'source-v2' })
       .where(eq(dataSources.id, source.id));
@@ -666,10 +666,10 @@ describe('query engine failures', () => {
     const workspace = await signInToNewWorkspace();
     const source = await seedDataSource(workspace);
     const dashboard = await createDashboard();
-    const { createDatabase } = await import('#/db/client');
+    const { database } = await import('#/server/database.server');
     const { libraryMetrics } = await import('#/db/schema');
     const metricId = `legacy-text-metric-${crypto.randomUUID().slice(0, 8)}`;
-    await createDatabase(env.DB).insert(libraryMetrics).values({
+    await database().insert(libraryMetrics).values({
       id: metricId,
       workspaceId: workspace.workspaceId,
       name: 'Legacy text metric',

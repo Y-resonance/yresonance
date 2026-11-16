@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { env } from 'cloudflare:workers';
 import { describe, expect, test } from 'vitest';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { dashboardGrants, dataSources, libraryMetrics, shareLinks } from '#/db/schema';
 import { yearToDateRange } from '#/domain/dates';
 import { setClerkDirectory, signOut } from './doubles/clerk';
@@ -134,7 +133,7 @@ describe('dashboard grants', () => {
       status: 404,
       code: 'invalid_share_link',
     });
-    const db = createDatabase(env.DB);
+    const db = database();
     expect(
       await db.select().from(dashboardGrants).where(eq(dashboardGrants.dashboardId, dashboard.id)),
     ).toEqual([]);
@@ -270,9 +269,9 @@ describe('widget updates', () => {
     const source = await seedDataSource(workspace);
     const dashboard = await createDashboard();
     const widget = await addWidget(dashboard.id, scorecardDefinition(source));
-    const database = createDatabase(env.DB);
-    await database.insert(libraryMetrics).values({
-      id: 'existing_metric',
+    const db = database();
+    await db.insert(libraryMetrics).values({
+      id: crypto.randomUUID(),
       workspaceId: workspace.workspaceId,
       name: 'Existing metric',
       canonicalName: 'cost_per_view',
@@ -312,7 +311,7 @@ describe('widget updates', () => {
     })) as OpenedDashboard;
     expect(opened.dashboard.pages[0].widgets[0].definition.title).toBe('Revenue');
     expect(
-      await database
+      await db
         .select()
         .from(libraryMetrics)
         .where(eq(libraryMetrics.workspaceId, workspace.workspaceId)),

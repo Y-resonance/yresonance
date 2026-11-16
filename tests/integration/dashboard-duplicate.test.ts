@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { env } from 'cloudflare:workers';
 import { describe, expect, test } from 'vitest';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { dashboardGrants, fields, shareLinks } from '#/db/schema';
 import type { DashboardDocument } from '#/domain/schema';
 import {
@@ -121,7 +120,7 @@ describe('duplicating dashboards', () => {
     expect(copy.pages[0].widgets.map((widget) => widget.id)).not.toContain(
       original.pages[0].widgets[0]!.id,
     );
-    const db = createDatabase(env.DB);
+    const db = database();
     expect(await db.select().from(shareLinks).where(eq(shareLinks.dashboardId, copy.id))).toEqual(
       [],
     );
@@ -166,7 +165,7 @@ describe('duplicating dashboards', () => {
     const source = await seedDataSource(workspace);
     const target = await seedDataSource(workspace);
     const { dashboard, scorecard, control } = await reportFor(source);
-    const db = createDatabase(env.DB);
+    const db = database();
     for (const [id, canonicalName] of [
       [target.fieldIds.region, 'territory'],
       [target.fieldIds.revenue, 'gross_revenue'],

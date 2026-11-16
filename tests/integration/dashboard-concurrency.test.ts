@@ -1,7 +1,6 @@
-import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { afterEach, expect, test, vi } from 'vitest';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { libraryMetrics } from '#/db/schema';
 import type { DashboardDocument } from '#/domain/schema';
 import * as records from '#/server/records.server';
@@ -15,7 +14,7 @@ import {
   signInToNewWorkspace,
 } from './fixtures';
 
-// Let both requests load the same real D1 snapshot before either can write it.
+// Let both requests load the same real Postgres snapshot before either can write it.
 function overlapDashboardLoads() {
   const load = records.loadDashboard;
   let loaded = 0;
@@ -113,7 +112,7 @@ test('a conflicting widget and library metric update creates neither half of the
   expect(saved.pages[0].widgets[0].definition).toMatchObject({
     title: ['First', 'Second'][winner],
   });
-  const metrics = await createDatabase(env.DB)
+  const metrics = await database()
     .select()
     .from(libraryMetrics)
     .where(eq(libraryMetrics.workspaceId, workspace.workspaceId));

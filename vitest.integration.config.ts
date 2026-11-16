@@ -1,10 +1,8 @@
 import { fileURLToPath } from 'node:url';
-import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin';
+import { cloudflareTest } from '@cloudflare/vitest-plugin';
 import { defineConfig } from 'vitest/config';
 
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
-
-const migrations = await readD1Migrations(fromRoot('./drizzle'));
 
 export default defineConfig({
   resolve: {
@@ -21,12 +19,15 @@ export default defineConfig({
         // Date and flags match wrangler.jsonc.
         compatibilityDate: '2026-08-29',
         compatibilityFlags: ['nodejs_compat', 'enable_request_signal'],
-        d1Databases: ['DB'],
+        hyperdrives: {
+          HYPERDRIVE:
+            process.env.TEST_DATABASE_URL ??
+            'postgres://yresonance:yresonance@localhost:5432/yresonance_test',
+        },
         kvNamespaces: ['QUERY_CACHE'],
         r2Buckets: ['DATA'],
         images: { binding: 'IMAGES' },
         bindings: {
-          TEST_MIGRATIONS: migrations,
           CLOUDFLARE_ACCOUNT_ID: 'test-account',
           R2_BUCKET_NAME: 'yresonance-data-test',
           // Local mode keeps queries on the HTTP boundary the query-engine double owns.
@@ -49,6 +50,7 @@ export default defineConfig({
   ],
   test: {
     include: ['tests/integration/**/*.test.ts'],
+    globalSetup: ['./tests/integration/global-setup.ts'],
     setupFiles: ['./tests/integration/setup.ts'],
     // The service logs every request; keep that output for failures only.
     silent: 'passed-only',

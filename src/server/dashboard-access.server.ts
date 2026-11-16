@@ -37,7 +37,7 @@ export async function authorizeDashboard(
     };
   }
   const identity = await requireIdentity();
-  const [dashboardRows, workspaceRows] = await database().batch([
+  const [dashboardRows, workspaceRows] = await Promise.all([
     database().select().from(dashboards).where(eq(dashboards.id, id)).limit(1),
     database()
       .select()

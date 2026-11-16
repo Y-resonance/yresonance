@@ -1,7 +1,6 @@
-import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { expect, test, vi } from 'vitest';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { datasourceAuthorizations } from '#/db/schema';
 import { completeGoogleConnection, googleAccessToken } from '#/data/google-oauth.server';
 import { executeBigquery } from '#/data/bigquery.server';
@@ -203,7 +202,7 @@ test('Google consent is workspace-bound and single-use; queries refresh privatel
   });
   expect(source.fields.find((field) => field.columnName === 'accountId')?.castTo).toBe('VARCHAR');
   expect(requests.filter((entry) => entry.url.pathname.endsWith('/jobs'))).toHaveLength(0);
-  const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+  const stored = await database().query.datasourceAuthorizations.findFirst({
     where: eq(datasourceAuthorizations.id, grant.id),
   });
   expect(stored!.encryptedConfig).not.toContain('private-refresh-token');
@@ -690,7 +689,7 @@ test('personal Google grants reject known IDs from colleagues and other workspac
     }),
   ).toMatchObject({ currentConnectionId: grant.id, canManageCurrentConnection: true });
   expect((await completeGoogleConnection(callback)).status).toBe(303);
-  const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+  const stored = await database().query.datasourceAuthorizations.findFirst({
     where: eq(datasourceAuthorizations.id, grant.id),
   });
   const listing = await postApiRequest({
@@ -784,7 +783,7 @@ test.each(['membership', 'revocation', 'disconnect_during_verification'] as cons
     expect(requests.filter((entry) => entry.url.pathname.endsWith('/jobs'))).toHaveLength(
       beforeJobs,
     );
-    const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+    const stored = await database().query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
     });
     expect(stored).toMatchObject({
@@ -810,7 +809,7 @@ test.each(['http403', 'network', 'timeout'] as const)(
     const grant = (await connections()).connections[0]!;
     const browse = { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id };
     await callService(browse);
-    const db = createDatabase(env.DB);
+    const db = database();
     const before = await db.query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
     });
@@ -919,7 +918,7 @@ test('membership loss revokes a concurrently refreshed grant until the owner exp
     removeClerkMembership(owner.orgId, owner.userId);
     finishMembership();
     await denied;
-    const stored = await createDatabase(env.DB).query.datasourceAuthorizations.findFirst({
+    const stored = await database().query.datasourceAuthorizations.findFirst({
       where: eq(datasourceAuthorizations.id, grant.id),
     });
     expect(stored).toMatchObject({ status: 'reconnect_required', encryptedConfig: null });

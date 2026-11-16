@@ -27,6 +27,11 @@ function resolveDevPort(value: string | undefined) {
   return port;
 }
 
+if (process.env.CLOUDFLARE_ENV === 'preview' && !process.env.HYPERDRIVE_PREVIEW_ID)
+  throw new Error(
+    'Set HYPERDRIVE_PREVIEW_ID to the shared preview Hyperdrive configuration before building.',
+  );
+
 export default defineConfig(({ command, mode }) => ({
   build: {
     minify: 'oxc',
@@ -70,6 +75,9 @@ export default defineConfig(({ command, mode }) => ({
         : {}),
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
+        ...(command === 'build' && process.env.CLOUDFLARE_ENV === 'preview'
+          ? { hyperdrive: [{ binding: 'HYPERDRIVE', id: process.env.HYPERDRIVE_PREVIEW_ID! }] }
+          : {}),
         vars: {
           ...config.vars,
           POSTHOG_ENABLED: process.env.POSTHOG_ENABLED ?? config.vars?.POSTHOG_ENABLED ?? 'false',

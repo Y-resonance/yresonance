@@ -41,3 +41,5 @@ instructions. The accompanying raw files in `benchmarks/` support those measurem
 - `discovery/`, `evidence/`, and `review-evidence/`: historical screenshots removed from the current
   tree. They remain in Git history. New evidence follows
   [the upload and GitHub workflow](development.md#review-evidence).
+
+- [Postgres cutover](postgres-cutover.md): direct migrations, offline copy, verification and rollback.

@@ -4,14 +4,14 @@
 
 This follows [Cloudflare's resource isolation model](https://developers.cloudflare.com/workers/previews/resources/).
 Cloudflare gives each branch Preview its own Durable Object namespace and
-container app. D1, KV, and R2 require distinct resources, so
+container app. Postgres, Hyperdrive, KV, and R2 require distinct resources, so
 `scripts/preview-resources.ts prepare` provisions them before the native build.
 Names include a hash of the exact branch name, preserving data across pushes and
 avoiding collisions between branches such as `feature/report` and `feature-report`.
 
 The helper writes `.wrangler-branch.json` with branch bindings under `previews`,
-and `.wrangler-preview-migrations.json` pointing to that same D1 database. It
-applies migrations before building. Production bindings and routes stay at the
+with a Hyperdrive binding to the branch database. It applies the Postgres baseline over a direct
+connection before building. Production bindings and routes stay at the
 top level. Branch resources request Western Europe; containers retain `WEUR`.
 Analytics use the non-production `yresonance_product_preview` dataset. ClickHouse uses one
 `yresonance_preview_<branch-hash>` database per branch, created during preparation and deleted
@@ -22,6 +22,38 @@ Cloudflare deploys the Preview, maintains its branch URL, and posts it to the PR
 The separate `env.preview` remains available for deliberate shared deployments
 with `bun run deploy:preview`.
 
+## Postgres provisioning
+
+All non-production databases live on the single PlanetScale `preview` branch. Preparation
+creates `yresonance_preview_<branch-hash>`, applies the baseline and grants the shared
+`yresonance_preview_runtime` role table access. It creates that login if missing with
+`NOCREATEDB NOCREATEROLE`. The role has no schema-create grants and never receives the
+provisioning credentials. Each Hyperdrive config disables query caching and limits origin
+connections to five. Cleanup deletes Hyperdrive first, then uses `DROP DATABASE ... WITH (FORCE)`.
+Provisioning takes an advisory lock and tolerates partial retries. It refuses a fourth branch
+preview on the initial 25-connection budget and reports the separate 25-Hyperdrive account cap.
+Legacy D1 cleanup remains until the one-week retention window has passed.
+
+Before the first build, configure:
+
+- Workers Builds preview variables: `POSTGRES_PREVIEW_URL` with the direct provisioning role
+  connection on the preview branch (PlanetScale `postgres` permission), and
+  `POSTGRES_PREVIEW_RUNTIME_PASSWORD` with a separate, stable runtime-role password.
+- GitHub secret `POSTGRES_PREVIEW_URL` for cleanup. Never use this admin URL in a Hyperdrive
+  origin or Worker variable. Do not print database error details, which may contain credentials.
+- `CLOUDFLARE_API_TOKEN` with Hyperdrive edit permission in addition to existing permissions.
+- Shared preview: provision `yresonance_preview_shared`, migrate with
+  `POSTGRES_PREVIEW_SHARED_URL`, grant the same runtime role access, and create its own
+  Hyperdrive with caching disabled and five origin connections. Supply that configuration ID as
+  `HYPERDRIVE_PREVIEW_ID` when building `CLOUDFLARE_ENV=preview`. The build refuses a missing ID.
+
+Runtime-password rotation requires changing the Postgres role and every preview Hyperdrive
+credential together. The helper does not reset an existing role's password on every build.
+After the shared preview is running, measure idle `pg_stat_activity` and query durations including
+`yresonance.query_read_budget` events. Raise the preview cap only after measuring idle pool use
+or increasing the branch connection budget. Shared-preview copy rehearsal, query latency and
+cross-branch isolation verification remain mandatory before production cutover.
+
 ## Preview build configuration
 
 Configure Cloudflare Workers Builds with `bun run build:branch-preview` as the preview build
@@ -30,8 +62,8 @@ command and `bun run deploy:branch-preview` as the deploy command. Preparation r
 against the checked-in template does not provision isolated storage.
 
 Use the Clerk development publishable key as `VITE_CLERK_PUBLISHABLE_KEY` in the preview build
-environment. Its `CLOUDFLARE_API_TOKEN` needs Worker/container deployment and D1/KV/R2 creation,
-read, write, and migration access. Configure the optional `CLICKHOUSE_PREVIEW_*` build and cleanup
+environment. Its `CLOUDFLARE_API_TOKEN` needs Worker/container deployment and Hyperdrive/KV/R2 creation,
+read and write access, plus D1 deletion access for older previews. Configure the optional `CLICKHOUSE_PREVIEW_*` build and cleanup
 secrets as described in [ClickHouse setup](clickhouse.md). Keep credentials unavailable to fork
 builds. Workers Builds reads Bun's version from `packageManager` in `package.json`; leave
 `BUN_VERSION` unset on build triggers.
@@ -68,14 +100,14 @@ new Previews; update existing Previews explicitly when rotating credentials.
 
 ## Preview verification and cleanup
 
-After changing preview provisioning, verify two same-repository branches have different D1/KV/R2
+After changing preview provisioning, verify two same-repository branches have different Postgres/Hyperdrive/KV/R2
 bindings. Sign in, upload synthetic data, and execute a container-backed query in both. Data must
 remain isolated and survive a new commit on the same branch. A successful build alone does not
 verify container support.
 
 On PR closure, `.github/workflows/preview.yml` checks repository ownership and runs trusted
 code from the default branch. Cleanup waits for that branch's running Cloudflare builds, then
-deletes its Preview, matching container apps, D1/KV/R2 resources, and ClickHouse database.
+deletes its Preview, matching container apps, Hyperdrive configuration, Postgres database, legacy D1/KV/R2 resources, and ClickHouse database.
 Legacy `pr-<number>` previews under both old Worker names are deleted after native cleanup succeeds.
 Retry the workflow with the
 closed PR number after a partial failure only while the branch has not been pushed or reused
@@ -100,7 +132,7 @@ These operations delete preview data and require authorization for the target en
 ## Cloudflare deployment
 
 GitHub Actions deploys pushes to `main` after all jobs in the Check workflow pass. The deployment
-job builds that commit, applies production D1 migrations, and deploys the Worker and query container.
+job builds that commit, applies production Postgres migrations over a direct connection, and deploys the Worker and query container.
 Deployments run one at a time and skip commits that are no longer the head of `main`.
 
 Query containers are constrained to Western Europe (`WEUR`) in production and previews.
@@ -116,7 +148,7 @@ all paths (`path_excludes: ["*"]`) to prevent independent production deployments
 GitHub Actions runs checks, deploys production, and deletes closed PR resources; it does not deploy previews.
 
 The production job uses the repository secret `CLOUDFLARE_API_TOKEN`, which must permit Worker,
-container, and D1 deployment operations. It builds with `VITE_CLERK_PUBLISHABLE_KEY_PRODUCTION`
+container deployment operations. It builds with `VITE_CLERK_PUBLISHABLE_KEY_PRODUCTION`
 from repository variables and `POSTHOG_PROJECT_TOKEN_PRODUCTION` from repository secrets.
 The existing development Clerk variable remains reserved for browser tests.
 
@@ -131,7 +163,7 @@ The Worker expects these private resources:
 
 | Resource | Production               | Preview                          |
 | -------- | ------------------------ | -------------------------------- |
-| D1       | `yresonance-app`         | `yresonance-app-preview`         |
+| Postgres | PlanetScale production | `yresonance_preview_shared` on the preview branch |
 | KV       | `yresonance-query-cache` | `yresonance-query-cache-preview` |
 | R2       | `yresonance-data`        | `yresonance-data-preview`        |
 
@@ -157,5 +189,5 @@ wrangler r2 bucket create yresonance-data-preview --location weur
 ```
 
 Store objects under `ws/<workspaceId>/`. Datasource registration rejects keys outside the active
-workspace prefix. Apply the D1 migration to preview before opening a preview build; applying it to
+workspace prefix. Apply the Postgres baseline to preview before opening a preview build; applying it to
 production remains a separate explicit step.

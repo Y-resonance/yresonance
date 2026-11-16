@@ -1,7 +1,7 @@
-import { drizzle } from 'drizzle-orm/d1';
-
+import { drizzle } from 'drizzle-orm/node-postgres';
+import type { Client } from 'pg';
 import * as schema from './schema';
 
-export function createDatabase(database: D1Database) {
-  return drizzle(database, { schema });
+export function createDatabase(client: Client) {
+  return drizzle(client, { schema });
 }

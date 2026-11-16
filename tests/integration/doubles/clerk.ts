@@ -1,6 +1,6 @@
 /**
  * Stands in for `@clerk/tanstack-react-start/server` in the Worker integration suite.
- * Everything below Clerk stays real: `requireSession` still bootstraps workspaces in D1
+ * Everything below Clerk stays real: `requireSession` still bootstraps workspaces in Postgres
  * and the service still enforces tenancy, grants, and share links against those rows.
  */
 

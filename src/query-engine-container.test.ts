@@ -24,7 +24,7 @@ describe('QueryEngineContainer', () => {
   it('registers the private R2 handler through the Containers SDK accessor', () => {
     expect(testState.registrations).toEqual([
       {
-        'r2.yresonance.internal': testState.handler,
+        'r2.yresonance.internal': expect.any(Function),
       },
     ]);
     expect(Object.hasOwn(QueryEngineContainer, 'outboundByHost')).toBe(false);

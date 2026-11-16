@@ -1,14 +1,16 @@
 import type { DatasourceCachePolicy } from '#/domain/schema';
 import {
+  boolean,
+  jsonb,
   index,
   integer,
   primaryKey,
-  sqliteTable,
+  pgTable,
   text,
   uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+} from 'drizzle-orm/pg-core';
 
-export const workspaces = sqliteTable(
+export const workspaces = pgTable(
   'workspaces',
   {
     id: text().primaryKey(),
@@ -25,7 +27,7 @@ export const workspaces = sqliteTable(
   ],
 );
 
-export const dataSources = sqliteTable(
+export const dataSources = pgTable(
   'data_sources',
   {
     id: text().primaryKey(),
@@ -34,8 +36,8 @@ export const dataSources = sqliteTable(
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text().notNull(),
     connectorType: text('connector_type').notNull().default('duckdb-file'),
-    location: text({ mode: 'json' }).notNull(),
-    cachePolicy: text('cache_policy', { mode: 'json' }).$type<DatasourceCachePolicy>(),
+    location: jsonb().notNull(),
+    cachePolicy: jsonb('cache_policy').$type<DatasourceCachePolicy>(),
     version: text().notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -47,7 +49,7 @@ export const dataSources = sqliteTable(
 );
 
 // Kept outside datasource records so API responses cannot include encrypted credentials.
-export const datasourceConnections = sqliteTable('datasource_connections', {
+export const datasourceConnections = pgTable('datasource_connections', {
   datasourceId: text('datasource_id')
     .primaryKey()
     .references(() => dataSources.id, { onDelete: 'cascade' }),
@@ -58,7 +60,7 @@ export const datasourceConnections = sqliteTable('datasource_connections', {
 });
 
 // OAuth grants belong to their recorded creator within a workspace. Tokens stay outside datasource metadata.
-export const datasourceAuthorizations = sqliteTable(
+export const datasourceAuthorizations = pgTable(
   'datasource_authorizations',
   {
     id: text().primaryKey(),
@@ -76,7 +78,7 @@ export const datasourceAuthorizations = sqliteTable(
   (table) => [index('datasource_authorizations_workspace_idx').on(table.workspaceId)],
 );
 
-export const datasourceUploads = sqliteTable(
+export const datasourceUploads = pgTable(
   'datasource_uploads',
   {
     key: text().primaryKey(),
@@ -92,7 +94,7 @@ export const datasourceUploads = sqliteTable(
   (table) => [index('datasource_uploads_workspace_id_idx').on(table.workspaceId)],
 );
 
-export const ingestionTokens = sqliteTable(
+export const ingestionTokens = pgTable(
   'ingestion_tokens',
   {
     id: text().primaryKey(),
@@ -108,7 +110,7 @@ export const ingestionTokens = sqliteTable(
   (table) => [index('ingestion_tokens_workspace_id_idx').on(table.workspaceId)],
 );
 
-export const queryReadBudgets = sqliteTable(
+export const queryReadBudgets = pgTable(
   'query_read_budgets',
   {
     id: text().primaryKey(),
@@ -123,7 +125,7 @@ export const queryReadBudgets = sqliteTable(
   (table) => [index('query_read_budgets_workspace_id_idx').on(table.workspaceId)],
 );
 
-export const fields = sqliteTable(
+export const fields = pgTable(
   'fields',
   {
     id: text().primaryKey(),
@@ -140,9 +142,9 @@ export const fields = sqliteTable(
     semanticType: text('semantic_type').notNull(),
     defaultAggregation: text('default_aggregation'),
     description: text(),
-    hidden: integer({ mode: 'boolean' }).notNull().default(false),
+    hidden: boolean().notNull().default(false),
     castTo: text('cast_to'),
-    sampleValues: text('sample_values', { mode: 'json' }),
+    sampleValues: jsonb('sample_values'),
     cardinality: integer(),
   },
   (table) => [
@@ -152,7 +154,7 @@ export const fields = sqliteTable(
   ],
 );
 
-export const calculatedFields = sqliteTable(
+export const calculatedFields = pgTable(
   'calculated_fields',
   {
     id: text().primaryKey(),
@@ -181,7 +183,7 @@ export const calculatedFields = sqliteTable(
   ],
 );
 
-export const libraryMetrics = sqliteTable(
+export const libraryMetrics = pgTable(
   'library_metrics',
   {
     id: text().primaryKey(),
@@ -204,7 +206,7 @@ export const libraryMetrics = sqliteTable(
   ],
 );
 
-export const dashboards = sqliteTable(
+export const dashboards = pgTable(
   'dashboards',
   {
     id: text().primaryKey(),
@@ -212,7 +214,7 @@ export const dashboards = sqliteTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text().notNull(),
-    document: text({ mode: 'json' }).notNull(),
+    document: jsonb().notNull(),
     createdBy: text('created_by').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -220,7 +222,7 @@ export const dashboards = sqliteTable(
   (table) => [index('dashboards_workspace_id_idx').on(table.workspaceId)],
 );
 
-export const dashboardGrants = sqliteTable(
+export const dashboardGrants = pgTable(
   'dashboard_grants',
   {
     dashboardId: text('dashboard_id')
@@ -237,7 +239,7 @@ export const dashboardGrants = sqliteTable(
   ],
 );
 
-export const shareLinks = sqliteTable(
+export const shareLinks = pgTable(
   'share_links',
   {
     token: text().primaryKey(),
@@ -253,7 +255,7 @@ export const shareLinks = sqliteTable(
 
 // Uploaded dashboard images. The original and its resized variants live in R2 under
 // `ws/<workspaceId>/assets/<id>/`. Rows stay while any dashboard may reference them.
-export const dashboardAssets = sqliteTable(
+export const dashboardAssets = pgTable(
   'dashboard_assets',
   {
     id: text().primaryKey(),

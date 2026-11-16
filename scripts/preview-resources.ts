@@ -1,5 +1,6 @@
 import { appendFile } from 'node:fs/promises';
 import { previewResourceName, previewClickhouseDatabase } from './preview-config';
+import { managePreviewPostgres } from './postgres-preview';
 import { managePreviewClickhouse } from './clickhouse-preview';
 import { readPreviewTemplate } from './preview-template';
 import { z } from 'zod';
@@ -101,11 +102,7 @@ async function manageResources(workerName: string) {
 
   if (action === 'prepare') {
     await managePreviewClickhouse('prepare', branch);
-    const db =
-      database ??
-      databaseSchema.parse(
-        await api('/d1/database', 'POST', { name: resourceName, primary_location_hint: 'weur' }),
-      );
+    const hyperdriveId = await managePreviewPostgres('prepare', branch, api);
     const kv =
       namespace ??
       namespaceSchema.parse(await api('/storage/kv/namespaces', 'POST', { title: resourceName }));
@@ -124,14 +121,7 @@ async function manageResources(workerName: string) {
         DATA_SOURCE_BASE_URL: `r2://${resourceName}`,
         QUERY_DATA_SOURCE_BASE_URL: `r2://${resourceName}`,
       },
-      d1_databases: [
-        {
-          binding: 'DB',
-          database_name: resourceName,
-          database_id: db.uuid,
-          migrations_dir: 'drizzle',
-        },
-      ],
+      hyperdrive: [{ binding: 'HYPERDRIVE', id: hyperdriveId! }],
       kv_namespaces: [{ binding: 'QUERY_CACHE', id: kv.id }],
       r2_buckets: [{ binding: 'DATA', bucket_name: resourceName }],
       analytics_engine_datasets: template.analytics_engine_datasets,
@@ -139,8 +129,6 @@ async function manageResources(workerName: string) {
       containers: template.containers,
       durable_objects: template.durable_objects,
     };
-    // Keep paths relative to the repository. Vite builds from this same config, and migrations
-    // target the same D1 database that the Preview receives.
     await Bun.write(
       configPath,
       JSON.stringify(
@@ -152,21 +140,6 @@ async function manageResources(workerName: string) {
         2,
       ),
     );
-    await Bun.write(
-      '.wrangler-preview-migrations.json',
-      JSON.stringify({ account_id: accountId, d1_databases: bindings.d1_databases }),
-    );
-    await run([
-      'bunx',
-      'wrangler',
-      'd1',
-      'migrations',
-      'apply',
-      'DB',
-      '--remote',
-      '--config',
-      '.wrangler-preview-migrations.json',
-    ]);
     console.log(`Prepared isolated resources for ${previewName}: ${resourceName}`);
   } else {
     // Attempt every cleanup even if one service fails. Rerunning discovers resources by their
@@ -205,7 +178,10 @@ async function manageResources(workerName: string) {
       });
     if (database) await cleanup(() => api(`/d1/database/${database.uuid}`, 'DELETE'));
     if (namespace) await cleanup(() => api(`/storage/kv/namespaces/${namespace.id}`, 'DELETE'));
-    if (!legacy) await cleanup(() => managePreviewClickhouse('cleanup', branch));
+    if (!legacy) {
+      await cleanup(() => managePreviewPostgres('cleanup', branch, api));
+      await cleanup(() => managePreviewClickhouse('cleanup', branch));
+    }
     await cleanup(async () => {
       const buckets = z
         .object({ buckets: z.array(z.object({ name: z.string() })) })

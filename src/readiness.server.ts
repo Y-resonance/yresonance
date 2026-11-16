@@ -1,3 +1,5 @@
+import { sql } from 'drizzle-orm';
+import { database } from '#/server/database.server';
 import { env } from 'cloudflare:workers';
 import { checkSourceStorage } from '#/data/source.server';
 
@@ -9,8 +11,8 @@ import {
 } from './readiness';
 
 const checks: ReadinessChecks = {
-  d1: async () => {
-    await env.DB.prepare('SELECT 1').first();
+  postgres: async () => {
+    await database().execute(sql`SELECT 1`);
   },
   kv: async () => {
     await env.QUERY_CACHE.get('__readiness__');

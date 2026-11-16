@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { expect } from 'vitest';
 import { apiRequestSchema } from '#/api/contracts';
-import { createDatabase } from '#/db/client';
+import { withDatabaseScope, database } from '#/server/database.server';
 import { dataSources, fields } from '#/db/schema';
 import type { SourceListing } from '#/data/source.server';
 import type { DashboardDocument, WidgetDefinition } from '#/domain/schema';
@@ -32,7 +32,11 @@ export interface SeededDataSource {
 
 /** Runs a request through the same schema the API route parses, so defaults apply. */
 export function callService(request: unknown) {
-  return executeRequest(apiRequestSchema.parse(request));
+  return withDatabaseScope(
+    env.HYPERDRIVE.connectionString,
+    () => executeRequest(apiRequestSchema.parse(request)),
+    true,
+  );
 }
 
 /** Posts to the real `/api/yresonance` handler to exercise the HTTP envelope. */
@@ -41,13 +45,18 @@ export function postApiRequest(body: unknown) {
   if (!handlers || typeof handlers !== 'object' || !('POST' in handlers))
     throw new Error('The /api/yresonance route no longer exposes a POST handler.');
   const post = (handlers as { POST: (context: { request: Request }) => Promise<Response> }).POST;
-  return post({
-    request: new Request('https://yresonance.test/api/yresonance', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    }),
-  });
+  return withDatabaseScope(
+    env.HYPERDRIVE.connectionString,
+    () =>
+      post({
+        request: new Request('https://yresonance.test/api/yresonance', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+      }),
+    true,
+  );
 }
 
 /** Signs a fresh Clerk identity in and bootstraps its workspace through the real service. */
@@ -83,18 +92,18 @@ export function signInAsOwner(workspace: TestWorkspace, { isAdmin = true } = {})
 }
 
 /**
- * Writes a datasource and its fields straight to D1. Registration goes through object
+ * Writes a datasource and its fields straight to Postgres. Registration goes through object
  * storage, which these tests substitute rather than protect.
  */
 export async function seedDataSource(
   workspace: TestWorkspace,
   { version = 'source-v1' } = {},
 ): Promise<SeededDataSource> {
-  const database = createDatabase(env.DB);
+  const db = database();
   const id = uniqueId('ds');
   const name = uniqueId('Sales');
   const now = new Date().toISOString();
-  await database.insert(dataSources).values({
+  await db.insert(dataSources).values({
     id,
     workspaceId: workspace.workspaceId,
     name,
@@ -135,7 +144,7 @@ export async function seedDataSource(
     workspaceId: workspace.workspaceId,
     dataSourceId: id,
   }));
-  await database.insert(fields).values(rows);
+  await db.insert(fields).values(rows);
   const fieldIds = Object.fromEntries(
     rows.map((row) => [row.columnName, row.id]),
   ) as SeededDataSource['fieldIds'];

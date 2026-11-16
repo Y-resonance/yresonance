@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { ingestionTokens } from '#/db/schema';
 import { capabilityUrl, createR2Capability } from './internal-r2';
 import { deleteSourceObject, localSourceUrl } from './source.server';
@@ -8,8 +8,6 @@ import { MAX_DATASOURCE_FILE_BYTES } from '#/domain/datasource-upload';
 import type { DataSourceRecord } from '#/query/types';
 import type { DatasourceConnector } from './connectors/contract';
 import type { ManagedUploadImport } from './analytics-data-backend';
-
-const database = () => createDatabase(env.DB);
 
 // The caller has already claimed and authorized this workspace upload.
 export async function importManagedFile(

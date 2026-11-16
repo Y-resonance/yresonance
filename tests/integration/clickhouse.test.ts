@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { afterEach, expect, test, vi } from 'vitest';
 import { signOut } from './doubles/clerk';
 import { eq } from 'drizzle-orm';
-import { createDatabase } from '#/db/client';
+import { database } from '#/server/database.server';
 import { dataSources } from '#/db/schema';
 import type { DataSourceRecord } from '#/query/types';
 import {
@@ -159,7 +159,7 @@ test('zero TTL bypasses KV and a datasource cannot claim another workspace manag
   expect(await callService(query)).toMatchObject({ cache: 'miss' });
   expect(await callService(query)).toMatchObject({ cache: 'miss' });
   expect((await env.QUERY_CACHE.list()).keys).toHaveLength(0);
-  await createDatabase(env.DB)
+  await database()
     .update(dataSources)
     .set({
       location: {
