@@ -56,7 +56,7 @@ function identityProvider(person: Person) {
     const body = new URLSearchParams(await request.text());
     provider.tokenRequests.push(body);
     if (body.get('grant_type') === 'refresh_token' && provider.failRefresh)
-      return Response.json({ error: 'server_error' }, { status: 503 });
+      return Response.json({ error: 'temporarily_unavailable' }, { status: 400 });
     if (body.get('grant_type') === 'refresh_token' && provider.rejectRefresh)
       return Response.json({ error: 'invalid_grant' }, { status: 400 });
     const now = Math.floor(Date.now() / 1000);
