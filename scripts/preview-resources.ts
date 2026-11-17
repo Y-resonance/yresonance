@@ -37,7 +37,10 @@ async function api(path: string, method = 'GET', body?: unknown) {
     .object({ success: z.boolean(), result: z.unknown() })
     .parse(await response.json());
   if (!response.ok || !envelope.success) {
-    throw new Error(`Cloudflare ${method} ${path} failed with HTTP ${response.status}`);
+    throw Object.assign(
+      new Error(`Cloudflare ${method} ${path} failed with HTTP ${response.status}`),
+      { status: response.status },
+    );
   }
   return envelope.result;
 }

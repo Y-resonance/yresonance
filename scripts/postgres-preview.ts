@@ -6,6 +6,46 @@ import { previewClickhouseDatabase } from './preview-config';
 
 class PreviewProvisioningError extends Error {}
 
+const failureMetadataSchema = z.object({
+  code: z
+    .union([
+      z.string().regex(/^[0-9A-Z]{5}$/), // PostgreSQL SQLSTATE
+      z.enum([
+        'ENOENT',
+        'EACCES',
+        'ENOTFOUND',
+        'ECONNREFUSED',
+        'ECONNRESET',
+        'ETIMEDOUT',
+        'EHOSTUNREACH',
+        'ENETUNREACH',
+        'EAI_AGAIN',
+        'CERT_HAS_EXPIRED',
+        'DEPTH_ZERO_SELF_SIGNED_CERT',
+        'SELF_SIGNED_CERT_IN_CHAIN',
+        'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+        'UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
+        'ERR_TLS_CERT_ALTNAME_INVALID',
+      ]),
+    ])
+    .optional()
+    .catch(undefined),
+  status: z.number().int().min(100).max(599).optional().catch(undefined),
+});
+
+function provisioningFailure(action: string, database: string, operation: string, error: unknown) {
+  const parsed = failureMetadataSchema.safeParse(error);
+  const code = parsed.success ? parsed.data.code : undefined;
+  const status = parsed.success ? parsed.data.status : undefined;
+  const diagnostic = [operation, code && `code=${code}`, status && `HTTP ${status}`]
+    .filter(Boolean)
+    .join('; ');
+  // Never include the original message, query, URL, stack or cause: they can contain secrets.
+  return new PreviewProvisioningError(
+    `Postgres preview ${action} failed for ${database} during ${diagnostic}.`,
+  );
+}
+
 type CloudflareApi = (path: string, method?: string, body?: unknown) => Promise<unknown>;
 const runtimeRole = 'yresonance_preview_runtime';
 const configurationsSchema = z.array(
@@ -29,11 +69,15 @@ export async function managePreviewPostgres(
     throw new PreviewProvisioningError(
       'POSTGRES_PREVIEW_URL is required for preview Postgres provisioning and cleanup.',
     );
-  const admin = new Client({ connectionString: url });
+  let admin: Client | undefined;
+  let operation = 'connect to Postgres';
   try {
+    admin = new Client({ connectionString: url });
     await admin.connect();
     // Serialize prepare/cleanup across builds, including capacity checks and partial retries.
+    operation = 'acquire provisioning lock';
     await admin.query("SELECT pg_advisory_lock(hashtext('yresonance-preview-provisioning'))");
+    operation = 'list Hyperdrive configurations';
     const configs: z.infer<typeof configurationsSchema> = [];
     for (let page = 1; ; page++) {
       const batch = configurationsSchema.parse(
@@ -45,7 +89,9 @@ export async function managePreviewPostgres(
     const config = configs.find((item) => item.name === name);
     if (action === 'cleanup') {
       // Delete the pool before forcibly closing its origin connections.
+      operation = 'delete Hyperdrive configuration';
       if (config) await api(`/hyperdrive/configs/${config.id}`, 'DELETE');
+      operation = 'drop preview database';
       await admin.query(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
       return;
     }
@@ -54,6 +100,7 @@ export async function managePreviewPostgres(
       throw new PreviewProvisioningError(
         'POSTGRES_PREVIEW_RUNTIME_PASSWORD is required for the shared preview runtime role.',
       );
+    operation = 'inspect preview database capacity';
     const databases = await admin.query<{ datname: string }>(
       "SELECT datname FROM pg_database WHERE datname LIKE 'yresonance_preview_%'",
     );
@@ -69,6 +116,7 @@ export async function managePreviewPostgres(
       throw new PreviewProvisioningError(
         'Hyperdrive configuration limit reached (25). Remove an unused preview first.',
       );
+    operation = 'configure preview database and runtime role';
     const role = await admin.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [runtimeRole]);
     if (!role.rowCount) {
       // Utility statements do not accept bind parameters; escape only this secret literal.
@@ -82,8 +130,11 @@ export async function managePreviewPostgres(
     directUrl.pathname = `/${database}`;
     const direct = new Client({ connectionString: directUrl.toString() });
     try {
+      operation = 'connect to preview database';
       await direct.connect();
+      operation = 'migrate preview database';
       await migrate(drizzle(direct), { migrationsFolder: './drizzle' });
+      operation = 'grant preview runtime permissions';
       await direct.query(`GRANT USAGE ON SCHEMA public TO ${runtimeRole}`);
       await direct.query(
         `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${runtimeRole}`,
@@ -92,13 +143,18 @@ export async function managePreviewPostgres(
         `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${runtimeRole}`,
       );
     } finally {
-      await direct.end();
+      try {
+        await direct.end();
+      } catch (error) {
+        throw provisioningFailure(action, database, 'disconnect from preview database', error);
+      }
     }
     if (config) {
       if (!config.caching?.disabled)
         throw new PreviewProvisioningError('Preview Hyperdrive query caching must be disabled.');
       return config.id;
     }
+    operation = 'create Hyperdrive configuration';
     const created = z.object({ id: z.string() }).parse(
       await api('/hyperdrive/configs', 'POST', {
         name,
@@ -120,12 +176,13 @@ export async function managePreviewPostgres(
     return created.id;
   } catch (error) {
     if (error instanceof PreviewProvisioningError) throw error;
-    // Query exceptions can include the CREATE ROLE password or an origin connection URL.
-    throw new PreviewProvisioningError(
-      `Postgres preview ${action} failed for ${database}; check provisioning access, capacity, runtime credentials and migration state in a secure session.`,
-    );
+    throw provisioningFailure(action, database, operation, error);
   } finally {
     // Disconnect also releases the advisory lock on every failure path.
-    await admin.end();
+    try {
+      await admin?.end();
+    } catch (error) {
+      throw provisioningFailure(action, database, 'disconnect from Postgres', error);
+    }
   }
 }

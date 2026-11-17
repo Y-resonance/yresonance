@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { inspect } from 'node:util';
 import { afterEach, expect, test } from 'vitest';
 import { managePreviewPostgres } from '../../scripts/postgres-preview';
 import { previewClickhouseDatabase } from '../../scripts/preview-config';
@@ -109,4 +110,48 @@ test('a fourth branch preview is refused before a database or Hyperdrive is crea
   await prepare();
   await expect(prepare()).rejects.toThrow('25-connection PlanetScale branch');
   expect(configurations).toHaveLength(3);
+});
+
+test.each([
+  { metadata: { status: 403 }, diagnostic: 'HTTP 403' },
+  { metadata: { code: 'ECONNRESET' }, diagnostic: 'code=ECONNRESET' },
+  {
+    metadata: { code: 'postgres://secret-user:secret-password@example.test' },
+    diagnostic: undefined,
+  },
+])(
+  'cleanup reports its failing operation with safe metadata: $metadata',
+  async ({ metadata, diagnostic }) => {
+    process.env.POSTGRES_PREVIEW_URL = url;
+    process.env.POSTGRES_PREVIEW_RUNTIME_PASSWORD = 'preview-test-only';
+    const branch = await prepare();
+    const failure = Object.assign(new Error('secret-password and secret-token'), metadata, {
+      query: 'CREATE ROLE test PASSWORD secret-password',
+      detail: 'secret-token',
+    });
+    const error = await managePreviewPostgres('cleanup', branch, async (...args) => {
+      if (args[1] === 'DELETE') throw failure;
+      return api(...args);
+    }).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).toContain('during delete Hyperdrive configuration');
+    if (diagnostic) expect(String(error)).toContain(diagnostic);
+    expect(inspect(error)).not.toMatch(/secret-password|secret-token|secret-user|CREATE ROLE/);
+    expect(configurations).toHaveLength(1);
+  },
+);
+
+test('Postgres authentication failures retain SQLSTATE without exposing credentials', async () => {
+  const invalid = new URL(url);
+  invalid.password = 'invalid-secret-password';
+  process.env.POSTGRES_PREVIEW_URL = invalid.toString();
+  try {
+    const error = await managePreviewPostgres('cleanup', 'authentication-test', api).catch(
+      (error: unknown) => error,
+    );
+    expect(String(error)).toContain('during connect to Postgres; code=28P01');
+    expect(inspect(error)).not.toContain('invalid-secret-password');
+  } finally {
+    process.env.POSTGRES_PREVIEW_URL = url;
+  }
 });
