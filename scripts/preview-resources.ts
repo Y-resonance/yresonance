@@ -5,7 +5,7 @@ import { managePreviewClickhouse } from './clickhouse-preview';
 import { readPreviewTemplate } from './preview-template';
 import { z } from 'zod';
 
-const action = z.enum(['prepare', 'cleanup', 'cleanup-legacy']).parse(process.argv[2]);
+const action = z.enum(['prepare', 'cleanup', 'cleanup-legacy', 'diagnose']).parse(process.argv[2]);
 const branch = z
   .string()
   .min(1)
@@ -57,6 +57,11 @@ async function list<T>(path: string, schema: z.ZodType<T>) {
 async function run(command: string[]) {
   const child = Bun.spawn(command, { stdout: 'inherit', stderr: 'inherit' });
   if ((await child.exited) !== 0) throw new Error(`Command failed: ${command[0]}`);
+}
+
+if (action === 'diagnose') {
+  await managePreviewPostgres('diagnose', branch, api);
+  process.exit(0);
 }
 
 // Native Preview builds have their own history, separate from production builds.

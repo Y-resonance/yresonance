@@ -10,6 +10,11 @@ on:
         required: true
         type: string
 
+      diagnose:
+        description: Only check preview Postgres and Hyperdrive access (no cleanup)
+        type: boolean
+        default: false
+
 permissions:
   contents: read
   pull-requests: read
@@ -20,8 +25,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  diagnose:
+    if: github.event_name == 'workflow_dispatch' && inputs.diagnose
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      POSTGRES_PREVIEW_URL: ${{ secrets.POSTGRES_PREVIEW_URL }}
+    steps:
+      # Explicit diagnostics use the selected ref so fixes can be checked before merging.
+      - uses: useblacksmith/checkout@v1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - name: Check preview access without changing resources
+        run: bun run scripts/preview-resources.ts diagnose preview-diagnostics
+
   cleanup:
-    if: github.event_name == 'workflow_dispatch' || (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: (github.event_name == 'workflow_dispatch' && !inputs.diagnose) || (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     env:

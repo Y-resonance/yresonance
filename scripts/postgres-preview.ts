@@ -58,7 +58,7 @@ const configurationsSchema = z.array(
 
 // A branch database and its Hyperdrive are one lifecycle. The admin URL never reaches a Worker.
 export async function managePreviewPostgres(
-  action: 'prepare' | 'cleanup',
+  action: 'prepare' | 'cleanup' | 'diagnose',
   branch: string,
   api: CloudflareApi,
 ) {
@@ -75,8 +75,10 @@ export async function managePreviewPostgres(
     admin = new Client({ connectionString: url });
     await admin.connect();
     // Serialize prepare/cleanup across builds, including capacity checks and partial retries.
-    operation = 'acquire provisioning lock';
-    await admin.query("SELECT pg_advisory_lock(hashtext('yresonance-preview-provisioning'))");
+    if (action !== 'diagnose') {
+      operation = 'acquire provisioning lock';
+      await admin.query("SELECT pg_advisory_lock(hashtext('yresonance-preview-provisioning'))");
+    }
     operation = 'list Hyperdrive configurations';
     const configs: z.infer<typeof configurationsSchema> = [];
     for (let page = 1; ; page++) {
@@ -85,6 +87,24 @@ export async function managePreviewPostgres(
       );
       configs.push(...batch);
       if (batch.length < 20) break;
+    }
+    if (action === 'diagnose') {
+      operation = 'inspect preview database ownership';
+      await admin.query('BEGIN READ ONLY');
+      const databases = await admin.query<{ database: string; canDrop: boolean }>(
+        `SELECT datname AS database, pg_has_role(current_user, datdba, 'MEMBER') AS "canDrop"
+         FROM pg_database WHERE datname LIKE 'yresonance_preview_%' ORDER BY datname`,
+      );
+      await admin.query('ROLLBACK');
+      console.info('yresonance.postgres_preview_diagnostic', {
+        postgres: 'connected',
+        databases: databases.rows,
+        hyperdrive: 'readable',
+        configurations: configs
+          .filter((config) => config.name.startsWith('yresonance-postgres-'))
+          .map((config) => config.name),
+      });
+      return;
     }
     const config = configs.find((item) => item.name === name);
     if (action === 'cleanup') {

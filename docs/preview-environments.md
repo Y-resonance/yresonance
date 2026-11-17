@@ -133,6 +133,18 @@ fails cleanup and leaves the ClickHouse database in place; supply all five value
 A push after closure can recreate resources and require cleanup again.
 These operations delete preview data and require authorization for the target environment.
 
+### Read-only cleanup diagnostics
+
+Dispatch the `Preview cleanup` workflow with `diagnose=true` on the ref to inspect.
+This mode uses the GitHub preview credentials, checks Postgres access and database ownership,
+and lists Hyperdrive configurations. It does not provision or delete resources. Unlike cleanup,
+the explicit diagnostic runs the selected ref so a diagnostic fix can be checked before merging.
+The required `pr` input only identifies the workflow's concurrency group in this mode.
+
+Postgres provisioning failures report the operation plus a safe SQLSTATE, connection/TLS code,
+or HTTP status when available. Original error messages, SQL, connection URLs and causes stay out
+of the logs because they can contain credentials.
+
 ## Cloudflare deployment
 
 GitHub Actions deploys pushes to `main` after all jobs in the Check workflow pass. The deployment

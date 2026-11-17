@@ -1,6 +1,6 @@
 import { Client } from 'pg';
 import { inspect } from 'node:util';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { managePreviewPostgres } from '../../scripts/postgres-preview';
 import { previewClickhouseDatabase } from '../../scripts/preview-config';
 
@@ -153,5 +153,25 @@ test('Postgres authentication failures retain SQLSTATE without exposing credenti
     expect(inspect(error)).not.toContain('invalid-secret-password');
   } finally {
     process.env.POSTGRES_PREVIEW_URL = url;
+  }
+});
+
+test('diagnostics inspect access without provisioning or deleting resources', async () => {
+  process.env.POSTGRES_PREVIEW_URL = url;
+  const output = vi.spyOn(console, 'info').mockImplementation(() => {});
+  try {
+    await managePreviewPostgres('diagnose', 'preview-diagnostics', async (...args) => {
+      expect(args[1]).toBeUndefined();
+      return api(...args);
+    });
+    expect(configurations).toHaveLength(0);
+    expect(output).toHaveBeenCalledWith('yresonance.postgres_preview_diagnostic', {
+      postgres: 'connected',
+      databases: [],
+      hyperdrive: 'readable',
+      configurations: [],
+    });
+  } finally {
+    output.mockRestore();
   }
 });
