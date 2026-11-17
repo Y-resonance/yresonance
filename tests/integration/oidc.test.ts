@@ -37,6 +37,7 @@ function identityProvider(person: Person) {
     person,
     nonce: undefined as string | undefined,
     rejectRefresh: false,
+    failRefresh: false,
     tokenRequests: [] as URLSearchParams[],
   };
   const original = globalThis.fetch;
@@ -54,6 +55,8 @@ function identityProvider(person: Person) {
       });
     const body = new URLSearchParams(await request.text());
     provider.tokenRequests.push(body);
+    if (body.get('grant_type') === 'refresh_token' && provider.failRefresh)
+      return Response.json({ error: 'server_error' }, { status: 503 });
     if (body.get('grant_type') === 'refresh_token' && provider.rejectRefresh)
       return Response.json({ error: 'invalid_grant' }, { status: 400 });
     const now = Math.floor(Date.now() / 1000);
@@ -242,6 +245,19 @@ describe('OIDC session lifetime', () => {
 
     expect(await identity(visitor, '/api/yresonance')).toMatchObject({ userId: null });
     expect([...visitor.cookies.keys()]).toEqual([]);
+  });
+
+  test('keeps the session through a provider outage and resumes afterwards', async () => {
+    const sub = uniqueSub();
+    const provider = identityProvider({ sub });
+    const { visitor } = await signIn(provider);
+    provider.failRefresh = true;
+
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + 301_000 });
+
+    expect(await identity(visitor, '/api/yresonance')).toMatchObject({ userId: null });
+    provider.failRefresh = false;
+    expect(await identity(visitor, '/api/yresonance')).toMatchObject({ userId: sub });
   });
 
   test('signs out through a same-origin form post and ends the provider session', async () => {

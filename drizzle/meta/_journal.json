@@ -15,6 +15,13 @@
       "when": 1794931313658,
       "tag": "0001_tired_fallen_one",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794933265603,
+      "tag": "0002_parched_gargoyle",
+      "breakpoints": true
     }
   ]
 }

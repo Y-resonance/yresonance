@@ -33,13 +33,14 @@ export const users = pgTable(
   'users',
   {
     id: text().primaryKey(),
-    // Stored in lower case so sharing by email matches regardless of spelling.
+    // Stored in lower case so sharing by email matches regardless of spelling. At most one
+    // user holds an address; users without one are not limited.
     email: text(),
     name: text(),
     imageUrl: text('image_url'),
     lastSeenAt: text('last_seen_at').notNull(),
   },
-  (table) => [index('users_email_idx').on(table.email)],
+  (table) => [uniqueIndex('users_email_unique').on(table.email)],
 );
 
 export const dataSources = pgTable(

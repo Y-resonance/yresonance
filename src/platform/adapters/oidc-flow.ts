@@ -211,16 +211,19 @@ async function recordUser(session: OidcSession) {
     lastSeenAt: new Date().toISOString(),
   };
   // An address belongs to whoever signed in with it last, so a share by email never reaches
-  // a previous owner.
-  if (session.email)
-    await database()
-      .update(users)
-      .set({ email: null })
-      .where(and(eq(users.email, session.email), ne(users.id, session.userId)));
-  await database()
-    .insert(users)
-    .values(values)
-    .onConflictDoUpdate({ target: users.id, set: values });
+  // a previous owner. Two people signing in with one address at the same moment collide on
+  // the unique index; the second attempt then takes the address over.
+  const email = session.email;
+  const write = () =>
+    database().transaction(async (tx) => {
+      if (email)
+        await tx
+          .update(users)
+          .set({ email: null })
+          .where(and(eq(users.email, email), ne(users.id, session.userId)));
+      await tx.insert(users).values(values).onConflictDoUpdate({ target: users.id, set: values });
+    });
+  await write().catch(write);
 }
 
 async function login(request: Request) {
@@ -346,9 +349,9 @@ async function resolveSession(request: Request) {
       ),
     };
   } catch (error) {
-    // A rejected refresh token ends the session. An unreachable provider only fails this
-    // request, so a short outage does not sign everyone out.
-    const rejected = error instanceof client.ResponseBodyError;
+    // A rejected refresh token ends the session. An unreachable or failing provider only
+    // fails this request, so an outage does not sign everyone out.
+    const rejected = error instanceof client.ResponseBodyError && error.error === 'invalid_grant';
     console.warn('yresonance.auth_refresh', { result: rejected ? 'rejected' : 'unavailable' });
     return { session: null, cookies: rejected ? clear : [] };
   }

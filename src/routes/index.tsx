@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
 import { AppShell } from '#/components/app-shell';
+import { SignInRedirect } from '#/components/auth-actions';
 import { SignedIn, SignedOut } from '#/components/auth-gate';
 import { LandingPage } from '#/components/landing-page';
 import { LoadingState } from '#/components/request-state';
@@ -35,12 +36,17 @@ function Home() {
   const { landing } = useAuthCapabilities();
   return (
     <AppShell requireWorkspace>
-      {landing ? (
-        <SignedOut>
-          <LandingPage />
-          <SiteFooter />
-        </SignedOut>
-      ) : null}
+      <SignedOut>
+        {landing ? (
+          <>
+            <LandingPage />
+            <SiteFooter />
+          </>
+        ) : (
+          // Reached by navigating inside the app, where no page request triggers the login.
+          <SignInRedirect />
+        )}
+      </SignedOut>
       <SignedIn>
         <Suspense fallback={<LoadingState />}>
           <DashboardIndex />
