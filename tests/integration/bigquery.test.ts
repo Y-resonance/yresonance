@@ -4,8 +4,7 @@ import { database } from '#/server/database.server';
 import { datasourceAuthorizations, datasourceConnections, dashboards } from '#/db/schema';
 import { completeGoogleConnection, googleAccessToken } from '#/data/google-oauth.server';
 import { executeBigquery } from '#/data/bigquery.server';
-import { signOut, removeClerkMembership, setClerkDirectory } from './doubles/clerk';
-import * as clerk from './doubles/clerk';
+import { directory, signOut, removeMembership, setDirectory } from './doubles/auth';
 import type { DatasourceCatalogPage } from '#/api/contracts';
 import type { DataSourceRecord } from '#/query/types';
 import {
@@ -597,9 +596,7 @@ test('personal Google grants reject known IDs from colleagues and other workspac
     location,
     connection: { authorizationId: grant.id },
   })) as DataSourceRecord;
-  setClerkDirectory([
-    { id: alice.userId, emailAddress: 'alice@app.test', firstName: 'Alice', lastName: 'Smith' },
-  ]);
+  setDirectory([{ id: alice.userId, email: 'alice@app.test', name: 'Alice Smith' }]);
   const callback = await begin(grant.id);
   signInAsColleague(alice);
   await expectApiError(completeGoogleConnection(callback), {
@@ -635,7 +632,7 @@ test('personal Google grants reject known IDs from colleagues and other workspac
         canManageCurrentConnection: false,
         currentConnectionOwnerName: 'Alice Smith',
       });
-      setClerkDirectory([]);
+      setDirectory([]);
       expect(
         await callService({
           action: 'listDatasourceConnections',
@@ -749,7 +746,7 @@ test.each(['membership', 'revocation', 'disconnect_during_verification'] as cons
     const bob = signInAsColleague(alice);
     await expectApiError(callService(query), { status: 403, code: 'dashboard_access_denied' });
     signInAsOwner(alice);
-    setClerkDirectory([{ id: bob, emailAddress: 'bob@example.test' }]);
+    setDirectory([{ id: bob, email: 'bob@example.test' }]);
     await callService({
       action: 'shareDashboard',
       dashboardId: dashboard.id,
@@ -759,7 +756,7 @@ test.each(['membership', 'revocation', 'disconnect_during_verification'] as cons
     expect(await callService(query)).toMatchObject({ cache: 'miss' });
     expect(await callService(query)).toMatchObject({ cache: 'hit' });
     // The grant is now refreshed and unexpired. Neither revocation check may rely on refresh.
-    if (loss === 'membership') removeClerkMembership(alice.orgId, alice.userId);
+    if (loss === 'membership') removeMembership(alice.orgId, alice.userId);
     const original = globalThis.fetch;
     let revoked = loss === 'revocation';
     let disconnectOnVerify = loss === 'disconnect_during_verification';
@@ -850,19 +847,13 @@ test('a stalled membership lookup times out without deleting credentials or requ
   await completeGoogleConnection(await begin());
   const grant = (await connections()).connections[0]!;
   const browse = { action: 'browseDatasource', provider: 'bigquery', connectionId: grant.id };
-  const client = clerk.clerkClient();
   let lookupStarted!: () => void;
   const started = new Promise<void>((resolve) => {
     lookupStarted = resolve;
   });
-  const lookup = vi.spyOn(clerk, 'clerkClient').mockReturnValue({
-    ...client,
-    organizations: {
-      getOrganizationMembershipList: () => {
-        lookupStarted();
-        return new Promise(() => {});
-      },
-    },
+  const lookup = vi.spyOn(directory, 'memberships').mockImplementation(() => {
+    lookupStarted();
+    return new Promise(() => {});
   });
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   try {
@@ -886,7 +877,7 @@ test('membership loss revokes a concurrently refreshed grant until the owner exp
   const owner = await signInToNewWorkspace();
   await completeGoogleConnection(await begin());
   const grant = (await connections()).connections[0]!;
-  const client = clerk.clerkClient();
+  const memberships = directory.memberships;
   let notifyStarted!: () => void;
   let finishMembership!: () => void;
   const started = new Promise<void>((resolve) => {
@@ -896,18 +887,13 @@ test('membership loss revokes a concurrently refreshed grant until the owner exp
     finishMembership = resolve;
   });
   let firstLookup = true;
-  const lookup = vi.spyOn(clerk, 'clerkClient').mockReturnValue({
-    ...client,
-    organizations: {
-      getOrganizationMembershipList: async (params) => {
-        if (firstLookup) {
-          firstLookup = false;
-          notifyStarted();
-          await waiting;
-        }
-        return client.organizations.getOrganizationMembershipList(params);
-      },
-    },
+  const lookup = vi.spyOn(directory, 'memberships').mockImplementation(async (query) => {
+    if (firstLookup) {
+      firstLookup = false;
+      notifyStarted();
+      await waiting;
+    }
+    return memberships(query);
   });
   try {
     const denied = expect(googleAccessToken(owner.workspaceId, grant.id)).rejects.toMatchObject({
@@ -919,7 +905,7 @@ test('membership loss revokes a concurrently refreshed grant until the owner exp
     expect(requests.some((request) => request.body.includes('grant_type=refresh_token'))).toBe(
       true,
     );
-    removeClerkMembership(owner.orgId, owner.userId);
+    removeMembership(owner.orgId, owner.userId);
     finishMembership();
     await denied;
     const stored = await database().query.datasourceAuthorizations.findFirst({

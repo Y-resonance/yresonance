@@ -8,7 +8,7 @@ import type { DashboardDocument, WidgetDefinition } from '#/domain/schema';
 import { Route as apiRoute } from '#/routes/api.yresonance';
 import { ApiError } from '#/server/errors';
 import { executeRequest } from '#/server/service.server';
-import { signInAs } from './doubles/clerk';
+import { signInAs } from './doubles/auth';
 
 let sequence = 0;
 const uniqueId = (prefix: string) =>
@@ -59,7 +59,7 @@ export function postApiRequest(body: unknown) {
   );
 }
 
-/** Signs a fresh Clerk identity in and bootstraps its workspace through the real service. */
+/** Signs a fresh identity in and bootstraps its workspace through the real service. */
 export async function signInToNewWorkspace({ isAdmin = true } = {}): Promise<TestWorkspace> {
   const orgId = uniqueId('org');
   const userId = uniqueId('user');
@@ -70,18 +70,18 @@ export async function signInToNewWorkspace({ isAdmin = true } = {}): Promise<Tes
   return { userId, orgId, workspaceId: workspace.id, r2Prefix: `ws/${workspace.id}/` };
 }
 
-/** Mints a Clerk user id without signing anyone in. */
+/** Mints a user id without signing anyone in. */
 export function newUserId() {
   return uniqueId('user');
 }
 
-/** Signs a specific member of the workspace's Clerk organization in. */
+/** Signs a specific member of the workspace's organization in. */
 export function signInAsUser(workspace: TestWorkspace, userId: string, { isAdmin = false } = {}) {
   signInAs({ userId, orgId: workspace.orgId, orgSlug: workspace.orgId, isAdmin });
   return userId;
 }
 
-/** Signs a fresh non-admin member of the same Clerk organization in. */
+/** Signs a fresh non-admin member of the same organization in. */
 export function signInAsColleague(workspace: TestWorkspace) {
   return signInAsUser(workspace, newUserId());
 }

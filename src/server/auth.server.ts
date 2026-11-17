@@ -14,19 +14,18 @@ export interface SessionContext {
 
 export async function requireIdentity() {
   const session = await platform.auth.requestIdentity();
-  if (!session.isAuthenticated || !session.userId)
-    throw new ApiError(401, 'unauthenticated', 'Sign in to continue.');
+  if (!session.userId) throw new ApiError(401, 'unauthenticated', 'Sign in to continue.');
   if (!session.orgId)
     throw new ApiError(
       409,
       'organization_required',
-      'Select or create a Clerk organization to use yresonance.',
+      'Select or create a workspace to use yresonance.',
     );
   return {
     userId: session.userId,
     orgId: session.orgId,
     orgSlug: session.orgSlug,
-    isAdmin: session.orgRole === 'org:admin',
+    isAdmin: session.isAdmin,
   };
 }
 

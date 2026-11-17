@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, expect, test, vi } from 'vitest';
-import { signOut } from './doubles/clerk';
+import { signOut } from './doubles/auth';
 import { eq } from 'drizzle-orm';
 import { database } from '#/server/database.server';
 import { dataSources } from '#/db/schema';

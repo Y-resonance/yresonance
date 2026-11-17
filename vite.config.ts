@@ -34,20 +34,20 @@ export default defineConfig(({ command, mode }) => ({
   },
   resolve: {
     tsconfigPaths: true,
-    // UI tests replace Clerk at the module boundary. Never alias auth in a deployable build.
+    // UI tests replace both halves of the auth adapter. Never alias auth in a deployable build.
     ...(command === 'serve' && mode === 'e2e-ui'
       ? {
           alias: [
             {
-              find: /^@clerk\/tanstack-react-start\/server$/,
+              find: /^.*\/platform\/adapters\/clerk$/,
               replacement: fileURLToPath(
-                new URL('./tests/e2e/support/clerk-server.ts', import.meta.url),
+                new URL('./tests/e2e/support/auth-server.ts', import.meta.url),
               ),
             },
             {
-              find: /^@clerk\/tanstack-react-start$/,
+              find: /^.*\/platform\/adapters\/clerk-ui$/,
               replacement: fileURLToPath(
-                new URL('./tests/e2e/support/clerk-ui.tsx', import.meta.url),
+                new URL('./tests/e2e/support/auth-ui.tsx', import.meta.url),
               ),
             },
           ],

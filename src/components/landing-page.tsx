@@ -1,5 +1,5 @@
 import { GetAccessButton, SignInAction } from '#/components/auth-actions';
-import { useSignUpMode } from '#/hooks/use-sign-up-mode';
+import { useAuthCapabilities } from '#/platform/index.ui';
 import { BrowserFrame } from '#/components/browser-frame';
 import { BuildDemo } from '#/components/landing/build-demo';
 import { useInView } from '#/components/landing/motion';
@@ -222,7 +222,7 @@ const sectionTitle = 'text-3xl font-semibold tracking-tight text-balance sm:text
 const sectionBody = 'mt-4 max-w-xl text-base leading-7 text-muted-foreground';
 
 export function LandingPage() {
-  const mode = useSignUpMode();
+  const { signUp: mode } = useAuthCapabilities();
   return (
     <main className="overflow-x-clip">
       <section className={cn(section, 'relative isolate pt-16 pb-24 text-center sm:pt-28')}>

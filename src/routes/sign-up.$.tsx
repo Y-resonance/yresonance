@@ -1,6 +1,7 @@
-import { SignUp } from '@clerk/tanstack-react-start';
 import { createFileRoute } from '@tanstack/react-router';
+import { SignInRedirect } from '#/components/auth-actions';
 import { pageTitle } from '#/lib/page-title';
+import { SignUpForm } from '#/platform/index.ui';
 
 export const Route = createFileRoute('/sign-up/$')({
   component: Page,
@@ -18,7 +19,7 @@ export const Route = createFileRoute('/sign-up/$')({
 function Page() {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <SignUp signInUrl="/sign-in" fallbackRedirectUrl="/" />
+      {SignUpForm ? <SignUpForm /> : <SignInRedirect />}
     </div>
   );
 }

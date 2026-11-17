@@ -1,7 +1,7 @@
 import { withDatabaseScope } from '#/server/database.server';
 import { env } from 'cloudflare:workers';
 import { afterEach, aroundEach, beforeEach, vi } from 'vitest';
-import { resetClerk } from './doubles/clerk';
+import { resetAuth } from './doubles/auth';
 import { queryEngine } from './doubles/query-engine';
 
 aroundEach(async (run) => {
@@ -19,5 +19,5 @@ beforeEach(async () => {
 afterEach(() => {
   vi.unstubAllGlobals();
   queryEngine.reset();
-  resetClerk();
+  resetAuth();
 });

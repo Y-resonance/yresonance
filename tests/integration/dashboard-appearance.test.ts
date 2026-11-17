@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { DashboardDocument, WidgetDefinition } from '#/domain/schema';
-import { signOut } from './doubles/clerk';
+import { signOut } from './doubles/auth';
 import { addWidget, callService, createDashboard, signInToNewWorkspace } from './fixtures';
 
 const text: WidgetDefinition = {

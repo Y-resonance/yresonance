@@ -1,5 +1,6 @@
 import type { AnyRequestMiddleware } from '@tanstack/react-start';
 import type { DatasourceProvider } from '#/data/providers/contract';
+import type { BrowserSession } from './ui';
 
 export type StorageRange =
   | { offset: number; length?: number }
@@ -50,12 +51,9 @@ export interface Cache {
 }
 export interface DirectoryUser {
   id: string;
-  imageUrl?: string;
-  firstName: string | null;
-  lastName: string | null;
-  username: string | null;
-  primaryEmailAddress: { emailAddress: string } | null;
-  emailAddresses: { emailAddress: string }[];
+  email: string | null;
+  name: string | null;
+  imageUrl: string | null;
 }
 export interface PlatformConfig {
   database: { connectionString(): string };
@@ -71,24 +69,22 @@ export interface PlatformConfig {
     writeDataPoint(point: { blobs: string[]; doubles?: number[]; indexes?: string[] }): void;
   };
   auth: {
+    // A signed-out request has no userId. A signed-in user without a workspace has no orgId.
     requestIdentity(): Promise<{
-      isAuthenticated: boolean;
       userId: string | null;
-      orgId: string | null | undefined;
-      orgSlug: string | null | undefined;
-      orgRole: string | null | undefined;
+      orgId: string | null;
+      orgSlug: string | null;
+      isAdmin: boolean;
     }>;
     directory: {
-      users(query: {
-        userId?: string[];
-        emailAddress?: string[];
-        limit: number;
-      }): Promise<{ data: DirectoryUser[] }>;
-      memberships(query: { organizationId: string; userId: string[]; limit: number }): Promise<{
-        data: { publicUserData?: { userId?: string | null } | null }[];
-      }>;
+      /** Looks users up by id or by email address. Unknown ones are left out. */
+      users(query: { userIds: string[] } | { emails: string[] }): Promise<DirectoryUser[]>;
+      /** Returns the given user ids that belong to the organization. */
+      memberships(query: { orgId: string; userIds: string[] }): Promise<string[]>;
     };
     middleware(): AnyRequestMiddleware;
+    /** Identity for the browser, from providers that keep the session on the server. */
+    browserSession?(): Promise<BrowserSession | null>;
   };
   datasources: readonly DatasourceProvider[];
   queryEngine: { url(): string; fetch(workspaceId: string, request: Request): Promise<Response> };

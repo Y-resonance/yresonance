@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { Route } from '../../src/routes/api.yresonance';
-import { signOut } from './doubles/clerk';
+import { signOut } from './doubles/auth';
 import { queryEngine } from './doubles/query-engine';
 import {
   addWidget,

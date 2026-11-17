@@ -1,5 +1,5 @@
-import { Show } from '@clerk/tanstack-react-start';
 import { Link } from '@tanstack/react-router';
+import { SignedOut } from '#/components/auth-gate';
 import { GitHubIcon, githubUrl, trackGitHubClick } from '#/components/github-link';
 
 const link = 'transition-colors hover:text-foreground';
@@ -25,7 +25,7 @@ export function SiteFooter() {
         </div>
 
         {/* These jump to landing sections, and signed-in visitors get dashboards at / instead. */}
-        <Show when="signed-out">
+        <SignedOut>
           <nav aria-label="Product">
             <p className={heading}>Product</p>
             <ul className="mt-3 flex flex-col gap-2">
@@ -46,7 +46,7 @@ export function SiteFooter() {
               </li>
             </ul>
           </nav>
-        </Show>
+        </SignedOut>
 
         <nav aria-label="Open source">
           <p className={heading}>Open source</p>

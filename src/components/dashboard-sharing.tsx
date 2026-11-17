@@ -121,7 +121,7 @@ export function DashboardSharing({
           <DialogDescription>
             {linksOnly
               ? 'Anyone with a link can view this dashboard.'
-              : 'Links are read-only. User grants require a Clerk account.'}
+              : 'Links are read-only. User grants require a yresonance account.'}
           </DialogDescription>
         </DialogHeader>
         <DashboardCollaborators users={sharing.grants} />
