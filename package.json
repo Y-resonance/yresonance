@@ -17,10 +17,10 @@
     "db:migrate:local": "DATABASE_URL=postgres://yresonance:yresonance@localhost:5432/yresonance drizzle-kit migrate",
     "db:migrate:preview": "bun run scripts/migrate.ts POSTGRES_PREVIEW_SHARED_URL",
     "db:migrate:production": "bun run scripts/migrate.ts POSTGRES_PRODUCTION_URL",
-    "reset": "bun run scripts/reset-environment.ts",
+    "reset": "bun run cloud/scripts/reset-environment.ts",
     "generate-routes": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false bun run scripts/generate-routes.ts",
-    "cf-typegen": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler types --strict-vars false",
-    "types:check": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler types --strict-vars false --check",
+    "cf-typegen": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler types --config cloud/wrangler.jsonc --strict-vars false",
+    "types:check": "CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler types --config cloud/wrangler.jsonc --strict-vars false --check",
     "typecheck": "bun run prepare:preview-example && bun run generate-routes && tsc --noEmit",
     "test": "vitest --run",
     "test:clickhouse": "vitest --run --config vitest.clickhouse.config.ts",
@@ -34,7 +34,7 @@
     "fmt:check": "oxfmt --check",
     "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run types:check && bun run test",
     "prepare:preview-example": "bun run scripts/prepare-preview-example.ts",
-    "build:branch-preview": "bun run scripts/preview-resources.ts prepare && YRESONANCE_PREVIEW_CONFIG=.wrangler-branch.json bun run build",
+    "build:branch-preview": "bun run cloud/scripts/preview-resources.ts prepare && YRESONANCE_PREVIEW_CONFIG=cloud/.wrangler-branch.json bun run build",
     "deploy:branch-preview": "wrangler preview --config dist/server/wrangler.json"
   },
   "dependencies": {

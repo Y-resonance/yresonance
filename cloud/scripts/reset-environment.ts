@@ -40,3 +40,5 @@ if (!response.ok) {
   console.error(`Reset failed with HTTP ${response.status}.`);
   process.exit(1);
 }
+
+export {};

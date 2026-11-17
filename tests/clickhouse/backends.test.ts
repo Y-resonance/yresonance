@@ -323,8 +323,8 @@ test('managed Parquet imports are queryable and a failed import removes its tabl
 });
 
 test('preview databases retain data across builds and cleanup removes only the closed branch', async () => {
-  const { managePreviewClickhouse } = await import('../../scripts/clickhouse-preview');
-  const { previewClickhouseDatabase } = await import('../../scripts/preview-config');
+  const { managePreviewClickhouse } = await import('../../cloud/scripts/clickhouse-preview');
+  const { previewClickhouseDatabase } = await import('../../cloud/scripts/preview-config');
   for (const key of ['URL', 'USER', 'PASSWORD', 'ACCESS_CLIENT_ID', 'ACCESS_CLIENT_SECRET']) {
     vi.stubEnv(
       `CLICKHOUSE_PREVIEW_${key}`,

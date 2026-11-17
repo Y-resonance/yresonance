@@ -21,7 +21,7 @@ test('a non-JSON Cloudflare access denial preserves its HTTP status', async () =
     vi.fn().mockResolvedValue(new Response('<html>access denied</html>', { status: 403 })),
   );
   const original = process.argv;
-  process.argv = ['bun', 'scripts/preview-resources.ts', 'diagnose', 'preview-diagnostics'];
+  process.argv = ['bun', 'cloud/scripts/preview-resources.ts', 'diagnose', 'preview-diagnostics'];
   try {
     await expect(import('./preview-resources')).rejects.toMatchObject({
       status: 403,

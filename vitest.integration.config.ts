@@ -16,7 +16,7 @@ export default defineConfig({
   plugins: [
     cloudflareTest({
       miniflare: {
-        // Date and flags match wrangler.jsonc.
+        // Date and flags match cloud/wrangler.jsonc.
         compatibilityDate: '2026-08-29',
         compatibilityFlags: ['nodejs_compat', 'enable_request_signal'],
         hyperdrives: {

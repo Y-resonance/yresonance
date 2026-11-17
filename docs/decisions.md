@@ -42,7 +42,11 @@ explain. Update it when a decision changes, not when an implementation detail do
 
 ## Platform
 
-- Deployment services are selected at build time in one typed `yresonance.config.ts` using
+- Hosted-service configuration and operations live in `cloud/`. Shared application code and
+  reusable infrastructure adapters stay in `src/`, even when our hosted service currently uses
+  them. The separation describes deployment ownership; the repository remains MIT licensed.
+  There is no package split or separate enterprise edition.
+- Deployment services are selected at build time in one typed `cloud/yresonance.config.ts` using
   `defineConfig`, with one adapter per slot. Only the server platform entry imports the config.
   Adapters stay in this repository, in separate files; there is no runtime platform switch,
   package split, or monorepo. Contracts follow current application needs rather than full

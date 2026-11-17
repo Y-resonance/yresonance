@@ -2,8 +2,8 @@ import { Client } from 'pg';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { inspect } from 'node:util';
 import { afterEach, expect, test, vi } from 'vitest';
-import { managePreviewPostgres } from '../../scripts/postgres-preview';
-import { previewClickhouseDatabase } from '../../scripts/preview-config';
+import { managePreviewPostgres } from '../../cloud/scripts/postgres-preview';
+import { previewClickhouseDatabase } from '../../cloud/scripts/preview-config';
 
 // Provisioning runs in a Node build process, separately from Worker integration tests.
 const url =

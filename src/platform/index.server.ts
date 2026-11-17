@@ -1,2 +1,2 @@
-import config from '../../yresonance.config';
+import config from '../../cloud/yresonance.config';
 export const platform = config;

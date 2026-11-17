@@ -16,7 +16,7 @@ if (legacy)
     .regex(/^[1-9]\d*$/)
     .parse(branch);
 const previewName = legacy ? `pr-${branch}` : branch;
-const configPath = '.wrangler-branch.json';
+const configPath = 'cloud/.wrangler-branch.json';
 const { rawConfig, workerName, accountId, template } = readPreviewTemplate();
 if (!legacy) previewResourceName(workerName, branch);
 const token = z.string().min(1).parse(process.env.CLOUDFLARE_API_TOKEN);
@@ -176,10 +176,13 @@ async function manageResources(workerName: string) {
     await cleanup(() => api(previewPath, 'DELETE'));
     if (preview)
       await cleanup(async () => {
-        const child = Bun.spawn(['bunx', 'wrangler', 'containers', 'list', '--json'], {
-          stdout: 'pipe',
-          stderr: 'inherit',
-        });
+        const child = Bun.spawn(
+          ['bunx', 'wrangler', 'containers', 'list', '--config', 'cloud/wrangler.jsonc', '--json'],
+          {
+            stdout: 'pipe',
+            stderr: 'inherit',
+          },
+        );
         const output = await new Response(child.stdout).text();
         if ((await child.exited) !== 0) throw new Error('Could not list container apps');
         const apps = z
@@ -188,7 +191,17 @@ async function manageResources(workerName: string) {
         for (const app of apps.filter((item) =>
           item.name.startsWith(`${workerName}_${preview.slug}_`),
         )) {
-          await cleanup(() => run(['bunx', 'wrangler', 'containers', 'delete', app.id]));
+          await cleanup(() =>
+            run([
+              'bunx',
+              'wrangler',
+              'containers',
+              'delete',
+              app.id,
+              '--config',
+              'cloud/wrangler.jsonc',
+            ]),
+          );
         }
       });
     if (database) await cleanup(() => api(`/d1/database/${database.uuid}`, 'DELETE'));
