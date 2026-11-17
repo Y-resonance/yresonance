@@ -45,7 +45,11 @@ Before the first build, configure:
   connection on the preview branch (PlanetScale `postgres` permission), and
   `POSTGRES_PREVIEW_RUNTIME_PASSWORD` with a separate, stable runtime-role password.
 - GitHub secret `POSTGRES_PREVIEW_URL` for cleanup, using the same compatible connection URL.
-- `CLOUDFLARE_API_TOKEN` with Hyperdrive edit permission in addition to existing permissions.
+- GitHub cleanup needs Hyperdrive read/write access. Either add Hyperdrive Write to its existing
+  `CLOUDFLARE_API_TOKEN`, or set a separate `CLOUDFLARE_HYPERDRIVE_API_TOKEN` secret restricted to
+  Hyperdrive Write in this account. The helper uses that optional token only for Hyperdrive API
+  calls; all other resources keep the existing token. Workers Builds can use the same optional
+  variable or a build token that already has Hyperdrive access.
 - Shared preview: provision `yresonance_preview_shared`, migrate with
   `POSTGRES_PREVIEW_SHARED_URL`, grant the same runtime role access, and create its own
   Hyperdrive with caching disabled and five origin connections. Its ID is recorded in

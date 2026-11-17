@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 5
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_HYPERDRIVE_API_TOKEN: ${{ secrets.CLOUDFLARE_HYPERDRIVE_API_TOKEN }}
       POSTGRES_PREVIEW_URL: ${{ secrets.POSTGRES_PREVIEW_URL }}
     steps:
       # Explicit diagnostics use the selected ref so fixes can be checked before merging.
@@ -51,6 +52,7 @@ jobs:
     timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_HYPERDRIVE_API_TOKEN: ${{ secrets.CLOUDFLARE_HYPERDRIVE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 17c619232f5d84567cd69896e892f326
       CLOUDFLARE_WORKER_TAG: ${{ vars.CLOUDFLARE_WORKER_TAG }}
       PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}

@@ -20,6 +20,7 @@ const configPath = '.wrangler-branch.json';
 const { rawConfig, workerName, accountId, template } = readPreviewTemplate();
 if (!legacy) previewResourceName(workerName, branch);
 const token = z.string().min(1).parse(process.env.CLOUDFLARE_API_TOKEN);
+const hyperdriveToken = process.env.CLOUDFLARE_HYPERDRIVE_API_TOKEN || token;
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}`;
 const databaseSchema = z.object({ uuid: z.string(), name: z.string() });
 const namespaceSchema = z.object({ id: z.string(), title: z.string() });
@@ -27,7 +28,10 @@ const namespaceSchema = z.object({ id: z.string(), title: z.string() });
 async function api(path: string, method = 'GET', body?: unknown) {
   const response = await fetch(`${apiBase}${path}`, {
     method,
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    headers: {
+      authorization: `Bearer ${path.startsWith('/hyperdrive/') ? hyperdriveToken : token}`,
+      'content-type': 'application/json',
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   // Deletion is repeatable, including partially provisioned or never deployed PRs.
