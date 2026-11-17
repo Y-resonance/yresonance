@@ -31,12 +31,21 @@ const failureMetadataSchema = z.object({
     .optional()
     .catch(undefined),
   status: z.number().int().min(100).max(599).optional().catch(undefined),
+  cause: z.unknown().optional(),
 });
 
 function provisioningFailure(action: string, database: string, operation: string, error: unknown) {
-  const parsed = failureMetadataSchema.safeParse(error);
-  const code = parsed.success ? parsed.data.code : undefined;
-  const status = parsed.success ? parsed.data.status : undefined;
+  let code: string | undefined;
+  let status: number | undefined;
+  let current = error;
+  // Drizzle wraps database errors. Bound traversal so even cyclic causes terminate.
+  for (let depth = 0; depth < 5; depth++) {
+    const parsed = failureMetadataSchema.safeParse(current);
+    if (!parsed.success) break;
+    code ??= parsed.data.code;
+    status ??= parsed.data.status;
+    current = parsed.data.cause;
+  }
   const diagnostic = [operation, code && `code=${code}`, status && `HTTP ${status}`]
     .filter(Boolean)
     .join('; ');

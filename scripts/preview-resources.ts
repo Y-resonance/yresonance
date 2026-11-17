@@ -37,15 +37,18 @@ async function api(path: string, method = 'GET', body?: unknown) {
   // Deletion is repeatable, including partially provisioned or never deployed PRs.
   if (response.status === 404 && (method === 'DELETE' || path.startsWith('/workers/workers/')))
     return null;
+  const failure = () =>
+    Object.assign(new Error(`Cloudflare ${method} ${path} failed with HTTP ${response.status}`), {
+      status: response.status,
+    });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw failure();
+  }
   const envelope = z
     .object({ success: z.boolean(), result: z.unknown() })
     .parse(await response.json());
-  if (!response.ok || !envelope.success) {
-    throw Object.assign(
-      new Error(`Cloudflare ${method} ${path} failed with HTTP ${response.status}`),
-      { status: response.status },
-    );
-  }
+  if (!envelope.success) throw failure();
   return envelope.result;
 }
 

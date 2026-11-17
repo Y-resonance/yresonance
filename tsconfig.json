@@ -11,6 +11,7 @@
     "scripts/check-local-postgres.ts",
     "scripts/migrate.ts",
     "scripts/preview-resources.ts",
+    "scripts/preview-resources.test.ts",
     "scripts/preview-config.ts",
     "scripts/preview-config.test.ts",
     "scripts/preview-template.ts",

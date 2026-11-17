@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { inspect } from 'node:util';
 import { afterEach, expect, test, vi } from 'vitest';
 import { managePreviewPostgres } from '../../scripts/postgres-preview';
@@ -116,6 +117,16 @@ test.each([
   { metadata: { status: 403 }, diagnostic: 'HTTP 403' },
   { metadata: { code: 'ECONNRESET' }, diagnostic: 'code=ECONNRESET' },
   {
+    metadata: {
+      cause: new DrizzleQueryError(
+        'CREATE ROLE test PASSWORD secret-password',
+        ['secret-token'],
+        Object.assign(new Error('secret-user'), { code: '42501' }),
+      ),
+    },
+    diagnostic: 'code=42501',
+  },
+  {
     metadata: { code: 'postgres://secret-user:secret-password@example.test' },
     diagnostic: undefined,
   },
@@ -158,18 +169,23 @@ test('Postgres authentication failures retain SQLSTATE without exposing credenti
 
 test('diagnostics inspect access without provisioning or deleting resources', async () => {
   process.env.POSTGRES_PREVIEW_URL = url;
+  process.env.POSTGRES_PREVIEW_RUNTIME_PASSWORD = 'preview-test-only';
+  const branch = await prepare();
+  const config = configurations[0]!;
   const output = vi.spyOn(console, 'info').mockImplementation(() => {});
   try {
     await managePreviewPostgres('diagnose', 'preview-diagnostics', async (...args) => {
       expect(args[1]).toBeUndefined();
       return api(...args);
     });
-    expect(configurations).toHaveLength(0);
+    expect(configurations).toHaveLength(1);
     expect(output).toHaveBeenCalledWith('yresonance.postgres_preview_diagnostic', {
       postgres: 'connected',
-      databases: [],
+      databases: expect.arrayContaining([
+        { database: previewClickhouseDatabase(branch), canDrop: true },
+      ]),
       hyperdrive: 'readable',
-      configurations: [],
+      configurations: [config.name],
     });
   } finally {
     output.mockRestore();
