@@ -1,3 +1,4 @@
+import type { Settings } from '#/platform/settings';
 import { z } from 'zod';
 import { openConnection, sealConnection } from './connection-secrets';
 import { claimQueryReadBytes, INTERNAL_R2_HOST } from './internal-r2';
@@ -13,7 +14,7 @@ export async function externalFileUrl(
   getUrl: string,
   headUrl: string,
   queryId: string,
-  environment: Cloudflare.Env,
+  environment: Pick<Settings, 'INTERNAL_R2_SIGNING_SECRET' | 'DATA_SOURCE_BASE_URL'>,
 ) {
   const token = await sealConnection(
     { getUrl, headUrl, queryId, expiresAt: Date.now() + 5 * 60_000 },
@@ -31,7 +32,7 @@ export async function externalFileUrl(
 export async function handleExternalFileRequest(
   request: Request,
   token: string,
-  environment: Cloudflare.Env,
+  environment: Pick<Settings, 'INTERNAL_R2_SIGNING_SECRET'>,
 ) {
   if (!['GET', 'HEAD'].includes(request.method))
     return new Response(null, { status: 405, headers: { allow: 'GET, HEAD' } });

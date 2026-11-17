@@ -21,6 +21,7 @@ dev-data/*
 *.sql
 !/drizzle/**/*.sql
 !/scripts/**/*.sql
+!/cloud/scripts/**/*.sql
 *.sqlite
 *.sqlite-*
 *.db
@@ -29,7 +30,7 @@ dev-data/*
 # Keep installed agent skills local.
 /.agents/skills/
 /skills-lock.json
-.wrangler-branch.json
+/cloud/.wrangler-branch.json
 .wrangler-preview-migrations.json
 .generated/
 

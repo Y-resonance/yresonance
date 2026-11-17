@@ -5,7 +5,7 @@ const env = vi.hoisted(() => ({
   POSTHOG_ENABLED: 'true',
   POSTHOG_HOST: 'https://eu.i.posthog.com',
 }));
-vi.mock('cloudflare:workers', () => ({ env }));
+vi.mock('#/platform/settings', () => ({ settings: () => env }));
 
 beforeEach(() => {
   env.POSTHOG_ENABLED = 'true';
@@ -149,3 +149,5 @@ describe('PostHog proxy', () => {
     expect(response?.headers.get('cache-control')).toBe('no-store');
   });
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

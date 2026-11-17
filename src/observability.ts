@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { platform } from '#/platform/index.server';
 
 export function recordProductMetric(
   event: string,
@@ -8,7 +8,7 @@ export function recordProductMetric(
     index?: string;
   } = {},
 ) {
-  env.PRODUCT_ANALYTICS?.writeDataPoint({
+  platform.productAnalytics?.writeDataPoint({
     blobs: [event, ...(values.labels ?? [])],
     doubles: values.numbers,
     indexes: values.index ? [values.index] : undefined,

@@ -12,7 +12,7 @@ describe('branch preview template', () => {
       { binding: 'PRODUCT_ANALYTICS', dataset: 'yresonance_product_preview' },
     ]);
     expect(template.containers).toEqual([
-      expect.objectContaining({ class_name: 'QueryEngineContainer', image: './Dockerfile' }),
+      expect.objectContaining({ class_name: 'QueryEngineContainer', image: '../Dockerfile' }),
     ]);
     expect(template.durable_objects?.bindings).toEqual([
       { name: 'QUERY_ENGINE', class_name: 'QueryEngineContainer' },

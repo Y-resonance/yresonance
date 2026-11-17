@@ -1,6 +1,7 @@
+import type { Storage, Cache } from '#/platform/config';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('cloudflare:workers', () => ({ env: {} }));
+vi.mock('#/platform/settings', () => ({ settings: () => ({}) }));
 import { handleResetRequest } from './reset.server';
 
 describe('environment reset', () => {
@@ -69,11 +70,15 @@ function resetEnvironment(appEnvironment: 'preview' | 'production') {
   const deleteR2 = vi.fn<() => void>();
   const deleteKv = vi.fn<() => void>();
   const bindings = {
-    APP_ENV: appEnvironment,
-    RESET_ADMIN_TOKEN: 'reset-secret',
-    QUERY_CACHE_NAME: 'yresonance-query-cache',
-    DATA: { list: listR2, delete: deleteR2 },
-    QUERY_CACHE: { list: listKv, delete: deleteKv },
-  } as unknown as Cloudflare.Env;
+    settings: {
+      APP_ENV: appEnvironment,
+      RESET_ADMIN_TOKEN: 'reset-secret',
+      QUERY_CACHE_NAME: 'yresonance-query-cache',
+    },
+    storage: { list: listR2, delete: deleteR2 } as unknown as Storage,
+    cache: { list: listKv, delete: deleteKv } as unknown as Cache,
+  };
   return { bindings, listR2, listKv, deleteR2, deleteKv };
 }
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

@@ -1,15 +1,21 @@
 # Preview environments and deployment
 
+The hosted deployment's composition is `cloud/yresonance.config.ts`; its resource configuration
+is `cloud/wrangler.jsonc` and operational commands live in `cloud/scripts/`. Run the existing Bun
+commands from the repository root. The Vite entry and Wrangler type-generation scripts explicitly
+select this configuration. Local `.env.local` remains at the root for `bun run dev`; Wrangler-specific
+`.dev.vars` files belong next to `cloud/wrangler.jsonc`.
+
 ## Preview isolation
 
 This follows [Cloudflare's resource isolation model](https://developers.cloudflare.com/workers/previews/resources/).
 Cloudflare gives each branch Preview its own Durable Object namespace and
 container app. Postgres, Hyperdrive, KV, and R2 require distinct resources, so
-`scripts/preview-resources.ts prepare` provisions them before the native build.
+`cloud/scripts/preview-resources.ts prepare` provisions them before the native build.
 Names include a hash of the exact branch name, preserving data across pushes and
 avoiding collisions between branches such as `feature/report` and `feature-report`.
 
-The helper writes `.wrangler-branch.json` with branch bindings under `previews`,
+The helper writes `cloud/.wrangler-branch.json` with branch bindings under `previews`,
 with a Hyperdrive binding to the branch database. It applies the Postgres baseline over a direct
 connection before building. Production bindings and routes stay at the
 top level. Branch resources request Western Europe; containers retain `WEUR`.
@@ -45,11 +51,15 @@ Before the first build, configure:
   connection on the preview branch (PlanetScale `postgres` permission), and
   `POSTGRES_PREVIEW_RUNTIME_PASSWORD` with a separate, stable runtime-role password.
 - GitHub secret `POSTGRES_PREVIEW_URL` for cleanup, using the same compatible connection URL.
-- `CLOUDFLARE_API_TOKEN` with Hyperdrive edit permission in addition to existing permissions.
+- GitHub cleanup needs Hyperdrive read/write access. Either add Hyperdrive Write to its existing
+  `CLOUDFLARE_API_TOKEN`, or set a separate `CLOUDFLARE_HYPERDRIVE_API_TOKEN` secret restricted to
+  Hyperdrive Write in this account. The helper uses that optional token only for Hyperdrive API
+  calls; all other resources keep the existing token. Workers Builds can use the same optional
+  variable or a build token that already has Hyperdrive access.
 - Shared preview: provision `yresonance_preview_shared`, migrate with
   `POSTGRES_PREVIEW_SHARED_URL`, grant the same runtime role access, and create its own
   Hyperdrive with caching disabled and five origin connections. Its ID is recorded in
-  `wrangler.jsonc` under `env.preview`; update that binding when recreating it.
+  `cloud/wrangler.jsonc` under `env.preview`; update that binding when recreating it.
 
 Runtime-password rotation requires changing the Postgres role and every preview Hyperdrive
 credential together. The helper does not reset an existing role's password on every build.
@@ -92,10 +102,10 @@ Configure these Previews Base secrets with the Clerk
 **development** instance and non-production signing keys:
 
 ```sh
-bunx wrangler preview base-config secret put CLERK_SECRET_KEY
-bunx wrangler preview base-config secret put INTERNAL_R2_SIGNING_SECRET
-bunx wrangler preview base-config secret put UPLOAD_SIGNING_SECRET
-bunx wrangler preview base-config secret put RESET_ADMIN_TOKEN
+bunx wrangler preview --config cloud/wrangler.jsonc base-config secret put CLERK_SECRET_KEY
+bunx wrangler preview --config cloud/wrangler.jsonc base-config secret put INTERNAL_R2_SIGNING_SECRET
+bunx wrangler preview --config cloud/wrangler.jsonc base-config secret put UPLOAD_SIGNING_SECRET
+bunx wrangler preview --config cloud/wrangler.jsonc base-config secret put RESET_ADMIN_TOKEN
 ```
 
 These commands change live preview configuration and require separate approval.
@@ -120,11 +130,11 @@ by a later push; retrying can delete the new Preview and its data. Confirm anoth
 still works after cleanup.
 
 Cloudflare can retain container apps after Preview deletion. If the Preview record is already
-gone, inspect `bunx wrangler containers list` and delete only verified leftovers matched to the
+gone, inspect `bunx wrangler containers list --config cloud/wrangler.jsonc` and delete only verified leftovers matched to the
 recorded Preview slug. Never delete by the parent Worker prefix.
 
 Branches without PRs need explicit cleanup after their builds stop:
-`bun run scripts/preview-resources.ts cleanup <branch>`, using the same account, API token, and
+`bun run cloud/scripts/preview-resources.ts cleanup <branch>`, using the same account, API token, and
 `CLOUDFLARE_WORKER_TAG`. For branches with a ClickHouse preview database, also supply
 `CLICKHOUSE_PREVIEW_URL`, `CLICKHOUSE_PREVIEW_USER`, `CLICKHOUSE_PREVIEW_PASSWORD`,
 `CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID`, and `CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET`.
@@ -132,6 +142,32 @@ With no `CLICKHOUSE_PREVIEW_*` values set, ClickHouse cleanup is skipped. Partia
 fails cleanup and leaves the ClickHouse database in place; supply all five values before retrying.
 A push after closure can recreate resources and require cleanup again.
 These operations delete preview data and require authorization for the target environment.
+
+For explicit recovery before a fix merges, dispatch cleanup on the reviewed fix branch with
+`use_selected_ref=true`. This opt-in runs that exact selected commit; automatic cleanup and manual
+runs without the flag still use the default branch. The closed-PR and repository-ownership checks
+remain required. Confirm the closed branch has not been reused before running recovery.
+
+#### Deployed preview smoke test
+
+Dispatch `Preview cleanup` with `preview_url` set to the deployed branch URL and `pr` set to its
+PR number. This mode skips cleanup and diagnostics, uses existing Clerk development test credentials,
+and runs one real-browser check for sign-in, CSV ingestion, an uncached query, and image upload/read.
+The target must be an HTTPS branch URL ending in `-yresonance.rundown.workers.dev`; the production
+Worker URL is rejected. Synthetic records use a `Preview smoke` prefix and disappear with the
+preview's normal lifecycle. Traces, screenshots and video stay off to avoid capturing login secrets.
+
+## Read-only cleanup diagnostics
+
+Dispatch the `Preview cleanup` workflow with `diagnose=true` on the ref to inspect.
+This mode uses the GitHub preview credentials, checks Postgres access and database ownership,
+and lists Hyperdrive configurations. It does not provision or delete resources. Unlike cleanup,
+the explicit diagnostic runs the selected ref so a diagnostic fix can be checked before merging.
+The required `pr` input only identifies the workflow's concurrency group in this mode.
+
+Postgres provisioning failures report the operation plus a safe SQLSTATE, connection/TLS code,
+or HTTP status when available. Original error messages, SQL, connection URLs and causes stay out
+of the logs because they can contain credentials.
 
 ## Cloudflare deployment
 
@@ -142,7 +178,7 @@ Deployments run one at a time and skip commits that are no longer the head of `m
 Query containers are constrained to Western Europe (`WEUR`) in production and previews.
 
 The `IMAGES` binding resizes dashboard images. It is declared at the top level, in `env.preview`,
-and in the `previews` template that `scripts/preview-resources.ts` copies, because bindings are not
+and in the `previews` template that `cloud/scripts/preview-resources.ts` copies, because bindings are not
 inherited. The account's 5,000 free unique transformations per month are shared by production and
 every preview; past that, the free plan fails transformations with 9422 and the Worker serves the
 original image.

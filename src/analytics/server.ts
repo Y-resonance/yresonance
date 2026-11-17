@@ -3,7 +3,7 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { LoggerProvider, SimpleLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { PostHog } from 'posthog-node';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
-import { waitUntil } from 'cloudflare:workers';
+import { platform } from '#/platform/index.server';
 import type { ApiRequest } from '#/api/contracts';
 import type { WidgetDefinition } from '#/domain/schema';
 import { markdownFeatures } from '#/domain/text-content';
@@ -134,7 +134,7 @@ function exportApiRequest({
   });
 
   // Await exports inside waitUntil so analytics never delay or fail the user's request.
-  waitUntil(
+  platform.background.waitUntil(
     Promise.allSettled([client.shutdown(), logs.shutdown()]).then((results) => {
       if (results.some((result) => result.status === 'rejected'))
         console.warn('yresonance.telemetry_export_failed');

@@ -1,5 +1,5 @@
+import { settings } from '#/platform/settings';
 import { readResponseText } from './http-response';
-import { env } from 'cloudflare:workers';
 import { z } from 'zod';
 import { hashJson } from '#/domain/hash';
 import type { DataSourceRecord } from '#/query/types';
@@ -39,7 +39,7 @@ export function managedClickhouseDatabase() {
     .string()
     .regex(/^yresonance_[a-z0-9_]+$/)
     .max(100)
-    .safeParse(env.CLICKHOUSE_DATABASE);
+    .safeParse(settings().CLICKHOUSE_DATABASE);
   if (!database.success)
     throw new DatasourceError(
       'datasource_connector_failed',
@@ -65,7 +65,9 @@ export async function authorizedClickhouseTable(dataSource: Omit<DataSourceRecor
   } else {
     let mappings: z.infer<typeof accessMappingsSchema>;
     try {
-      mappings = accessMappingsSchema.parse(JSON.parse(env.CLICKHOUSE_EXTERNAL_TABLES ?? '[]'));
+      mappings = accessMappingsSchema.parse(
+        JSON.parse(settings().CLICKHOUSE_EXTERNAL_TABLES ?? '[]'),
+      );
     } catch {
       throw new DatasourceError(
         'datasource_connector_failed',
@@ -152,7 +154,7 @@ export async function clickhouseRequest(
           CLICKHOUSE_USER: options.connection.user,
           CLICKHOUSE_PASSWORD: options.connection.password,
         }
-      : env,
+      : settings(),
   );
   if (!config.success)
     throw new DatasourceError('datasource_connector_failed', 'ClickHouse is not configured.');

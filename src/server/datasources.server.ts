@@ -1,3 +1,5 @@
+import { platform } from '#/platform/index.server';
+import { settings } from '#/platform/settings';
 import {
   authorizationReferenceSchema,
   requireOwnedGoogleConnection,
@@ -23,10 +25,9 @@ import {
   isManagedDatasourceUpload,
   verifyDatasourceUploadCleanupToken,
 } from '#/domain/datasource-upload';
-import { registrationProvider, providers, datasourceProvider } from '#/data/providers/index.server';
+import { registrationProvider, datasourceProvider } from '#/data/providers/index.server';
 import { sealConnection } from '#/data/connection-secrets';
 import { type DataSourceRecord } from '#/query/types';
-import { env } from 'cloudflare:workers';
 import { canUpdateFieldMetadata } from '#/domain/field-metadata';
 import { seedPreviewWorkspace } from './preview-seed.server';
 import { database, UPLOAD_CLAIM_LEASE_MS } from './database.server';
@@ -39,7 +40,7 @@ import { authorizeDashboard, dashboardUsesDataSource } from './dashboard-access.
 
 export async function listDatasourceProviders() {
   await requireSession();
-  return providers.map((provider) => provider.definition);
+  return platform.datasources.map((provider) => provider.definition);
 }
 
 export async function listDataSources() {
@@ -300,7 +301,7 @@ export async function registerDatasource(
           workspaceId: dataSource.workspaceId,
           encryptedConfig: await sealConnection(
             connection,
-            env.UPLOAD_SIGNING_SECRET,
+            settings().UPLOAD_SIGNING_SECRET,
             `${dataSource.workspaceId}/${dataSource.id}`,
           ),
         });
@@ -343,7 +344,7 @@ export async function registerDatasource(
 }
 
 function uploadCleanupSecret() {
-  return env.UPLOAD_SIGNING_SECRET;
+  return settings().UPLOAD_SIGNING_SECRET;
 }
 
 async function isDatasourceObjectRegistered(workspaceId: string, key: string) {

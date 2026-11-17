@@ -14,9 +14,8 @@ const state = vi.hoisted(() => ({
   },
   pending: [] as Promise<unknown>[],
 }));
-vi.mock('cloudflare:workers', () => ({
-  env: state.env,
-  waitUntil: (promise: Promise<unknown>) => state.pending.push(promise),
+vi.mock('#/platform/settings', () => ({
+  settings: () => state.env,
 }));
 
 const requests: Array<{ url: string; body: string; authorization?: string }> = [];
@@ -220,3 +219,9 @@ describe('server analytics delivery', () => {
     expect(requests).toEqual([]);
   });
 });
+
+vi.mock('#/platform/index.server', () => ({
+  platform: {
+    background: { waitUntil: (promise: Promise<unknown>) => state.pending.push(promise) },
+  },
+}));

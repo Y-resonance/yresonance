@@ -35,3 +35,5 @@ describe('QueryEngineContainer', () => {
 it('database access outside an invocation fails before opening a connection', () => {
   expect(() => database()).toThrow('database() requires an invocation scope.');
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

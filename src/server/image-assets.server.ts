@@ -1,5 +1,6 @@
+import { settings } from '#/platform/settings';
+import { platform } from '#/platform/index.server';
 import { and, desc, eq, inArray } from 'drizzle-orm';
-import { env } from 'cloudflare:workers';
 import { dashboardAssets, workspaces } from '#/db/schema';
 import { dashboardWidgets, type DashboardDocument } from '#/domain/schema';
 import {
@@ -45,7 +46,7 @@ const assetColumns = {
 
 /** The deployment's upload limit. `IMAGE_UPLOAD_MAX_BYTES` can lower the 20 MB default. */
 export function imageUploadLimit() {
-  const configured = Number(env.IMAGE_UPLOAD_MAX_BYTES);
+  const configured = Number(settings().IMAGE_UPLOAD_MAX_BYTES);
   return Number.isSafeInteger(configured) && configured > 0
     ? Math.min(configured, MAX_IMAGE_UPLOAD_BYTES)
     : MAX_IMAGE_UPLOAD_BYTES;
@@ -121,9 +122,9 @@ export async function uploadImageAsset(request: Request, dashboardId: string) {
     (new URL(request.url).searchParams.get('name') ?? '').trim().slice(0, 200) || 'Image';
   const assetId = `asset_${crypto.randomUUID()}`;
   const key = imageAssetKey(session.workspace.r2Prefix, assetId);
-  await env.DATA.put(key, request.body, { onlyIf: { etagDoesNotMatch: '*' } });
+  await platform.storage.put(key, request.body, { createOnly: true });
   try {
-    const head = await env.DATA.get(key, { range: { offset: 0, length: HEADER_BYTES } });
+    const head = await platform.storage.get(key, { range: { offset: 0, length: HEADER_BYTES } });
     const header = new Uint8Array(await head!.arrayBuffer());
     const format = detectImageFormat(header);
     if (format === 'svg') throw reject(415, 'svg', svgUploadMessage, 'svg');
@@ -145,16 +146,16 @@ export async function uploadImageAsset(request: Request, dashboardId: string) {
     trackUpload({ result: 'success', format, size, dashboardId, startedAt, workspaceId });
     return asset;
   } catch (error) {
-    await env.DATA.delete(key);
+    await platform.storage.delete(key);
     throw error;
   }
 }
 
 async function imageDimensions(key: string, format: ImageFormat, header: Uint8Array) {
-  const object = await env.DATA.get(key);
+  const object = await platform.storage.get(key);
   try {
-    const info = await env.IMAGES.info(object!.body);
-    if ('width' in info && info.width > 0 && info.height > 0)
+    const info = await platform.images.dimensions(object!.body);
+    if (info && info.width > 0 && info.height > 0)
       return { width: info.width, height: info.height };
   } catch (error) {
     if (format !== 'avif') {
@@ -248,7 +249,7 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
   const originalKey = imageAssetKey(asset.prefix, asset.id);
   const originalFormat = imageFormatFromContentType(asset.contentType)!;
   const serveOriginal = async (fallbackReason: string, errorCode?: number) => {
-    const original = await env.DATA.get(originalKey);
+    const original = await platform.storage.get(originalKey);
     if (!original) throw notFound;
     log({
       variant: 'original',
@@ -286,7 +287,7 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
   const format = variantFormat(request.headers.get('accept'), originalFormat, width);
   const variantKey = imageAssetKey(asset.prefix, asset.id, `w${width}.${format}`);
   const variantHeaders = { ...assetHeaders, 'content-type': imageContentTypes[format] };
-  const stored = await env.DATA.get(variantKey);
+  const stored = await platform.storage.get(variantKey);
   if (stored) {
     const storedType = stored.httpMetadata?.contentType ?? variantHeaders['content-type'];
     log({
@@ -304,19 +305,17 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
     });
   }
 
-  const original = await env.DATA.get(originalKey);
+  const original = await platform.storage.get(originalKey);
   if (!original) throw notFound;
   let bytes: ArrayBuffer;
   // Cloudflare may encode another format than requested, so the result's own type is stored.
   let contentType: string;
   try {
-    const result = await env.IMAGES.input(original.body)
-      .transform({ width, fit: 'scale-down' })
-      .output({ format: imageContentTypes[format], quality: 80 });
-    contentType = result.contentType();
+    const result = await platform.images.resize(original.body, width, imageContentTypes[format]);
+    contentType = result.headers.get('content-type')!;
     // Variants are small next to the 20 MB originals; R2 needs their length before storing.
-    bytes = await result.response().arrayBuffer();
-    await env.DATA.put(variantKey, bytes, { httpMetadata: { contentType } });
+    bytes = await result.arrayBuffer();
+    await platform.storage.put(variantKey, bytes, { contentType });
   } catch (error) {
     return serveOriginal('transform_failed', imagesErrorCode(error));
   }
@@ -338,6 +337,6 @@ export async function serveImageAsset(request: Request, dashboardId: string, ass
 // The Images binding throws ImagesError with a numeric code, for example 9422 when the monthly
 // transformation quota is used up.
 function imagesErrorCode(error: unknown) {
-  const code = (error as Partial<ImagesError> | undefined)?.code;
+  const code = (error as { code?: number } | undefined)?.code;
   return typeof code === 'number' ? code : undefined;
 }

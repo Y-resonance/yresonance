@@ -2,15 +2,15 @@ import { Database } from 'bun:sqlite';
 import { readFileSync } from 'node:fs';
 import { Client } from 'pg';
 import { getTableConfig } from 'drizzle-orm/pg-core';
-import * as schema from '../src/db/schema';
-import { stableStringify } from '../src/domain/hash';
-import { openConnection } from '../src/data/connection-secrets';
+import * as schema from '../../src/db/schema';
+import { stableStringify } from '../../src/domain/hash';
+import { openConnection } from '../../src/data/connection-secrets';
 
 // Only an offline D1 SQL export is read. No D1 endpoint or live source is accepted.
 const [action, exportPath] = process.argv.slice(2);
 if (!['copy', 'verify'].includes(action ?? '') || !exportPath || !process.env.DATABASE_URL)
   throw new Error(
-    'Usage: DATABASE_URL=<direct target> bun scripts/copy-d1-to-postgres.ts copy|verify <d1-export.sql>',
+    'Usage: DATABASE_URL=<direct target> bun cloud/scripts/copy-d1-to-postgres.ts copy|verify <d1-export.sql>',
   );
 const source = new Database(':memory:');
 source.exec(readFileSync(exportPath, 'utf8'));

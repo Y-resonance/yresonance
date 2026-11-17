@@ -1,15 +1,15 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { bindClickhouseParameters, clickhouseRequest } from './clickhouse.server';
 
-vi.mock('cloudflare:workers', () => ({
-  env: {
+vi.mock('#/platform/settings', () => ({
+  settings: () => ({
     CLICKHOUSE_URL: 'https://clickhouse.test',
     CLICKHOUSE_USER: 'backend',
     CLICKHOUSE_PASSWORD: 'private-password',
     CLICKHOUSE_ACCESS_CLIENT_ID: 'private-id',
     CLICKHOUSE_ACCESS_CLIENT_SECRET: 'private-access-secret',
     CLICKHOUSE_DATABASE: 'yresonance_development',
-  },
+  }),
 }));
 afterEach(() => vi.unstubAllGlobals());
 
@@ -51,3 +51,5 @@ test('redirects and server exceptions fail without forwarding or exposing creden
     'ClickHouse could not complete the request.',
   );
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

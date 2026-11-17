@@ -261,7 +261,7 @@ test('external file capabilities relay ranges, enforce read budgets, and reject 
   const { externalFileUrl } = await import('#/data/external-file');
   const workspace = await signInToNewWorkspace();
   const queryId = crypto.randomUUID();
-  await createQueryReadBudget(queryId, workspace.workspaceId, env);
+  await createQueryReadBudget(queryId, workspace.workspaceId);
   const upstream: Request[] = [];
   let body = '1234';
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {

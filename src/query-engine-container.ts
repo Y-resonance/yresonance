@@ -1,3 +1,5 @@
+import { platform } from '#/platform/index.server';
+import { settings } from '#/platform/settings';
 import { withDatabaseScope } from '#/server/database.server';
 import { Container } from '@cloudflare/containers';
 import { handleInternalR2Request, INTERNAL_R2_HOST } from '#/data/internal-r2';
@@ -37,10 +39,10 @@ export class QueryEngineContainer extends Container {
 }
 
 QueryEngineContainer.outboundByHost = {
-  [INTERNAL_R2_HOST]: (request, environment) =>
+  [INTERNAL_R2_HOST]: (request) =>
     withDatabaseScope(
-      environment.HYPERDRIVE.connectionString,
-      () => handleInternalR2Request(request, environment),
+      platform.database.connectionString(),
+      () => handleInternalR2Request(request, { storage: platform.storage, settings: settings() }),
       true,
     ),
 };

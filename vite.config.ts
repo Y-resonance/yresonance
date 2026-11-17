@@ -65,9 +65,7 @@ export default defineConfig(({ command, mode }) => ({
     fileDataPlugin(),
     queryEnginePlugin(),
     cloudflare({
-      ...(process.env.YRESONANCE_PREVIEW_CONFIG
-        ? { configPath: process.env.YRESONANCE_PREVIEW_CONFIG }
-        : {}),
+      configPath: process.env.YRESONANCE_PREVIEW_CONFIG ?? 'cloud/wrangler.jsonc',
       viteEnvironment: { name: 'ssr' },
       config: (config) => ({
         vars: {

@@ -12,14 +12,15 @@ import type { DatasourceQuery } from '#/data/connectors/contract';
 import type { DataSourceRecord, FieldRecord } from '#/query/types';
 import type { DashboardDocument, WidgetDefinition } from '#/domain/schema';
 
-vi.mock('cloudflare:workers', () => ({
-  env: {
+vi.mock('#/platform/settings', () => {
+  const values = {
     ...process.env,
     R2_BUCKET_NAME: 'backend-conformance',
     QUERY_CACHE_NAME: 'backend-conformance',
     CLICKHOUSE_DATABASE: 'yresonance_development',
-  },
-}));
+  };
+  return { settings: () => values };
+});
 
 const workspaceId = `conformance_${crypto.randomUUID()}`;
 const id = `ds_${crypto.randomUUID()}`;
@@ -264,7 +265,8 @@ test('managed Parquet imports are queryable and a failed import removes its tabl
   const { createServer } = await import('node:http');
   const { ingestClickhouseUpload, removeClickhouseUpload } =
     await import('#/data/clickhouse-ingestion.server');
-  const { env } = await import('cloudflare:workers');
+  const { settings } = await import('#/platform/settings');
+  const env = settings();
   const directory = await mkdtemp(join(tmpdir(), 'clickhouse-parquet-'));
   const path = join(directory, 'source.parquet');
   await connection.run(`COPY source TO '${path}' (FORMAT PARQUET)`);
@@ -321,8 +323,8 @@ test('managed Parquet imports are queryable and a failed import removes its tabl
 });
 
 test('preview databases retain data across builds and cleanup removes only the closed branch', async () => {
-  const { managePreviewClickhouse } = await import('../../scripts/clickhouse-preview');
-  const { previewClickhouseDatabase } = await import('../../scripts/preview-config');
+  const { managePreviewClickhouse } = await import('../../cloud/scripts/clickhouse-preview');
+  const { previewClickhouseDatabase } = await import('../../cloud/scripts/preview-config');
   for (const key of ['URL', 'USER', 'PASSWORD', 'ACCESS_CLIENT_ID', 'ACCESS_CLIENT_SECRET']) {
     vi.stubEnv(
       `CLICKHOUSE_PREVIEW_${key}`,
@@ -609,3 +611,5 @@ test('native ClickHouse expressions use built-ins, validate context, and reject 
     await clickhouseRequest(workspaceId, `DROP FUNCTION ${udf}`, [], { readonly: false });
   }
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

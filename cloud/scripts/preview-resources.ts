@@ -5,7 +5,7 @@ import { managePreviewClickhouse } from './clickhouse-preview';
 import { readPreviewTemplate } from './preview-template';
 import { z } from 'zod';
 
-const action = z.enum(['prepare', 'cleanup', 'cleanup-legacy']).parse(process.argv[2]);
+const action = z.enum(['prepare', 'cleanup', 'cleanup-legacy', 'diagnose']).parse(process.argv[2]);
 const branch = z
   .string()
   .min(1)
@@ -16,10 +16,11 @@ if (legacy)
     .regex(/^[1-9]\d*$/)
     .parse(branch);
 const previewName = legacy ? `pr-${branch}` : branch;
-const configPath = '.wrangler-branch.json';
+const configPath = 'cloud/.wrangler-branch.json';
 const { rawConfig, workerName, accountId, template } = readPreviewTemplate();
 if (!legacy) previewResourceName(workerName, branch);
 const token = z.string().min(1).parse(process.env.CLOUDFLARE_API_TOKEN);
+const hyperdriveToken = process.env.CLOUDFLARE_HYPERDRIVE_API_TOKEN || token;
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}`;
 const databaseSchema = z.object({ uuid: z.string(), name: z.string() });
 const namespaceSchema = z.object({ id: z.string(), title: z.string() });
@@ -27,18 +28,27 @@ const namespaceSchema = z.object({ id: z.string(), title: z.string() });
 async function api(path: string, method = 'GET', body?: unknown) {
   const response = await fetch(`${apiBase}${path}`, {
     method,
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    headers: {
+      authorization: `Bearer ${path.startsWith('/hyperdrive/') ? hyperdriveToken : token}`,
+      'content-type': 'application/json',
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   // Deletion is repeatable, including partially provisioned or never deployed PRs.
   if (response.status === 404 && (method === 'DELETE' || path.startsWith('/workers/workers/')))
     return null;
+  const failure = () =>
+    Object.assign(new Error(`Cloudflare ${method} ${path} failed with HTTP ${response.status}`), {
+      status: response.status,
+    });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw failure();
+  }
   const envelope = z
     .object({ success: z.boolean(), result: z.unknown() })
     .parse(await response.json());
-  if (!response.ok || !envelope.success) {
-    throw new Error(`Cloudflare ${method} ${path} failed with HTTP ${response.status}`);
-  }
+  if (!envelope.success) throw failure();
   return envelope.result;
 }
 
@@ -54,6 +64,11 @@ async function list<T>(path: string, schema: z.ZodType<T>) {
 async function run(command: string[]) {
   const child = Bun.spawn(command, { stdout: 'inherit', stderr: 'inherit' });
   if ((await child.exited) !== 0) throw new Error(`Command failed: ${command[0]}`);
+}
+
+if (action === 'diagnose') {
+  await managePreviewPostgres('diagnose', branch, api);
+  process.exit(0);
 }
 
 // Native Preview builds have their own history, separate from production builds.
@@ -161,10 +176,13 @@ async function manageResources(workerName: string) {
     await cleanup(() => api(previewPath, 'DELETE'));
     if (preview)
       await cleanup(async () => {
-        const child = Bun.spawn(['bunx', 'wrangler', 'containers', 'list', '--json'], {
-          stdout: 'pipe',
-          stderr: 'inherit',
-        });
+        const child = Bun.spawn(
+          ['bunx', 'wrangler', 'containers', 'list', '--config', 'cloud/wrangler.jsonc', '--json'],
+          {
+            stdout: 'pipe',
+            stderr: 'inherit',
+          },
+        );
         const output = await new Response(child.stdout).text();
         if ((await child.exited) !== 0) throw new Error('Could not list container apps');
         const apps = z
@@ -173,7 +191,17 @@ async function manageResources(workerName: string) {
         for (const app of apps.filter((item) =>
           item.name.startsWith(`${workerName}_${preview.slug}_`),
         )) {
-          await cleanup(() => run(['bunx', 'wrangler', 'containers', 'delete', app.id]));
+          await cleanup(() =>
+            run([
+              'bunx',
+              'wrangler',
+              'containers',
+              'delete',
+              app.id,
+              '--config',
+              'cloud/wrangler.jsonc',
+            ]),
+          );
         }
       });
     if (database) await cleanup(() => api(`/d1/database/${database.uuid}`, 'DELETE'));

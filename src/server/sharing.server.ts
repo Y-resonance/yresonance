@@ -1,8 +1,8 @@
+import { platform } from '#/platform/index.server';
 import { type ApiRequest } from '#/api/contracts';
 import { ApiError } from './errors';
 import { shareLinks, dashboardGrants } from '#/db/schema';
 import { and, eq, isNull, inArray } from 'drizzle-orm';
-import { clerkClient } from '@clerk/tanstack-react-start/server';
 import { authorizeDashboard } from './dashboard-access.server';
 import { database } from './database.server';
 
@@ -34,7 +34,7 @@ export async function shareDashboard(request: Extract<ApiRequest, { action: 'sha
       );
   } else {
     if (request.operation.kind === 'grant') {
-      const users = await clerkClient().users.getUserList({
+      const users = await platform.auth.directory.users({
         emailAddress: [request.operation.userEmail],
         limit: 2,
       });
@@ -57,7 +57,7 @@ export async function shareDashboard(request: Extract<ApiRequest, { action: 'sha
     } else {
       let userId = request.operation.userId;
       if (!userId && request.operation.userEmail) {
-        const users = await clerkClient().users.getUserList({
+        const users = await platform.auth.directory.users({
           emailAddress: [request.operation.userEmail],
           limit: 2,
         });
@@ -118,7 +118,7 @@ async function resolveCollaborators<T extends { clerkUserId: string }>(grants: T
   const userIds = [...new Set(grants.map((grant) => grant.clerkUserId))];
   const userPages = await Promise.all(
     chunk(userIds, 100).map((page) =>
-      clerkClient().users.getUserList({
+      platform.auth.directory.users({
         userId: page,
         limit: page.length,
       }),

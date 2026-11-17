@@ -7,7 +7,7 @@ import { dataSources, workspaces } from '#/db/schema';
 import { queryEngine } from './doubles/query-engine';
 import { callService, seedDataSource, signInToNewWorkspace, withR2Storage } from './fixtures';
 
-const bindings = env as unknown as Record<string, string>;
+const bindings = process.env as Record<string, string>;
 const originalEnvironment = bindings.APP_ENV;
 const db = () => database();
 

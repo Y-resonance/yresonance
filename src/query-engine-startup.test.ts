@@ -81,3 +81,5 @@ describe('query engine startup', () => {
     },
   );
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

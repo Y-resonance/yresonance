@@ -1,3 +1,4 @@
+import { platform } from '#/platform/index.server';
 import { dashboardControlWidgets, dashboardWidgets } from '#/domain/schema';
 import { type ApiRequest } from '#/api/contracts';
 import {
@@ -27,7 +28,6 @@ import {
 import { dateBucketTarget, resolveDateGranularity } from '#/domain/date-granularity';
 import { hashJson } from '#/domain/hash';
 import { widgetDependencyState, queryCacheState } from '#/domain/cache';
-import { env } from 'cloudflare:workers';
 import { alignDateComparisonRows } from '#/domain/widget-results';
 import { ApiError } from './errors';
 import { type DataSourceRecord } from '#/query/types';
@@ -118,7 +118,7 @@ export async function queryWidget(
   });
   const cached =
     ttlSeconds > 0 && !refresh
-      ? await env.QUERY_CACHE.get<{ cachedAt: number; result: Record<string, unknown> }>(
+      ? await platform.cache.get<{ cachedAt: number; result: Record<string, unknown> }>(
           cacheKey,
           'json',
         )
@@ -159,7 +159,7 @@ export async function queryWidget(
     // KV permits one write per key per second. Identical widgets can refresh together.
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
+        await platform.cache.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), result }), {
           expirationTtl: Math.max(60, ttlSeconds),
         });
         break;
@@ -256,7 +256,7 @@ async function latestFieldDate(
   });
   const cached =
     ttlSeconds > 0 && !refresh
-      ? await env.QUERY_CACHE.get<{ cachedAt: number; date: string | null }>(cacheKey, 'json')
+      ? await platform.cache.get<{ cachedAt: number; date: string | null }>(cacheKey, 'json')
       : null;
   if (cached && Date.now() - cached.cachedAt < ttlSeconds * 1000) return cached.date;
   // Filter options sorted descending put the latest non-empty dates first on every backend. The
@@ -275,15 +275,17 @@ async function latestFieldDate(
       .map((value) => (typeof value === 'string' ? calendarDay(value) : null))
       .find((day) => day !== null) ?? null;
   if (ttlSeconds > 0)
-    await env.QUERY_CACHE.put(cacheKey, JSON.stringify({ cachedAt: Date.now(), date }), {
-      expirationTtl: Math.max(60, ttlSeconds),
-    }).catch((error: unknown) =>
-      console.warn('yresonance.query_cache_write', {
-        kind: 'latestFieldDate',
-        outcome: 'failed',
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    );
+    await platform.cache
+      .put(cacheKey, JSON.stringify({ cachedAt: Date.now(), date }), {
+        expirationTtl: Math.max(60, ttlSeconds),
+      })
+      .catch((error: unknown) =>
+        console.warn('yresonance.query_cache_write', {
+          kind: 'latestFieldDate',
+          outcome: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
   return date;
 }
 

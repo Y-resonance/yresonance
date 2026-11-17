@@ -1,6 +1,7 @@
+import type { Storage } from '#/platform/config';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('cloudflare:workers', () => ({ env: {} }));
+vi.mock('#/platform/settings', () => ({ settings: () => ({}) }));
 import {
   browserUploadPath,
   capabilityUrl,
@@ -55,7 +56,7 @@ describe('internal R2 capabilities', () => {
         body: 'data',
       }),
       path.slice('/api/datasource-upload/'.length),
-      {} as Cloudflare.Env,
+      {} as Storage,
       { userId: 'user-1', workspaceId: 'workspace-1', workspacePrefix: 'ws/acme/' },
     );
 
@@ -69,10 +70,12 @@ describe('internal R2 capabilities', () => {
     );
     const response = await handleInternalR2Request(
       new Request(capabilityUrl(token), { method: 'PUT', body: 'data' }),
-      { INTERNAL_R2_SIGNING_SECRET: 'secret' } as unknown as Cloudflare.Env,
+      { storage: {} as Storage, settings: { INTERNAL_R2_SIGNING_SECRET: 'secret' } },
     );
 
     expect(response.status).toBe(405);
     expect(response.headers.get('allow')).toBe('GET, HEAD');
   });
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

@@ -105,3 +105,31 @@ and rejects repeated cursors.
 Each query engine queues at most 32 requests and runs one at a time. Caller cancellation
 and deadlines interrupt active work as well as preventing queued work from starting.
 Source description and sampling share the query engine's 30-second execution limit.
+
+## Platform configuration
+
+`cloud/yresonance.config.ts` selects the server infrastructure with `defineConfig`: Hyperdrive's
+Postgres connection string, R2 storage, Workers KV cache, Cloudflare Images, optional Analytics
+Engine, Clerk request identity/directory/middleware, and the existing five datasource providers.
+The DuckDB adapter retains the URL-scheme choice between local HTTP and the Cloudflare container.
+A background-task adapter keeps analytics delivery alive after the response.
+
+Only `src/platform/index.server.ts` imports that config; application services consume its typed
+slots. Each adapter lives in its own file under `src/platform/adapters`, imported only by the
+config. Bindings are read when an operation runs, never captured during module initialization.
+The static datasource catalog remains safe for client imports. Plain settings and secrets go
+through `src/platform/settings.ts`, which reads `process.env` lazily. Workers populate it with
+text bindings under our `nodejs_compat` compatibility date, as described in
+[Cloudflare's environment-variable documentation](https://developers.cloudflare.com/workers/configuration/environment-variables/).
+
+Storage exposes the operations the application uses, including range reads and create-only
+writes. Cache listing exists for environment reset inventory. Database clients retain their
+invocation scopes; configuration supplies only a connection string. Image errors propagate
+unchanged so the original-image and quota fallbacks still apply.
+
+The `cloud/` directory owns the composition and operations of our hosted service: its Wrangler
+resources, preview provisioning and cleanup, environment-reset CLI, and legacy D1 cutover tools.
+Reusable adapters and the application stay in `src/`; database migrations and local development
+utilities stay shared. GitHub workflows remain in `.github/workflows` and call `cloud/scripts`.
+This is a deployment boundary within the same MIT-licensed repository, with no separate package or
+enterprise feature layer. A self-hosted build target can select its own composition when added.

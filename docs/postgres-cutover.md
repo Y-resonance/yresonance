@@ -7,7 +7,7 @@ No production data or configuration is changed by local validation.
 ## Required external configuration
 
 - PlanetScale Postgres in AWS Frankfurt, with the production Hyperdrive configuration already
-  referenced by `wrangler.jsonc`. Keep query caching disabled. The preview origin is verified as
+  referenced by `cloud/wrangler.jsonc`. Keep query caching disabled. The preview origin is verified as
   Postgres 18, matching Compose/CI; verify production also uses that major before cutover.
 - GitHub repository secret `POSTGRES_PRODUCTION_URL`: direct production migration connection,
   available only in the production deploy step. Never migrate through Hyperdrive.
@@ -45,9 +45,9 @@ counts with `pg_stat_activity` before considering a larger preview cap.
 
    ```sh
    DATABASE_URL='<direct URL>' UPLOAD_SIGNING_SECRET='<existing secret>' \
-     bun scripts/copy-d1-to-postgres.ts copy /secure/path/d1-export.sql
+     bun cloud/scripts/copy-d1-to-postgres.ts copy /secure/path/d1-export.sql
    DATABASE_URL='<direct URL>' UPLOAD_SIGNING_SECRET='<existing secret>' \
-     bun scripts/copy-d1-to-postgres.ts verify /secure/path/d1-export.sql
+     bun cloud/scripts/copy-d1-to-postgres.ts verify /secure/path/d1-export.sql
    ```
 
    The source is an in-memory SQLite database loaded solely from the offline export. Tables copy

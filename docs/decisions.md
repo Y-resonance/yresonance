@@ -42,6 +42,20 @@ explain. Update it when a decision changes, not when an implementation detail do
 
 ## Platform
 
+- Hosted-service configuration and operations live in `cloud/`. Shared application code and
+  reusable infrastructure adapters stay in `src/`, even when our hosted service currently uses
+  them. The separation describes deployment ownership; the repository remains MIT licensed.
+  There is no package split or separate enterprise edition.
+- Deployment services are selected at build time in one typed `cloud/yresonance.config.ts` using
+  `defineConfig`, with one adapter per slot. Only the server platform entry imports the config.
+  Adapters stay in this repository, in separate files; there is no runtime platform switch,
+  package split, or monorepo. Contracts follow current application needs rather than full
+  vendor APIs. The initial configuration preserves all existing services and all five providers.
+  Alternative storage, cache, auth and Node hosting, and optional datasources/query execution,
+  are later work. Clerk client UI stays unchanged; server auth separates request identity from
+  directory lookups to align with the planned OIDC work. The datasource catalog stays static
+  because client code imports it.
+
 - One Cloudflare deploy: Worker (TanStack Start app and API) plus the query container. Postgres through Hyperdrive with
   Drizzle for application data, R2 for data files, KV for query results, Clerk for auth.
 - Postgres is the only application database, including customer-hosted deployments. Keeping a

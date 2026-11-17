@@ -8,9 +8,9 @@ import type { DataSourceRecord } from '#/query/types';
 import { callService, signInToNewWorkspace } from './fixtures';
 import { queryEngine } from './doubles/query-engine';
 
-const originalBase = env.DATA_SOURCE_BASE_URL;
+const originalBase = process.env.DATA_SOURCE_BASE_URL;
 afterEach(() => {
-  env.DATA_SOURCE_BASE_URL = originalBase;
+  process.env.DATA_SOURCE_BASE_URL = originalBase;
   vi.restoreAllMocks();
 });
 
@@ -23,10 +23,10 @@ test.each([
 ] as const)(
   '$backend $format import rolls back a failed registration and can retry',
   async ({ backend, format }) => {
-    env.DATA_SOURCE_BASE_URL = 'r2://yresonance-data';
-    env.CLICKHOUSE_URL = 'https://clickhouse.test';
-    env.CLICKHOUSE_USER = 'backend';
-    env.CLICKHOUSE_PASSWORD = 'private-password';
+    process.env.DATA_SOURCE_BASE_URL = 'r2://yresonance-data';
+    process.env.CLICKHOUSE_URL = 'https://clickhouse.test';
+    process.env.CLICKHOUSE_USER = 'backend';
+    process.env.CLICKHOUSE_PASSWORD = 'private-password';
     const workspace = await signInToNewWorkspace();
     const upload = (await callService({
       action: 'prepareDatasourceUpload',

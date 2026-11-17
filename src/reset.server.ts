@@ -1,6 +1,8 @@
+import { platform } from '#/platform/index.server';
+import { settings, type Settings } from '#/platform/settings';
+import type { Storage, Cache } from '#/platform/config';
 import { sql } from 'drizzle-orm';
 import { database } from '#/server/database.server';
-import { env } from 'cloudflare:workers';
 import { z } from 'zod';
 
 const resetRequestSchema = z.object({
@@ -23,32 +25,46 @@ const applicationTables = [
   'workspaces',
 ] as const;
 
-export async function handleResetRequest(request: Request, environment: Cloudflare.Env = env) {
+export async function handleResetRequest(
+  request: Request,
+  environment: {
+    storage: Storage;
+    cache: Cache;
+    settings: Pick<Settings, 'RESET_ADMIN_TOKEN' | 'APP_ENV' | 'QUERY_CACHE_NAME'>;
+  } = { storage: platform.storage, cache: platform.cache, settings: settings() },
+) {
   if (request.method !== 'POST')
     return Response.json(
       { error: 'Method not allowed.' },
       { status: 405, headers: { allow: 'POST' } },
     );
-  if (!(await authorized(request.headers.get('authorization'), environment.RESET_ADMIN_TOKEN)))
+  if (
+    !(await authorized(
+      request.headers.get('authorization'),
+      environment.settings.RESET_ADMIN_TOKEN,
+    ))
+  )
     return Response.json({ error: 'Unauthorized.' }, { status: 401 });
   const parsed = resetRequestSchema.safeParse(await request.json().catch(() => undefined));
   if (!parsed.success)
     return Response.json({ error: 'Choose development, preview, or production.' }, { status: 400 });
-  if (parsed.data.environment !== environment.APP_ENV)
+  if (parsed.data.environment !== environment.settings.APP_ENV)
     return Response.json(
-      { error: `This deployment is ${environment.APP_ENV}, not ${parsed.data.environment}.` },
+      {
+        error: `This deployment is ${environment.settings.APP_ENV}, not ${parsed.data.environment}.`,
+      },
       { status: 409 },
     );
 
   const [r2Keys, kvKeys] = await Promise.all([
-    listR2Keys(environment.DATA),
-    listKvKeys(environment.QUERY_CACHE),
+    listR2Keys(environment.storage),
+    listKvKeys(environment.cache),
   ]);
   const plan = {
     environment: parsed.data.environment,
     databaseTables: [...applicationTables],
     r2ObjectKeys: r2Keys,
-    kvNamespace: environment.QUERY_CACHE_NAME,
+    kvNamespace: environment.settings.QUERY_CACHE_NAME,
     kvKeys,
   };
   if (parsed.data.environment === 'production')
@@ -58,15 +74,13 @@ export async function handleResetRequest(request: Request, environment: Cloudfla
     for (const table of applicationTables) await tx.execute(sql.raw(`DELETE FROM "${table}"`));
   });
   for (let index = 0; index < r2Keys.length; index += 1_000)
-    await environment.DATA.delete(r2Keys.slice(index, index + 1_000));
+    await environment.storage.delete(r2Keys.slice(index, index + 1_000));
   for (let index = 0; index < kvKeys.length; index += 50)
-    await Promise.all(
-      kvKeys.slice(index, index + 50).map((key) => environment.QUERY_CACHE.delete(key)),
-    );
+    await Promise.all(kvKeys.slice(index, index + 50).map((key) => environment.cache.delete(key)));
   return Response.json({ executed: true, plan });
 }
 
-async function listR2Keys(bucket: R2Bucket) {
+async function listR2Keys(bucket: Storage) {
   const keys: string[] = [];
   let cursor: string | undefined;
   do {
@@ -77,7 +91,7 @@ async function listR2Keys(bucket: R2Bucket) {
   return keys;
 }
 
-async function listKvKeys(namespace: KVNamespace) {
+async function listKvKeys(namespace: Cache) {
   const keys: string[] = [];
   let cursor: string | undefined;
   do {

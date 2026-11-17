@@ -1,3 +1,4 @@
+import { platform } from '#/platform/index.server';
 import { env } from 'cloudflare:workers';
 import { and, eq, getTableColumns, sql } from 'drizzle-orm';
 import { describe, expect, test, vi } from 'vitest';
@@ -179,7 +180,7 @@ describe('Postgres application storage', () => {
           headers: { 'content-length': '4' },
         }),
         path.split('/').at(-1)!,
-        env,
+        platform.storage,
         {
           userId: workspace.userId,
           workspaceId: workspace.workspaceId,
@@ -192,7 +193,7 @@ describe('Postgres application storage', () => {
       .set({ status: 'registering' })
       .where(eq(schema.datasourceUploads.key, key));
     expect((await upload()).status).toBe(409);
-    await createQueryReadBudget(id, workspace.workspaceId, env);
+    await createQueryReadBudget(id, workspace.workspaceId);
     await db
       .update(schema.queryReadBudgets)
       .set({ maximumBytes: 4 })
@@ -208,7 +209,7 @@ describe('Postgres application storage', () => {
         () =>
           handleInternalR2Request(
             new Request(capabilityUrl(readToken), { headers: { range: 'bytes=0-3' } }),
-            env,
+            { storage: platform.storage, settings: env },
           ),
         true,
       );
@@ -238,7 +239,7 @@ describe('Postgres application storage', () => {
           body: 'data',
           headers: { 'content-length': '4' },
         }),
-        env,
+        { storage: platform.storage, settings: env },
       );
     const failure = vi.spyOn(env.DATA, 'put').mockRejectedValueOnce(new Error('R2 unavailable'));
     await expect(ingest()).rejects.toThrow('R2 unavailable');

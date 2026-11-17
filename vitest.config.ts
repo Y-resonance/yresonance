@@ -10,6 +10,7 @@ export default defineConfig({
       'src/**/*.test.tsx',
       'container/**/*.test.ts',
       'scripts/**/*.test.ts',
+      'cloud/scripts/**/*.test.ts',
     ],
   },
 });

@@ -1,4 +1,5 @@
-import { env } from 'cloudflare:workers';
+import { settings } from '#/platform/settings';
+import { platform } from '#/platform/index.server';
 import { z } from 'zod';
 import { DatasourceError } from '#/data/connectors/contract';
 import { datasourceUploadKey, type DatasourceUploadFormat } from '#/domain/datasource-upload';
@@ -31,7 +32,7 @@ export type SourceListing = z.infer<typeof sourceListingSchema>;
 
 export async function listSourceObjects(prefix?: string, cursor?: string): Promise<SourceListing> {
   if (usesR2()) {
-    const listing = await env.DATA.list({ prefix, cursor, limit: 1000 });
+    const listing = await platform.storage.list({ prefix, cursor, limit: 1000 });
     return {
       objects: listing.objects.map(({ key, size, etag, uploaded }) => ({
         key,
@@ -44,7 +45,7 @@ export async function listSourceObjects(prefix?: string, cursor?: string): Promi
     };
   }
 
-  const url = new URL(env.DATA_SOURCE_BASE_URL);
+  const url = new URL(settings().DATA_SOURCE_BASE_URL);
   if (prefix) url.searchParams.set('prefix', prefix);
   if (cursor) url.searchParams.set('cursor', cursor);
   const response = await fetch(url);
@@ -54,7 +55,7 @@ export async function listSourceObjects(prefix?: string, cursor?: string): Promi
 
 export async function headSourceObject(key: string): Promise<SourceObject | null> {
   if (usesR2()) {
-    const object = await env.DATA.head(key);
+    const object = await platform.storage.head(key);
     return object
       ? { key: object.key, size: object.size, etag: object.etag, uploaded: object.uploaded }
       : null;
@@ -82,7 +83,7 @@ export async function prepareSourceUpload(workspacePrefix: string, format: Datas
 
 export async function deleteSourceObject(key: string) {
   if (usesR2()) {
-    await env.DATA.delete(key);
+    await platform.storage.delete(key);
     return;
   }
   const response = await fetch(sourceUrl(key), { method: 'DELETE' });
@@ -108,7 +109,7 @@ export async function resolveDataSource(dataSource: DataSourceRecord, queryId: s
         'No matching datasource files were found.',
       );
     return {
-      sql: compileSourceSqlFromBaseUrl(dataSource, env.QUERY_DATA_SOURCE_BASE_URL, keys),
+      sql: compileSourceSqlFromBaseUrl(dataSource, settings().QUERY_DATA_SOURCE_BASE_URL, keys),
       sourceBytes: 0,
       objectKeys: keys,
       queryBudgetId: undefined,
@@ -133,14 +134,14 @@ export async function resolveDataSource(dataSource: DataSourceRecord, queryId: s
       'datasource_source_too_large',
       `Datasource exceeds the ${MAX_QUERY_SOURCE_BYTES} byte query limit.`,
     );
-  await createQueryReadBudget(queryId, dataSource.workspaceId, env);
+  await createQueryReadBudget(queryId, dataSource.workspaceId);
 
   const urls = await Promise.all(
     objects.map(async (object) =>
       capabilityUrl(
         await createR2Capability(
           { kind: 'read', key: object.key, queryId },
-          env.INTERNAL_R2_SIGNING_SECRET,
+          settings().INTERNAL_R2_SIGNING_SECRET,
         ),
       ),
     ),
@@ -155,20 +156,20 @@ export async function resolveDataSource(dataSource: DataSourceRecord, queryId: s
 
 export async function checkSourceStorage() {
   if (usesR2()) {
-    await env.DATA.list({ limit: 1, prefix: '__readiness__/' });
+    await platform.storage.list({ limit: 1, prefix: '__readiness__/' });
     return;
   }
-  const response = await fetch(env.DATA_SOURCE_BASE_URL, { method: 'GET' });
+  const response = await fetch(settings().DATA_SOURCE_BASE_URL, { method: 'GET' });
   if (!response.ok) throw new Error(`Local data service returned HTTP ${response.status}.`);
   await response.body?.cancel();
 }
 
 function usesR2() {
-  return env.DATA_SOURCE_BASE_URL.startsWith('r2://');
+  return settings().DATA_SOURCE_BASE_URL.startsWith('r2://');
 }
 
 function sourceUrl(key: string) {
-  const base = env.DATA_SOURCE_BASE_URL.replace(/\/$/u, '');
+  const base = settings().DATA_SOURCE_BASE_URL.replace(/\/$/u, '');
   return `${base}/${key.split('/').map(encodeURIComponent).join('/')}`;
 }
 
@@ -179,7 +180,7 @@ export function localSourceUrl(key: string) {
 
 export async function readSourceObject(key: string, maximumBytes: number) {
   if (usesR2()) {
-    const object = await env.DATA.get(key);
+    const object = await platform.storage.get(key);
     if (!object) throw new DatasourceError('datasource_source_not_found', 'Upload not found.');
     if (object.size > maximumBytes)
       throw new DatasourceError('datasource_source_too_large', 'The uploaded file is too large.');

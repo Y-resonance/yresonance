@@ -8,7 +8,11 @@ const desktopOnly = [
   '**/builder-formula.spec.ts',
 ];
 const mobileOnly = '**/builder-rows-mobile.spec.ts';
-const clerkTests = ['**/authenticated-*.spec.ts', '**/public-shell.spec.ts'];
+const clerkTests = [
+  '**/authenticated-*.spec.ts',
+  '**/public-shell.spec.ts',
+  '**/preview-smoke.spec.ts',
+];
 
 export default defineConfig({
   ...clerkConfig,
