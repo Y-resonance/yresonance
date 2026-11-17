@@ -1,7 +1,7 @@
+import { settings } from '#/platform/settings';
 import { and, eq } from 'drizzle-orm';
 import { database } from '#/server/database.server';
 import { datasourceConnections } from '#/db/schema';
-import { env } from 'cloudflare:workers';
 import type { DataSourceRecord } from '#/query/types';
 import { openConnection } from './connection-secrets';
 import { DatasourceError } from './connectors/contract';
@@ -21,7 +21,7 @@ export async function loadConnection(dataSource: Pick<DataSourceRecord, 'id' | '
   try {
     return await openConnection(
       row.encryptedConfig,
-      env.UPLOAD_SIGNING_SECRET,
+      settings().UPLOAD_SIGNING_SECRET,
       `${dataSource.workspaceId}/${dataSource.id}`,
     );
   } catch {

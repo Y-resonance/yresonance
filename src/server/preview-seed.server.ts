@@ -1,5 +1,6 @@
+import { settings } from '#/platform/settings';
+import { platform } from '#/platform/index.server';
 import { type SessionContext } from './auth.server';
-import { env } from 'cloudflare:workers';
 import { workspaces, dataSources, fields } from '#/db/schema';
 import { and, eq, isNull, or, lt } from 'drizzle-orm';
 import { ApiError } from './errors';
@@ -15,7 +16,7 @@ import { seedField } from './datasource-operations.server';
 const previewSeeds = new Map<string, Promise<void>>();
 
 export async function seedPreviewWorkspace(session: SessionContext) {
-  if (env.APP_ENV !== 'preview' || session.workspace.previewSeededAt) return;
+  if (settings().APP_ENV !== 'preview' || session.workspace.previewSeededAt) return;
   const workspaceId = session.workspace.id;
   const pending = previewSeeds.get(workspaceId);
   if (pending) return pending;
@@ -66,8 +67,8 @@ async function importPreviewExample(session: SessionContext) {
     const bytes = Uint8Array.from(atob(previewExample.parquet), (character) =>
       character.charCodeAt(0),
     );
-    const object = await env.DATA.put(destinationKey, bytes, {
-      httpMetadata: { contentType: 'application/vnd.apache.parquet' },
+    const object = await platform.storage.put(destinationKey, bytes, {
+      contentType: 'application/vnd.apache.parquet',
     });
     if (!object) throw new Error('Could not store the preview example.');
     const uploadedAt = Date.now();

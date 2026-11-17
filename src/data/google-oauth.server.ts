@@ -1,5 +1,5 @@
-import { env } from 'cloudflare:workers';
-import { clerkClient } from '@clerk/tanstack-react-start/server';
+import { settings } from '#/platform/settings';
+import { platform } from '#/platform/index.server';
 import { and, eq, lt, inArray, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import {
@@ -54,10 +54,10 @@ function configuration() {
       hostedDomain: z.string().min(1),
     })
     .safeParse({
-      clientId: env.GOOGLE_OAUTH_CLIENT_ID,
-      clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
-      redirectUri: env.GOOGLE_OAUTH_REDIRECT_URI,
-      hostedDomain: env.GOOGLE_OAUTH_HOSTED_DOMAIN,
+      clientId: settings().GOOGLE_OAUTH_CLIENT_ID,
+      clientSecret: settings().GOOGLE_OAUTH_CLIENT_SECRET,
+      redirectUri: settings().GOOGLE_OAUTH_REDIRECT_URI,
+      hostedDomain: settings().GOOGLE_OAUTH_HOSTED_DOMAIN,
     });
   if (!config.success)
     throw new ApiError(503, 'connection_not_configured', 'Google connection is not configured.');
@@ -149,7 +149,7 @@ async function connectionOwnerName(workspaceId: string, authorizationId: string)
   if (!owner) return undefined;
   try {
     const users = await clerkLookup(
-      clerkClient().users.getUserList({ userId: [owner.userId], limit: 1 }),
+      platform.auth.directory.users({ userId: [owner.userId], limit: 1 }),
     );
     const user = users.data.find((user) => user.id === owner.userId);
     return (
@@ -272,7 +272,7 @@ export async function beginDatasourceConnection(
     updatedAt: now,
     encryptedConfig: await sealConnection(
       { verifier },
-      env.UPLOAD_SIGNING_SECRET,
+      settings().UPLOAD_SIGNING_SECRET,
       `${session.workspace.id}/${id}`,
       'oauth',
     ),
@@ -289,7 +289,7 @@ export async function beginDatasourceConnection(
         ? `/datasources/${encodeURIComponent(request.dataSourceId)}`
         : '/datasources/new?provider=bigquery',
     },
-    env.UPLOAD_SIGNING_SECRET,
+    settings().UPLOAD_SIGNING_SECRET,
     'google-oauth-state',
     'oauth-state',
   );
@@ -317,7 +317,7 @@ export async function completeGoogleConnection(request: Request) {
     state = stateSchema.parse(
       await openConnection(
         new URL(request.url).searchParams.get('state') ?? '',
-        env.UPLOAD_SIGNING_SECRET,
+        settings().UPLOAD_SIGNING_SECRET,
         'google-oauth-state',
         'oauth-state',
       ),
@@ -370,7 +370,7 @@ export async function completeGoogleConnection(request: Request) {
       .parse(
         await openConnection(
           pending.encryptedConfig,
-          env.UPLOAD_SIGNING_SECRET,
+          settings().UPLOAD_SIGNING_SECRET,
           `${state.workspaceId}/${state.id}`,
           'oauth',
         ),
@@ -410,7 +410,7 @@ export async function completeGoogleConnection(request: Request) {
         accessToken: tokens.access_token,
         expiresAt: Date.now() + tokens.expires_in * 1000,
       },
-      env.UPLOAD_SIGNING_SECRET,
+      settings().UPLOAD_SIGNING_SECRET,
       `${state.workspaceId}/${targetId}`,
       'oauth',
     );
@@ -454,7 +454,7 @@ export async function completeGoogleConnection(request: Request) {
         if (!source) throw new Error('Datasource removed.');
         const reference = await sealConnection(
           { authorizationId: state.id },
-          env.UPLOAD_SIGNING_SECRET,
+          settings().UPLOAD_SIGNING_SECRET,
           `${state.workspaceId}/${dataSourceId}`,
         );
         // Compare the original encrypted reference without needing its old encryption key.
@@ -549,7 +549,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
   let isMember: boolean;
   try {
     const memberships = await clerkLookup(
-      clerkClient().organizations.getOrganizationMembershipList({
+      platform.auth.directory.memberships({
         organizationId: workspace.clerkOrganizationId,
         userId: [row.createdBy],
         limit: 1,
@@ -623,7 +623,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
   const grant = grantSchema.parse(
     await openConnection(
       row.encryptedConfig,
-      env.UPLOAD_SIGNING_SECRET,
+      settings().UPLOAD_SIGNING_SECRET,
       `${workspaceId}/${authorizationId}`,
       'oauth',
     ),
@@ -670,7 +670,7 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
       refreshToken: tokens.refresh_token ?? grant.refreshToken,
       expiresAt: Date.now() + tokens.expires_in * 1000,
     },
-    env.UPLOAD_SIGNING_SECRET,
+    settings().UPLOAD_SIGNING_SECRET,
     `${workspaceId}/${authorizationId}`,
     'oauth',
   );

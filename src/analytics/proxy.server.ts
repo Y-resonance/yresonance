@@ -1,19 +1,22 @@
+import { settings } from '#/platform/settings';
 import { BodyTooLargeError, readRequestBytes } from '../http/body';
-import { env } from 'cloudflare:workers';
 import { ANALYTICS_PROXY_PATH, posthogHosts } from './config';
 
 export function proxyAnalyticsRequest(request: Request) {
   const url = new URL(request.url);
   if (url.pathname !== ANALYTICS_PROXY_PATH && !url.pathname.startsWith(`${ANALYTICS_PROXY_PATH}/`))
     return undefined;
-  if (env.POSTHOG_ENABLED !== 'true') return Promise.resolve(new Response(null, { status: 404 }));
+  if (settings().POSTHOG_ENABLED !== 'true')
+    return Promise.resolve(new Response(null, { status: 404 }));
   return forwardAnalyticsRequest(request, url);
 }
 
 async function forwardAnalyticsRequest(request: Request, url: URL) {
   const pathname = url.pathname.slice(ANALYTICS_PROXY_PATH.length) || '/';
   const isAsset = pathname.startsWith('/static/') || pathname.startsWith('/array/');
-  const upstream = new URL(isAsset ? posthogHosts(env.POSTHOG_HOST).assetsHost : env.POSTHOG_HOST);
+  const upstream = new URL(
+    isAsset ? posthogHosts(settings().POSTHOG_HOST).assetsHost : settings().POSTHOG_HOST,
+  );
   // Assign the path separately so a double slash cannot replace the upstream host.
   upstream.pathname = pathname;
   upstream.search = url.search;

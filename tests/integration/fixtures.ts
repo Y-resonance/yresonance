@@ -216,10 +216,10 @@ export async function expectApiError(
 
 /**
  * Runs `operation` with the Worker in R2 mode so storage calls hit the isolated R2 binding.
- * The binding type pins the production URLs, so the swap needs one cast.
+ * Plain settings use process.env; storage still uses the real isolated R2 adapter.
  */
 export async function withR2Storage<T>(operation: () => Promise<T>) {
-  const bindings = env as unknown as Record<string, string>;
+  const bindings = process.env as Record<string, string>;
   const original = bindings.DATA_SOURCE_BASE_URL;
   bindings.DATA_SOURCE_BASE_URL = 'r2://yresonance-data';
   try {

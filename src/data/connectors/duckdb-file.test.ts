@@ -42,7 +42,7 @@ const mocks = vi.hoisted(() => ({
     >(),
 }));
 
-vi.mock('cloudflare:workers', () => ({ env: { R2_BUCKET_NAME: 'test-bucket' } }));
+vi.mock('#/platform/settings', () => ({ settings: () => ({ R2_BUCKET_NAME: 'test-bucket' }) }));
 vi.mock('#/data/source.server', () => ({
   headSourceObject: mocks.headSourceObject,
   listSourceObjects: mocks.listSourceObjects,
@@ -200,3 +200,5 @@ describe('duckdb-file datasource connector', () => {
     );
   });
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

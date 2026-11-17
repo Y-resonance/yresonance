@@ -1,4 +1,4 @@
-import { auth } from '@clerk/tanstack-react-start/server';
+import { platform } from '#/platform/index.server';
 import { eq } from 'drizzle-orm';
 import { database } from '#/server/database.server';
 import { workspaces } from '#/db/schema';
@@ -13,7 +13,7 @@ export interface SessionContext {
 }
 
 export async function requireIdentity() {
-  const session = await auth();
+  const session = await platform.auth.requestIdentity();
   if (!session.isAuthenticated || !session.userId)
     throw new ApiError(401, 'unauthenticated', 'Sign in to continue.');
   if (!session.orgId)

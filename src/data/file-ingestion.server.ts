@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { settings } from '#/platform/settings';
 import { database } from '#/server/database.server';
 import { ingestionTokens } from '#/db/schema';
 import { capabilityUrl, createR2Capability } from './internal-r2';
@@ -55,7 +55,7 @@ async function convertManagedCsvUpload(workspaceId: string, sourceKey: string) {
   });
   let sourceUrl: string;
   let destinationUrl: string;
-  if (env.DATA_SOURCE_BASE_URL.startsWith('r2://')) {
+  if (settings().DATA_SOURCE_BASE_URL.startsWith('r2://')) {
     const token = await createR2Capability(
       {
         kind: 'ingestion',
@@ -64,7 +64,7 @@ async function convertManagedCsvUpload(workspaceId: string, sourceKey: string) {
         destinationKey,
         expiresAt: Math.floor(expiresAt.getTime() / 1000),
       },
-      env.INTERNAL_R2_SIGNING_SECRET,
+      settings().INTERNAL_R2_SIGNING_SECRET,
     );
     sourceUrl = capabilityUrl(token);
     // The ingestion capability selects its read and write object from the HTTP method.

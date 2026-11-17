@@ -12,13 +12,13 @@ import type { DatasourceQuery } from '#/data/connectors/contract';
 import type { DataSourceRecord, FieldRecord } from '#/query/types';
 import type { DashboardDocument, WidgetDefinition } from '#/domain/schema';
 
-vi.mock('cloudflare:workers', () => ({
-  env: {
+vi.mock('#/platform/settings', () => ({
+  settings: () => ({
     ...process.env,
     R2_BUCKET_NAME: 'backend-conformance',
     QUERY_CACHE_NAME: 'backend-conformance',
     CLICKHOUSE_DATABASE: 'yresonance_development',
-  },
+  }),
 }));
 
 const workspaceId = `conformance_${crypto.randomUUID()}`;
@@ -264,7 +264,8 @@ test('managed Parquet imports are queryable and a failed import removes its tabl
   const { createServer } = await import('node:http');
   const { ingestClickhouseUpload, removeClickhouseUpload } =
     await import('#/data/clickhouse-ingestion.server');
-  const { env } = await import('cloudflare:workers');
+  const { settings } = await import('#/platform/settings');
+  const env = settings();
   const directory = await mkdtemp(join(tmpdir(), 'clickhouse-parquet-'));
   const path = join(directory, 'source.parquet');
   await connection.run(`COPY source TO '${path}' (FORMAT PARQUET)`);
@@ -609,3 +610,5 @@ test('native ClickHouse expressions use built-ins, validate context, and reject 
     await clickhouseRequest(workspaceId, `DROP FUNCTION ${udf}`, [], { readonly: false });
   }
 });
+
+vi.mock('#/platform/index.server', () => ({ platform: {} }));

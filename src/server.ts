@@ -1,6 +1,7 @@
+import { settings } from '#/platform/settings';
+import { platform } from '#/platform/index.server';
 import { withDatabaseScope } from './server/database.server';
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
-import { env } from 'cloudflare:workers';
 import { searchDiscoveryResponse } from './search-discovery';
 import { handleResetRequest } from './reset.server';
 import { trackApiRequest } from './analytics/server';
@@ -12,10 +13,10 @@ export { ContainerProxy } from '@cloudflare/containers';
 
 export default createServerEntry({
   async fetch(request) {
-    const maintenance = maintenanceResponse(request, env.MAINTENANCE_MODE);
+    const maintenance = maintenanceResponse(request, settings().MAINTENANCE_MODE);
     if (maintenance) return maintenance;
-    return withDatabaseScope(env.HYPERDRIVE.connectionString, async () => {
-      const discoveryResponse = searchDiscoveryResponse(request, env.APP_ENV);
+    return withDatabaseScope(platform.database.connectionString(), async () => {
+      const discoveryResponse = searchDiscoveryResponse(request, settings().APP_ENV);
       if (discoveryResponse) return discoveryResponse;
       const proxyResponse = proxyAnalyticsRequest(request);
       if (proxyResponse) return proxyResponse;

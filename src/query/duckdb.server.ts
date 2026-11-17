@@ -1,5 +1,4 @@
-import { getContainer } from '@cloudflare/containers';
-import { env } from 'cloudflare:workers';
+import { platform } from '#/platform/index.server';
 import { finishQueryReadBudget } from '#/data/internal-r2';
 import { resolveDataSource } from '#/data/source.server';
 import type {
@@ -122,28 +121,22 @@ async function queryEngineRequest<T>(
   queryId: string,
   body: QueryEngineRequest,
 ) {
-  const local = !env.DATA_SOURCE_BASE_URL.startsWith('r2://');
   const deadlineAt = Date.now() + QUERY_ENGINE_REQUEST_TIMEOUT_MS;
-  const request = new Request(
-    local ? new URL('/__query-engine', env.DATA_SOURCE_BASE_URL) : 'http://query-engine/query',
-    {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-yresonance-query-id': queryId,
-        'x-yresonance-query-deadline': String(deadlineAt),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(QUERY_ENGINE_REQUEST_TIMEOUT_MS),
+  const request = new Request(platform.queryEngine.url(), {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-yresonance-query-id': queryId,
+      'x-yresonance-query-deadline': String(deadlineAt),
     },
-  );
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(QUERY_ENGINE_REQUEST_TIMEOUT_MS),
+  });
   const startedAt = performance.now();
   let response: Response;
   let responseText: string;
   try {
-    response = local
-      ? await fetch(request)
-      : await getContainer(env.QUERY_ENGINE, workspaceId).fetch(request);
+    response = await platform.queryEngine.fetch(workspaceId, request);
     responseText = await response.text();
   } catch (error) {
     const totalDurationMs = performance.now() - startedAt;
@@ -219,7 +212,7 @@ async function finishSourceRead(
 ) {
   if (!budgetId) return 0;
   try {
-    const scannedBytes = await finishQueryReadBudget(budgetId, env);
+    const scannedBytes = await finishQueryReadBudget(budgetId);
     console.info('yresonance.query_scanned_bytes', { queryId, workspaceId, scannedBytes });
     recordProductMetric('query_scanned_bytes', {
       numbers: [scannedBytes],

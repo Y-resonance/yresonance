@@ -1,6 +1,6 @@
+import { platform } from '#/platform/index.server';
 import { createFileRoute } from '@tanstack/react-router';
 import type {} from '@tanstack/react-start';
-import { env } from 'cloudflare:workers';
 import { handleBrowserUploadRequest } from '#/data/internal-r2';
 import { ApiError } from '#/server/errors';
 import { requireSession } from '#/server/auth.server';
@@ -11,7 +11,7 @@ export const Route = createFileRoute('/api/datasource-upload/$token')({
       PUT: async ({ request, params }) => {
         try {
           const session = await requireSession();
-          return handleBrowserUploadRequest(request, params.token, env, {
+          return handleBrowserUploadRequest(request, params.token, platform.storage, {
             userId: session.userId,
             workspaceId: session.workspace.id,
             workspacePrefix: session.workspace.r2Prefix,

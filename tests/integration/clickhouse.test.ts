@@ -13,16 +13,16 @@ import {
   signInToNewWorkspace,
 } from './fixtures';
 
-const originalMappings = env.CLICKHOUSE_EXTERNAL_TABLES;
+const originalMappings = process.env.CLICKHOUSE_EXTERNAL_TABLES;
 afterEach(() => {
-  env.CLICKHOUSE_EXTERNAL_TABLES = originalMappings;
+  process.env.CLICKHOUSE_EXTERNAL_TABLES = originalMappings;
   vi.restoreAllMocks();
 });
 
 function installClickhouse() {
-  env.CLICKHOUSE_URL = 'https://clickhouse.test';
-  env.CLICKHOUSE_USER = 'backend';
-  env.CLICKHOUSE_PASSWORD = 'private-password';
+  process.env.CLICKHOUSE_URL = 'https://clickhouse.test';
+  process.env.CLICKHOUSE_USER = 'backend';
+  process.env.CLICKHOUSE_PASSWORD = 'private-password';
   const requests: Array<{ sql: string; headers: Headers }> = [];
   let revenue = 42;
   const original = globalThis.fetch;
@@ -59,7 +59,7 @@ function installClickhouse() {
 }
 
 async function registerExternal(workspaceId: string, cacheTtlSeconds?: number) {
-  env.CLICKHOUSE_EXTERNAL_TABLES = JSON.stringify([
+  process.env.CLICKHOUSE_EXTERNAL_TABLES = JSON.stringify([
     { workspaceId, database: 'external', table: 'sales' },
   ]);
   return (await callService({
@@ -145,7 +145,7 @@ test.each([1, 300])(
     const clock = vi.spyOn(Date, 'now').mockReturnValue(now + ttlSeconds * 1000 + 1);
     expect(await callService(query)).toMatchObject({ cache: 'miss', rows: [{ metric_1: 43 }] });
     expect(await callService(query)).toMatchObject({ cache: 'hit' });
-    env.CLICKHOUSE_EXTERNAL_TABLES = '[]';
+    process.env.CLICKHOUSE_EXTERNAL_TABLES = '[]';
     await expectApiError(callService(query), { status: 403, code: 'datasource_access_denied' });
     clock.mockRestore();
   },
@@ -234,7 +234,7 @@ test('shared viewers fetch fresh results, replace the cache, and still require s
     rows: [{ metric_1: 55 }],
   });
   expect(await callService(sharedQuery)).toMatchObject({ cache: 'hit', rows: [{ metric_1: 55 }] });
-  env.CLICKHOUSE_EXTERNAL_TABLES = '[]';
+  process.env.CLICKHOUSE_EXTERNAL_TABLES = '[]';
   await expectApiError(callService({ ...sharedQuery, refresh: true }), {
     status: 403,
     code: 'datasource_access_denied',

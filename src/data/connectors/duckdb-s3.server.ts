@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { settings } from '#/platform/settings';
 import { s3ConnectionSchema } from '#/data/providers/config';
 import { loadConnection } from '#/data/connection-store.server';
 import { s3Storage } from '#/data/s3.server';
@@ -54,7 +54,7 @@ export function s3DuckdbBackend(connection = loadConnection): AnalyticsDataBacke
           await storage.sign(file.key, 'GET'),
           await storage.sign(file.key, 'HEAD'),
           queryId,
-          env,
+          settings(),
         ),
       ),
     );
@@ -64,7 +64,7 @@ export function s3DuckdbBackend(connection = loadConnection): AnalyticsDataBacke
         'datasource_source_too_large',
         'This source has too many files for one query. Choose a narrower prefix.',
       );
-    await createQueryReadBudget(queryId, source.workspaceId, env);
+    await createQueryReadBudget(queryId, source.workspaceId);
     return {
       sql,
       sourceBytes: size,

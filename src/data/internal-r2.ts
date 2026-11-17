@@ -1,3 +1,5 @@
+import type { Storage, StoredObject, StorageRange } from '#/platform/config';
+import type { Settings } from '#/platform/settings';
 import { and, eq, gte, isNull, lt, sql } from 'drizzle-orm';
 import { database } from '#/server/database.server';
 import { datasourceUploads, ingestionTokens, queryReadBudgets } from '#/db/schema';
@@ -77,7 +79,7 @@ export function browserUploadPath(key: string) {
 export async function handleBrowserUploadRequest(
   request: Request,
   encodedKey: string,
-  environment: Cloudflare.Env,
+  storage: Storage,
   authorization: { userId: string; workspaceId: string; workspacePrefix: string },
 ) {
   if (request.method !== 'PUT') return methodNotAllowed('PUT');
@@ -101,39 +103,48 @@ export async function handleBrowserUploadRequest(
   });
   if (!pending) return new Response('Upload is not pending.', { status: 409 });
   if (!request.body) return new Response('Upload body is required.', { status: 400 });
-  const stored = await environment.DATA.put(key, request.body, {
-    onlyIf: { etagDoesNotMatch: '*' },
-    httpMetadata: { contentType: contentTypeForKey(key) },
+  const stored = await storage.put(key, request.body, {
+    createOnly: true,
+    contentType: contentTypeForKey(key),
   });
   if (!stored) return new Response('Upload already exists.', { status: 409 });
   return new Response(null, { status: 201, headers: { etag: stored.httpEtag } });
 }
 
-export async function handleInternalR2Request(request: Request, environment: Cloudflare.Env) {
+export async function handleInternalR2Request(
+  request: Request,
+  environment: { storage: Storage; settings: Pick<Settings, 'INTERNAL_R2_SIGNING_SECRET'> },
+) {
   const url = new URL(request.url);
   if (url.hostname === INTERNAL_R2_HOST && url.pathname.startsWith('/api/connector-file/')) {
     const { handleExternalFileRequest } = await import('./external-file');
     return handleExternalFileRequest(
       request,
       url.pathname.slice('/api/connector-file/'.length),
-      environment,
+      environment.settings,
     );
   }
   if (url.hostname !== INTERNAL_R2_HOST || !url.pathname.startsWith('/capability/'))
     return new Response('Not found.', { status: 404 });
   const capability = await verifyR2Capability(
     url.pathname.slice('/capability/'.length),
-    environment.INTERNAL_R2_SIGNING_SECRET,
+    environment.settings.INTERNAL_R2_SIGNING_SECRET,
   );
   if (!capability) return new Response('Invalid or expired capability.', { status: 403 });
 
   if (capability.kind === 'read') {
     if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed('GET, HEAD');
-    return serveObject(request, environment, capability.key, capability.queryId, true);
+    return serveObject(request, environment.storage, capability.key, capability.queryId, true);
   }
 
   if (request.method === 'GET' || request.method === 'HEAD')
-    return serveObject(request, environment, capability.sourceKey, capability.tokenId, false);
+    return serveObject(
+      request,
+      environment.storage,
+      capability.sourceKey,
+      capability.tokenId,
+      false,
+    );
   if (request.method !== 'PUT') return methodNotAllowed('GET, HEAD, PUT');
   const contentLength = validContentLength(request, MAX_INGESTED_FILE_BYTES);
   if (!contentLength) return new Response('A valid Content-Length is required.', { status: 413 });
@@ -151,11 +162,11 @@ export async function handleInternalR2Request(request: Request, environment: Clo
     )
     .returning({ id: ingestionTokens.id });
   if (!claimed) return new Response('Ingestion token was already used.', { status: 409 });
-  let stored: R2Object | null;
+  let stored: StoredObject | null;
   try {
-    stored = await environment.DATA.put(capability.destinationKey, request.body, {
-      onlyIf: { etagDoesNotMatch: '*' },
-      httpMetadata: { contentType: 'application/vnd.apache.parquet' },
+    stored = await environment.storage.put(capability.destinationKey, request.body, {
+      createOnly: true,
+      contentType: 'application/vnd.apache.parquet',
     });
   } catch (error) {
     try {
@@ -177,11 +188,7 @@ export async function handleInternalR2Request(request: Request, environment: Clo
   return new Response(null, { status: 201, headers: { etag: stored.httpEtag } });
 }
 
-export async function createQueryReadBudget(
-  queryId: string,
-  workspaceId: string,
-  _environment: Cloudflare.Env,
-) {
+export async function createQueryReadBudget(queryId: string, workspaceId: string) {
   const now = new Date();
   await database()
     .delete(queryReadBudgets)
@@ -197,7 +204,7 @@ export async function createQueryReadBudget(
     });
 }
 
-export async function finishQueryReadBudget(queryId: string, _environment: Cloudflare.Env) {
+export async function finishQueryReadBudget(queryId: string) {
   const [row] = await database()
     .delete(queryReadBudgets)
     .where(eq(queryReadBudgets.id, queryId))
@@ -207,12 +214,12 @@ export async function finishQueryReadBudget(queryId: string, _environment: Cloud
 
 async function serveObject(
   request: Request,
-  environment: Cloudflare.Env,
+  storage: Storage,
   key: string,
   queryId: string,
   enforceBudget: boolean,
 ) {
-  const bucket = environment.DATA;
+  const bucket = storage;
   if (request.method === 'HEAD') {
     const object = await bucket.head(key);
     if (!object) return new Response('Not found.', { status: 404 });
@@ -259,7 +266,7 @@ export async function claimQueryReadBytes(queryId: string, bytes: number) {
   return claimed.length > 0;
 }
 
-function objectHeaders(object: R2Object, key: string) {
+function objectHeaders(object: StoredObject, key: string) {
   const headers = new Headers({
     'accept-ranges': 'bytes',
     'content-length': String(object.size),
@@ -271,7 +278,7 @@ function objectHeaders(object: R2Object, key: string) {
   return headers;
 }
 
-function normalizedRange(range: R2Range | undefined, size: number) {
+function normalizedRange(range: StorageRange | undefined, size: number) {
   if (!range) return undefined;
   if ('offset' in range && range.offset !== undefined) {
     const length = range.length ?? size - range.offset;
