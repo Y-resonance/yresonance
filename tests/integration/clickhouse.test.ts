@@ -15,7 +15,8 @@ import {
 
 const originalMappings = process.env.CLICKHOUSE_EXTERNAL_TABLES;
 afterEach(() => {
-  process.env.CLICKHOUSE_EXTERNAL_TABLES = originalMappings;
+  if (originalMappings === undefined) delete process.env.CLICKHOUSE_EXTERNAL_TABLES;
+  else process.env.CLICKHOUSE_EXTERNAL_TABLES = originalMappings;
   vi.restoreAllMocks();
 });
 
