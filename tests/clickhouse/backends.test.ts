@@ -12,14 +12,15 @@ import type { DatasourceQuery } from '#/data/connectors/contract';
 import type { DataSourceRecord, FieldRecord } from '#/query/types';
 import type { DashboardDocument, WidgetDefinition } from '#/domain/schema';
 
-vi.mock('#/platform/settings', () => ({
-  settings: () => ({
+vi.mock('#/platform/settings', () => {
+  const values = {
     ...process.env,
     R2_BUCKET_NAME: 'backend-conformance',
     QUERY_CACHE_NAME: 'backend-conformance',
     CLICKHOUSE_DATABASE: 'yresonance_development',
-  }),
-}));
+  };
+  return { settings: () => values };
+});
 
 const workspaceId = `conformance_${crypto.randomUUID()}`;
 const id = `ds_${crypto.randomUUID()}`;
