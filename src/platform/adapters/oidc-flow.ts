@@ -1,4 +1,4 @@
-import { inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import * as client from 'openid-client';
 import { z } from 'zod';
 import { openConnection, sealConnection } from '#/data/connection-secrets';
@@ -210,6 +210,13 @@ async function recordUser(session: OidcSession) {
     imageUrl: session.imageUrl,
     lastSeenAt: new Date().toISOString(),
   };
+  // An address belongs to whoever signed in with it last, so a share by email never reaches
+  // a previous owner.
+  if (session.email)
+    await database()
+      .update(users)
+      .set({ email: null })
+      .where(and(eq(users.email, session.email), ne(users.id, session.userId)));
   await database()
     .insert(users)
     .values(values)
@@ -220,8 +227,11 @@ async function login(request: Request) {
   const url = new URL(request.url);
   const destination = URL.parse(url.searchParams.get('returnTo') ?? '/', url.origin);
   // Only ever return into this application, and never into a route that starts sign-in again.
+  // A path may still begin with "//" after dot segments are resolved ("/.//host"), which a
+  // browser reads as another host.
   const returnTo =
-    destination?.origin === url.origin && !/^\/(auth\/|sign-in|sign-up)/.test(destination.pathname)
+    destination?.origin === url.origin &&
+    !/^\/(\/|auth\/|sign-in|sign-up)/.test(destination.pathname)
       ? destination.pathname + destination.search + destination.hash
       : '/';
   const pending = {

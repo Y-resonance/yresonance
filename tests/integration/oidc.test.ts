@@ -156,6 +156,9 @@ describe('OIDC sign-in', () => {
   test.each([
     ['https://evil.example/steal', '/'],
     ['//evil.example', '/'],
+    ['/.//evil.example', '/'],
+    ['/%2e//evil.example', '/'],
+    ['/x/..//evil.example/a', '/'],
     ['/auth/login', '/'],
     ['/sign-in', '/'],
     ['/dashboards/d1?page=2', '/dashboards/d1?page=2'],
@@ -300,6 +303,15 @@ describe('OIDC user directory', () => {
     // Someone who never signed in cannot be found, and is not a member.
     expect(await directoryUsers({ emails: [`${stranger}@example.test`] })).toEqual([]);
     expect(await directoryMembers([sub, stranger])).toEqual([sub]);
+  });
+
+  test('hands an email address to whoever signed in with it last', async () => {
+    const [before, after] = [uniqueSub(), uniqueSub()];
+    const email = `${before}@example.test`;
+    await signIn(identityProvider({ sub: before, email }));
+    await signIn(identityProvider({ sub: after, email }));
+
+    expect(await directoryUsers({ emails: [email] })).toMatchObject([{ id: after }]);
   });
 
   test('keeps the profile current when the user signs in again', async () => {

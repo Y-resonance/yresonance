@@ -74,6 +74,8 @@ Users, passwords and roles are managed in the provider, not in yresonance.
   The role is read from the access token: Keycloak's `realm_access.roles`, the client's
   `resource_access.<client id>.roles`, or a flat `roles` claim. Keycloak adds realm roles to the
   access token by default. A provider that issues opaque access tokens has no admins.
+- The `email` claim is trusted as issued; yresonance does not check `email_verified`. An
+  address belongs to whoever signed in with it last.
 - A dashboard can only be shared by email with someone who has signed in once. yresonance records
   users at login and needs no admin API credentials for the provider.
 
@@ -85,6 +87,8 @@ Users, passwords and roles are managed in the provider, not in yresonance.
   When the access token expires, the next request refreshes it. Role changes and removed users
   therefore take effect at that refresh, not instantly. Backchannel logout is not implemented.
 - A rejected refresh signs the user out. An unreachable provider fails only that request.
+  Parallel requests each refresh on their own, so a provider that rotates refresh tokens and
+  rejects reuse (Keycloak's "Revoke Refresh Token") can sign a user out. Leave that option off.
 - Sign-out posts to `/auth/logout` and ends the provider session too.
 - Signed-out page visits are redirected to the login and return to the requested page.
   Unlisted share links (`/share/...`), the legal pages, health checks and API routes stay
