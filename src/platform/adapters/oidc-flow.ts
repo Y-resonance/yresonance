@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import * as client from 'openid-client';
 import { z } from 'zod';
 import { openConnection, sealConnection } from '#/data/connection-secrets';
@@ -211,19 +211,18 @@ async function recordUser(session: OidcSession) {
     lastSeenAt: new Date().toISOString(),
   };
   // An address belongs to whoever signed in with it last, so a share by email never reaches
-  // a previous owner. Two people signing in with one address at the same moment collide on
-  // the unique index; the second attempt then takes the address over.
+  // a previous owner. The lock makes simultaneous sign-ins with one address take turns.
   const email = session.email;
-  const write = () =>
-    database().transaction(async (tx) => {
-      if (email)
-        await tx
-          .update(users)
-          .set({ email: null })
-          .where(and(eq(users.email, email), ne(users.id, session.userId)));
-      await tx.insert(users).values(values).onConflictDoUpdate({ target: users.id, set: values });
-    });
-  await write().catch(write);
+  await database().transaction(async (tx) => {
+    if (email) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${email}))`);
+      await tx
+        .update(users)
+        .set({ email: null })
+        .where(and(eq(users.email, email), ne(users.id, session.userId)));
+    }
+    await tx.insert(users).values(values).onConflictDoUpdate({ target: users.id, set: values });
+  });
 }
 
 async function login(request: Request) {
