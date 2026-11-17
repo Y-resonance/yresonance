@@ -20,6 +20,11 @@ on:
         type: boolean
         default: false
 
+      preview_url:
+        description: Run authenticated smoke tests against this branch-preview URL (no cleanup)
+        type: string
+        default: ''
+
 permissions:
   contents: read
   pull-requests: read
@@ -30,8 +35,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.preview_url != ''
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    env:
+      YRESONANCE_PREVIEW_URL: ${{ inputs.preview_url }}
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
+      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+    steps:
+      - uses: useblacksmith/checkout@v1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.13.1
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps --only-shell chromium
+      - name: Verify the deployed branch preview
+        run: bunx playwright test --config tests/e2e/playwright.preview.config.ts
+
   diagnose:
-    if: github.event_name == 'workflow_dispatch' && inputs.diagnose
+    if: github.event_name == 'workflow_dispatch' && inputs.diagnose && inputs.preview_url == ''
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5
     env:
@@ -52,7 +83,7 @@ jobs:
         run: bun run scripts/preview-resources.ts diagnose preview-diagnostics
 
   cleanup:
-    if: (github.event_name == 'workflow_dispatch' && !inputs.diagnose) || (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: (github.event_name == 'workflow_dispatch' && !inputs.diagnose && inputs.preview_url == '') || (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     env:

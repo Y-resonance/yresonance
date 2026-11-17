@@ -142,7 +142,16 @@ For explicit recovery before a fix merges, dispatch cleanup on the reviewed fix 
 runs without the flag still use the default branch. The closed-PR and repository-ownership checks
 remain required. Confirm the closed branch has not been reused before running recovery.
 
-### Read-only cleanup diagnostics
+#### Deployed preview smoke test
+
+Dispatch `Preview cleanup` with `preview_url` set to the deployed branch URL and `pr` set to its
+PR number. This mode skips cleanup and diagnostics, uses existing Clerk development test credentials,
+and runs one real-browser check for sign-in, CSV ingestion, an uncached query, and image upload/read.
+The target must be an HTTPS branch URL ending in `-yresonance.rundown.workers.dev`; the production
+Worker URL is rejected. Synthetic records use a `Preview smoke` prefix and disappear with the
+preview's normal lifecycle. Traces, screenshots and video stay off to avoid capturing login secrets.
+
+## Read-only cleanup diagnostics
 
 Dispatch the `Preview cleanup` workflow with `diagnose=true` on the ref to inspect.
 This mode uses the GitHub preview credentials, checks Postgres access and database ownership,
