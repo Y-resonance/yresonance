@@ -15,6 +15,11 @@ on:
         type: boolean
         default: false
 
+      use_selected_ref:
+        description: Run manual recovery using the selected ref instead of main
+        type: boolean
+        default: false
+
 permissions:
   contents: read
   pull-requests: read
@@ -63,10 +68,11 @@ jobs:
       CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID: ${{ secrets.CLICKHOUSE_PREVIEW_ACCESS_CLIENT_ID }}
       CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET: ${{ secrets.CLICKHOUSE_PREVIEW_ACCESS_CLIENT_SECRET }}
     steps:
-      # Cleanup uses trusted base-branch code even when the closed PR contained broken code.
+      # Automatic cleanup always uses trusted base-branch code. Manual recovery may opt in
+      # to a reviewed fix before it has merged; the closed-PR ownership check still applies.
       - uses: useblacksmith/checkout@v1
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.use_selected_ref && github.sha || github.event.repository.default_branch }}
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
         with:

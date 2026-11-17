@@ -137,6 +137,11 @@ fails cleanup and leaves the ClickHouse database in place; supply all five value
 A push after closure can recreate resources and require cleanup again.
 These operations delete preview data and require authorization for the target environment.
 
+For explicit recovery before a fix merges, dispatch cleanup on the reviewed fix branch with
+`use_selected_ref=true`. This opt-in runs that exact selected commit; automatic cleanup and manual
+runs without the flag still use the default branch. The closed-PR and repository-ownership checks
+remain required. Confirm the closed branch has not been reused before running recovery.
+
 ### Read-only cleanup diagnostics
 
 Dispatch the `Preview cleanup` workflow with `diagnose=true` on the ref to inspect.
