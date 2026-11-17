@@ -27,6 +27,21 @@ export const workspaces = pgTable(
   ],
 );
 
+// People who signed in through an OIDC provider. This is that deployment's user directory;
+// Clerk deployments read Clerk's directory and leave it empty.
+export const users = pgTable(
+  'users',
+  {
+    id: text().primaryKey(),
+    // Stored in lower case so sharing by email matches regardless of spelling.
+    email: text(),
+    name: text(),
+    imageUrl: text('image_url'),
+    lastSeenAt: text('last_seen_at').notNull(),
+  },
+  (table) => [index('users_email_idx').on(table.email)],
+);
+
 export const dataSources = pgTable(
   'data_sources',
   {

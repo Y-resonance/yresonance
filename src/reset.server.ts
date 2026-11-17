@@ -23,6 +23,7 @@ const applicationTables = [
   'query_read_budgets',
   'dashboard_assets',
   'workspaces',
+  'users',
 ] as const;
 
 export async function handleResetRequest(
