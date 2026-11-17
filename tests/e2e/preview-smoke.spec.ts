@@ -32,7 +32,8 @@ test('a deployed preview signs in, imports CSV, queries fresh data and serves an
     refresh: true,
   });
   expect(fresh.cache).toBe('miss');
-  expect(fresh.rows).toEqual([{ metric_1: 445 }]);
+  // DuckDB SUM over integers returns HUGEINT, serialized as text to preserve precision.
+  expect(fresh.rows).toEqual([{ metric_1: '445' }]);
 
   // Real PNG bytes exercise storage and the deployed Images binding, without fixture routes.
   const png = Buffer.from(
