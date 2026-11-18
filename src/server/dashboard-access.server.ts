@@ -4,7 +4,7 @@ import { and, eq, isNull, getTableColumns, sql } from 'drizzle-orm';
 import { shareLinks, dashboardGrants, dashboards, workspaces } from '#/db/schema';
 import { ApiError } from './errors';
 import { requireIdentity, workspaceSession, type SessionContext } from './auth.server';
-import { dashboardDocumentSchema, type DashboardDocument } from '#/domain/schema';
+import type { DashboardDocument } from '#/domain/schema';
 import { database } from './database.server';
 
 export async function authorizeDashboard(
@@ -37,17 +37,14 @@ export async function authorizeDashboard(
     };
   }
   const identity = await requireIdentity();
-  const [dashboardRows, workspaceRows] = await Promise.all([
-    database().select().from(dashboards).where(eq(dashboards.id, id)).limit(1),
+  const [loaded, workspaceRows] = await Promise.all([
+    loadDashboard(id),
     database()
       .select()
       .from(workspaces)
       .where(eq(workspaces.clerkOrganizationId, identity.orgId))
       .limit(1),
   ]);
-  const row = dashboardRows[0];
-  if (!row) throw new ApiError(404, 'dashboard_not_found', 'Dashboard not found.');
-  const loaded = { row, document: dashboardDocumentSchema.parse(row.document) };
   const session = await workspaceSession(identity, workspaceRows[0]);
   if (loaded.document.workspaceId !== session.workspace.id)
     throw new ApiError(404, 'dashboard_not_found', 'Dashboard not found.');

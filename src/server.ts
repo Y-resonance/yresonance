@@ -8,9 +8,7 @@ import { trackApiRequest } from './analytics/server';
 import { proxyAnalyticsRequest } from './analytics/proxy.server';
 import { maintenanceResponse } from './maintenance';
 
-export { QueryEngineContainer } from './query-engine-container';
-export { ContainerProxy } from '@cloudflare/containers';
-
+// Shared request handler. A deployment's own server entry adds what its runtime needs.
 export default createServerEntry({
   async fetch(request) {
     const maintenance = maintenanceResponse(request, settings().MAINTENANCE_MODE);

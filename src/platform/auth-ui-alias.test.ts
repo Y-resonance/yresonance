@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { selectedAuthAdapter } from './auth-ui';
+import { selectedAuthAdapter } from './auth-ui-alias';
 
 test('follows the active auth entry, not a commented-out one', () => {
   const config = `export default defineConfig({

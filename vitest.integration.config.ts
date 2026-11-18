@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
     alias: [
+      { find: 'yresonance:config', replacement: fromRoot('./cloud/yresonance.config.ts') },
       // The suite drives the real service; only the auth adapter is replaced.
       {
         find: /^.*\/platform\/adapters\/clerk$/,

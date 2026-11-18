@@ -15,6 +15,7 @@ Code defines the data model and contracts: `src/domain/schema.ts`, `src/db/schem
 | [BigQuery](bigquery.md) | Configuring Google authorization or changing query limits. |
 | [ClickHouse](clickhouse.md) | Configuring managed/external tables, credentials, preview databases, or freshness. |
 | [Preview environments and deployment](preview-environments.md) | Changing deployments, preview isolation, build setup, cleanup, or recovery. |
+| [Self-hosting](self-hosting.md) | Changing the npm package, its exports, the Vite plugin, or what a self-hoster has to do. |
 
 ## Historical measurements
 

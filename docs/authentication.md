@@ -1,7 +1,7 @@
 # Authentication
 
-Auth is one adapter slot with two halves. The `auth` entry in `cloud/yresonance.config.ts` selects
-both at build time:
+Auth is one adapter slot with two halves. The `auth` entry in the deployment config, ours is
+`cloud/yresonance.config.ts`, selects both at build time:
 
 | Half | File for `auth: <name>()` | Contract | Supplies |
 | --- | --- | --- | --- |
@@ -10,7 +10,8 @@ both at build time:
 
 The config imports server-only modules, so the browser cannot import it. The build reads the
 adapter name from it instead and resolves `virtual:auth-ui` to the matching UI file
-(`dev/auth-ui.ts`). Application code reads the UI half only through `src/platform/index.ui.ts`,
+(`src/platform/auth-ui-alias.ts`, used by the Vite plugin). An auth adapter outside this
+repository names its UI half with the plugin's `authUi` option. Application code reads the UI half only through `src/platform/index.ui.ts`,
 so the other provider's SDK stays out of the bundle. UI adapter files
 are named `*-ui` because TanStack Start refuses `*.client.*` imports during server rendering.
 
