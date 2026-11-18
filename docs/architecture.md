@@ -115,7 +115,8 @@ Engine, Clerk request identity/directory/middleware, and the existing five datas
 The DuckDB adapter retains the URL-scheme choice between local HTTP and the Cloudflare container.
 A background-task adapter keeps analytics delivery alive after the response.
 
-`cloud/yresonance.ui.ts` selects the UI half of the auth adapter, read only through
+The `auth` entry also selects the UI half of the auth adapter: the build resolves
+`virtual:auth-ui` to `src/platform/adapters/<name>-ui.tsx`, read only through
 `src/platform/index.ui.ts`.
 
 Only `src/platform/index.server.ts` imports that config; application services consume its typed

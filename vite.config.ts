@@ -6,6 +6,7 @@ import viteReact from '@vitejs/plugin-react';
 import posthog from '@posthog/rollup-plugin';
 import { defineConfig } from 'vite';
 import { imagetools } from 'vite-imagetools';
+import { authUiAlias } from './dev/auth-ui.ts';
 import { fileDataPlugin } from './dev/file-data-plugin.ts';
 import { queryEnginePlugin } from './dev/query-engine-plugin.ts';
 import { posthogHosts } from './src/analytics/config';
@@ -34,25 +35,19 @@ export default defineConfig(({ command, mode }) => ({
   },
   resolve: {
     tsconfigPaths: true,
-    // UI tests replace both halves of the auth adapter. Never alias auth in a deployable build.
-    ...(command === 'serve' && mode === 'e2e-ui'
-      ? {
-          alias: [
+    // UI tests replace both halves of the auth adapter. Never replace auth in a deployable build.
+    alias:
+      command === 'serve' && mode === 'e2e-ui'
+        ? [
             {
               find: /^.*\/platform\/adapters\/clerk$/,
               replacement: fileURLToPath(
                 new URL('./tests/e2e/support/auth-server.ts', import.meta.url),
               ),
             },
-            {
-              find: /^.*\/platform\/adapters\/clerk-ui$/,
-              replacement: fileURLToPath(
-                new URL('./tests/e2e/support/auth-ui.tsx', import.meta.url),
-              ),
-            },
-          ],
-        }
-      : {}),
+            authUiAlias('tests/e2e/support/auth-ui.tsx'),
+          ]
+        : [authUiAlias()],
   },
   server: {
     port: devPort,

@@ -1,14 +1,17 @@
 # Authentication
 
-Auth is one adapter slot with two halves, both chosen at build time:
+Auth is one adapter slot with two halves. The `auth` entry in `cloud/yresonance.config.ts` selects
+both at build time:
 
-| Half | Selected in | Contract | Supplies |
+| Half | File for `auth: <name>()` | Contract | Supplies |
 | --- | --- | --- | --- |
-| Server | `cloud/yresonance.config.ts` (`auth`) | `PlatformConfig['auth']` in `src/platform/config.ts` | Request identity, user directory, request middleware |
-| UI | `cloud/yresonance.ui.ts` | `AuthUi` in `src/platform/ui.ts` | State, actions, capabilities |
+| Server | `src/platform/adapters/<name>.ts` | `PlatformConfig['auth']` in `src/platform/config.ts` | Request identity, user directory, request middleware |
+| UI | `src/platform/adapters/<name>-ui.tsx` (default export) | `AuthUi` in `src/platform/ui.ts` | State, actions, capabilities |
 
-Keep both files on the same provider. Application code reads the UI half only through
-`src/platform/index.ui.ts`, so the other provider's SDK stays out of the bundle. UI adapter files
+The config imports server-only modules, so the browser cannot import it. The build reads the
+adapter name from it instead and resolves `virtual:auth-ui` to the matching UI file
+(`dev/auth-ui.ts`). Application code reads the UI half only through `src/platform/index.ui.ts`,
+so the other provider's SDK stays out of the bundle. UI adapter files
 are named `*-ui` because TanStack Start refuses `*.client.*` imports during server rendering.
 
 The auth components are ours and the same for every provider: signed-in and signed-out gates,
@@ -37,10 +40,6 @@ Keycloak, not by a deployed installation.
 // cloud/yresonance.config.ts
 import { oidc } from '../src/platform/adapters/oidc';
 export default defineConfig({ /* ... */ auth: oidc() });
-
-// cloud/yresonance.ui.ts
-import { oidcUi } from '../src/platform/adapters/oidc-ui';
-export default oidcUi();
 ```
 
 ### Register the client

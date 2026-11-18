@@ -1,9 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { BrowserSession } from '../ui';
-import { oidcUi } from './oidc-ui';
-
-const ui = oidcUi();
+import ui from './oidc-ui';
 
 function stateFor(session: BrowserSession | null) {
   let state!: ReturnType<typeof ui.useAuth>;

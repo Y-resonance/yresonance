@@ -62,8 +62,8 @@ explain. Update it when a decision changes, not when an implementation detail do
   package split, or monorepo. Contracts follow current application needs rather than full
   vendor APIs. The initial configuration preserves all existing services and all five providers.
   Alternative storage, cache, auth and Node hosting, and optional datasources/query execution,
-  are later work. Auth is the one slot with a second, UI half, selected in
-  `cloud/yresonance.ui.ts`; both halves must name the same provider. The datasource catalog
+  are later work. Auth is the one slot with a second, UI half; the build derives it from the
+  `auth` entry, so the config stays one file. The datasource catalog
   stays static because client code imports it.
 
 - One Cloudflare deploy: Worker (TanStack Start app and API) plus the query container. Postgres through Hyperdrive with

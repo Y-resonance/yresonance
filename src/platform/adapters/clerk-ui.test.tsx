@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { clerkUi } from './clerk-ui';
+import ui from './clerk-ui';
 
 const clerk = vi.hoisted(() => ({
   mode: 'public' as 'public' | 'restricted' | 'waitlist' | undefined,
@@ -22,8 +22,6 @@ vi.mock('@clerk/tanstack-react-start', () => ({
   }),
 }));
 vi.mock('./clerk-workspaces', () => ({ ClerkWorkspaceSetup: () => null }));
-
-const ui = clerkUi();
 
 // Hooks need a render; the probe hands their result to the test.
 function probe<T>(read: () => T) {
