@@ -15,6 +15,12 @@ export interface Settings {
   IMAGE_UPLOAD_MAX_BYTES: string;
   INTERNAL_R2_SIGNING_SECRET: string;
   MAINTENANCE_MODE: string;
+  // Read by the oidc() auth adapter only.
+  OIDC_ADMIN_ROLE: string;
+  OIDC_CLIENT_ID: string;
+  OIDC_CLIENT_SECRET: string;
+  OIDC_ISSUER_URL: string;
+  OIDC_SESSION_SECRET: string;
   POSTHOG_ENABLED: string;
   POSTHOG_HOST: string;
   POSTHOG_PROJECT_TOKEN: string;

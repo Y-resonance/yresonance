@@ -163,8 +163,9 @@ preserves asset cache headers. See [PostHog's proxy reference](https://posthog.c
   never their values. Widget writes add `widget_type`, and `text_style_fields` with the names of
   the title or text style options set; text widgets also add `text_has_links` and
   `text_has_formatting`. Text editor saves made while typing add `trigger: 'autosave'`.
-- `workspace_action` records onboarding actions and their outcomes.
-- Clerk user IDs identify signed-in visitors. Logout and account switches reset the browser identity.
+- `workspace_action` records onboarding actions and their outcomes. `account_menu_action` records
+  `manage_account` and `sign_out` from the user menu.
+- Auth provider user IDs identify signed-in visitors. Logout and account switches reset the browser identity.
 - PostHog Logs receive `api_request_completed` from `yresonance-api` and API failures from
   `yresonance-web`. Only these explicit log records are exported. Existing console logs remain in
   Cloudflare. Server exports finish through `waitUntil` without delaying API responses.

@@ -1,8 +1,8 @@
-import { Show, UserButton } from '@clerk/tanstack-react-start';
 import { Link } from '@tanstack/react-router';
 import { MenuIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { GetAccessButton, SignInAction } from '#/components/auth-actions';
+import { SignedIn, SignedOut } from '#/components/auth-gate';
 import { GitHubStarButton } from '#/components/github-link';
 import { ThemeToggle } from '#/components/theme-toggle';
 import { Button } from '#/components/ui/button';
@@ -16,6 +16,7 @@ import {
 } from '#/components/ui/sheet';
 import { WorkspaceGate } from '#/components/workspace-gate';
 import { GlobalSearch } from '#/components/global-search';
+import { UserMenu } from '#/components/user-menu';
 
 // Dashboards live at the root, so only an exact match may mark it active. The
 // others stay active on their detail routes, such as /datasources/:datasourceId.
@@ -46,9 +47,9 @@ export function AppShell({
     <div className="min-h-screen bg-background">
       <header className="border-b bg-background">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:gap-5 sm:px-6">
-          <Show when="signed-in">
+          <SignedIn>
             <MobileNavigation />
-          </Show>
+          </SignedIn>
           <Link className="font-semibold tracking-tight" to="/">
             yresonance
           </Link>
@@ -57,7 +58,7 @@ export function AppShell({
             aria-label="Main"
             className="hidden h-full flex-1 items-center gap-4 text-sm sm:flex"
           >
-            <Show when="signed-in">
+            <SignedIn>
               {navigation.map((item) => (
                 <Link
                   key={item.to}
@@ -70,29 +71,29 @@ export function AppShell({
                   {item.label}
                 </Link>
               ))}
-            </Show>
+            </SignedIn>
           </nav>
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <GlobalSearch />
             {/* The signed-in bar also holds navigation and the wide search box, so it needs md. */}
-            <Show when="signed-out">
+            <SignedOut>
               <GitHubStarButton className="hidden sm:inline-flex" />
-            </Show>
-            <Show when="signed-in">
+            </SignedOut>
+            <SignedIn>
               <GitHubStarButton className="hidden md:inline-flex" />
-            </Show>
+            </SignedIn>
             <ThemeToggle />
-            <Show when="signed-out">
+            <SignedOut>
               <SignInAction>
                 <Button className="hidden min-[360px]:inline-flex" variant="ghost" size="sm">
                   Sign in
                 </Button>
               </SignInAction>
               <GetAccessButton size="sm" />
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
+            </SignedOut>
+            <SignedIn>
+              <UserMenu />
+            </SignedIn>
           </div>
         </div>
       </header>

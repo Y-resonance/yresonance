@@ -1,8 +1,8 @@
-import { useAuth } from '@clerk/tanstack-react-start';
 import { PostHogProvider } from '@posthog/react';
 import { useRouter } from '@tanstack/react-router';
 import { useEffect, useRef, type ReactNode } from 'react';
 import posthog from 'posthog-js';
+import { useAuth } from '#/platform/index.ui';
 import type { AnalyticsConfig } from './config';
 import { initializeBrowserAnalytics } from './browser';
 
@@ -20,7 +20,7 @@ export function AnalyticsProvider({
   useEffect(() => {
     if (!config || !isLoaded) return;
     const client = initializeBrowserAnalytics(config);
-    // Clerk owns identity. Reset before an account switch or logout.
+    // The auth provider owns identity. Reset before an account switch or logout.
     const previousUser = client.get_property('clerk_user_id');
     const previousOrg = client.get_property('workspace_id');
     if (previousUser && previousUser !== userId) client.reset();

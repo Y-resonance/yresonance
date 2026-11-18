@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { signInAs, signOut } from './doubles/clerk';
+import { signInAs, signOut } from './doubles/auth';
 import {
   addWidget,
   callService,

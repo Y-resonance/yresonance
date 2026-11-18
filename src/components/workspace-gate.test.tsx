@@ -2,89 +2,44 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceGate } from './workspace-gate';
 
-const clerk = vi.hoisted(() => ({
-  auth: { isLoaded: true, isSignedIn: true, orgId: null as string | null },
-  user: { isLoaded: true, user: { createOrganizationEnabled: true } },
-  organizationList: {
-    isLoaded: true,
-    createOrganization: vi.fn<(params: { name: string }) => Promise<{ id: string }>>(),
-    setActive: vi.fn<(params: { organization: string }) => Promise<void>>(),
-    userInvitations: {
-      data: [] as Array<{
-        id: string;
-        publicOrganizationData: { id: string; name: string };
-        accept: () => Promise<unknown>;
-      }>,
-      error: null,
-      isLoading: false,
-      isFetching: false,
-      hasNextPage: false,
-      fetchNext: vi.fn<() => void>(),
-      revalidate: vi.fn<() => Promise<void>>(),
-    },
-    userMemberships: {
-      data: [] as Array<{ id: string; organization: { id: string; name: string } }>,
-      error: null,
-      isLoading: false,
-      isFetching: false,
-      hasNextPage: false,
-      fetchNext: vi.fn<() => void>(),
-      revalidate: vi.fn<() => Promise<void>>(),
-    },
-  },
+const auth = vi.hoisted(() => ({
+  state: { isLoaded: true, isSignedIn: true, orgId: null as string | null },
+  workspaces: 'multiple' as 'multiple' | 'single',
 }));
 
-vi.mock('@clerk/tanstack-react-start', () => ({
-  useAuth: () => clerk.auth,
-  useUser: () => clerk.user,
-  useOrganizationList: () => clerk.organizationList,
+vi.mock('#/platform/index.ui', () => ({
+  useAuth: () => auth.state,
+  useAuthCapabilities: () => ({ workspaces: auth.workspaces }),
+  WorkspaceSetup: () => 'Provider workspace setup',
 }));
+
+const gate = () => renderToStaticMarkup(<WorkspaceGate>Private route</WorkspaceGate>);
 
 describe('WorkspaceGate', () => {
   beforeEach(() => {
-    clerk.auth.orgId = null;
-    clerk.user.user.createOrganizationEnabled = true;
-    clerk.organizationList.userInvitations.data = [];
-    clerk.organizationList.userMemberships.data = [];
+    auth.state = { isLoaded: true, isSignedIn: true, orgId: null };
+    auth.workspaces = 'multiple';
   });
 
-  it('renders the private route when an organization is already active', () => {
-    clerk.auth.orgId = 'org_active';
+  it('renders the private route when a workspace is already active', () => {
+    auth.state.orgId = 'org_active';
 
-    expect(renderToStaticMarkup(<WorkspaceGate>Private route</WorkspaceGate>)).toBe(
-      'Private route',
-    );
+    expect(gate()).toBe('Private route');
   });
 
-  it('shows pending invitations before existing memberships', () => {
-    clerk.organizationList.userInvitations.data = [
-      {
-        id: 'invitation',
-        publicOrganizationData: { id: 'org_invited', name: 'Invited workspace' },
-        accept: vi.fn<() => Promise<unknown>>(),
-      },
-    ];
-    clerk.organizationList.userMemberships.data = [
-      {
-        id: 'membership',
-        organization: { id: 'org_existing', name: 'Existing workspace' },
-      },
-    ];
-
-    const html = renderToStaticMarkup(<WorkspaceGate>Private route</WorkspaceGate>);
-
-    expect(html.indexOf('Pending invitations')).toBeLessThan(html.indexOf('Your workspaces'));
-    expect(html).toContain('Invited workspace');
-    expect(html).toContain('Existing workspace');
-    expect(html).not.toContain('Private route');
+  it('hands a user without a workspace to the provider when it has several', () => {
+    expect(gate()).toBe('Provider workspace setup');
   });
 
-  it('makes workspace creation the primary choice for a new user', () => {
-    const html = renderToStaticMarkup(<WorkspaceGate>Private route</WorkspaceGate>);
+  it('never asks for a workspace when the provider has exactly one', () => {
+    auth.workspaces = 'single';
 
-    expect(html).toContain('Create a workspace');
-    expect(html).toContain('name="workspaceName"');
-    expect(html).not.toContain('Pending invitations');
-    expect(html).not.toContain('Your workspaces');
+    expect(gate()).toBe('Private route');
+  });
+
+  it('holds the private route back while the provider is loading', () => {
+    auth.state.isLoaded = false;
+
+    expect(gate()).toContain('Loading workspaces');
   });
 });

@@ -36,7 +36,17 @@ explain. Update it when a decision changes, not when an implementation detail do
 - Control values are lenient, control keys are strict. Any value for an exposed control's field is
   accepted, because the editor chose to expose that field. Unknown keys are rejected.
 - Multi-tenant from the start. A workspace is a Clerk Organization, every row carries a
-  `workspaceId`, R2 keys live under a per-workspace prefix.
+  `workspaceId`, R2 keys live under a per-workspace prefix. An OIDC deployment is the exception:
+  it has exactly one workspace, with no organizations, creation or switching.
+- Auth UI is ours and identical for every provider. A provider supplies state, actions and
+  capabilities, and keeps only its credential forms: Clerk's embedded form on hosted, the
+  provider's login page on OIDC.
+- Self-hosters sign in through a generic `oidc()` adapter, verified with Keycloak. Admin rights
+  come from a configurable role in the token; everyone else who can log in is an editor. Users,
+  roles and invitations are managed in the provider's console, never in yresonance. Users are
+  recorded in Postgres at login, so no admin API credentials are needed and sharing by email
+  only finds people who signed in once. OIDC deployments have no sign-up, waitlist or landing
+  page. See [authentication](authentication.md).
 - The query container has no internet access and no storage credentials. It reads exact,
   short-lived signed object URLs through the Worker.
 
@@ -52,9 +62,9 @@ explain. Update it when a decision changes, not when an implementation detail do
   package split, or monorepo. Contracts follow current application needs rather than full
   vendor APIs. The initial configuration preserves all existing services and all five providers.
   Alternative storage, cache, auth and Node hosting, and optional datasources/query execution,
-  are later work. Clerk client UI stays unchanged; server auth separates request identity from
-  directory lookups to align with the planned OIDC work. The datasource catalog stays static
-  because client code imports it.
+  are later work. Auth is the one slot with a second, UI half; the build derives it from the
+  `auth` entry, so the config stays one file. The datasource catalog
+  stays static because client code imports it.
 
 - One Cloudflare deploy: Worker (TanStack Start app and API) plus the query container. Postgres through Hyperdrive with
   Drizzle for application data, R2 for data files, KV for query results, Clerk for auth.

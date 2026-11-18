@@ -139,7 +139,8 @@ describe('Postgres application storage', () => {
       height: 1,
       createdAt: now(),
     });
-    const tables = Object.values(schema);
+    // Users are people, not workspace data, so deleting a workspace leaves them alone.
+    const tables = Object.values(schema).filter((table) => table !== schema.users);
     await db.delete(schema.workspaces).where(eq(schema.workspaces.id, workspace.workspaceId));
     for (const table of tables) {
       const columns = getTableColumns(table);

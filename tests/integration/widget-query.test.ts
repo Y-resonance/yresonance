@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, test, vi } from 'vitest';
-import { signOut } from './doubles/clerk';
+import { signOut } from './doubles/auth';
 import { queryEngine } from './doubles/query-engine';
 import {
   addWidget,

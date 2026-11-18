@@ -1,4 +1,3 @@
-import { ClerkProvider } from '@clerk/tanstack-react-start';
 import { HeadContent, Link, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import { queryOptions, type QueryClient } from '@tanstack/react-query';
 import { ApiSessionBoundary } from '#/api/query';
@@ -7,17 +6,30 @@ import { TooltipProvider } from '#/components/ui/tooltip';
 import { AnalyticsProvider } from '#/analytics/provider';
 import { getAnalyticsConfig } from '#/analytics/config-function';
 import { browserAnalytics } from '#/analytics/browser';
+import { AuthProvider } from '#/platform/index.ui';
+import { getBrowserSession } from '#/platform/session-function';
 
 import appCss from '../styles.css?url';
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  loader: ({ context }) =>
-    context.queryClient.ensureQueryData(
-      queryOptions({
-        queryKey: ['analytics-config'],
-        queryFn: () => getAnalyticsConfig(),
-      }),
-    ),
+  loader: async ({ context }) => {
+    const [analytics, session] = await Promise.all([
+      context.queryClient.ensureQueryData(
+        queryOptions({
+          queryKey: ['analytics-config'],
+          queryFn: () => getAnalyticsConfig(),
+        }),
+      ),
+      // Sign-in and sign-out reload the document, so one read per page load stays current.
+      context.queryClient.ensureQueryData(
+        queryOptions({
+          queryKey: ['browser-session'],
+          queryFn: () => getBrowserSession(),
+        }),
+      ),
+    ]);
+    return { analytics, session };
+  },
   headers: () => ({ 'Cache-Control': 'private, no-store' }),
   onCatch: (error) => browserAnalytics()?.captureException(error),
   head: () => ({
@@ -52,7 +64,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
-  const analytics = Route.useLoaderData();
+  const { analytics, session } = Route.useLoaderData();
   return (
     // The pre-paint theme script owns this element's class before React hydrates.
     <html lang="en" suppressHydrationWarning>
@@ -69,7 +81,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up">
+        <AuthProvider session={session ?? null}>
           <AnalyticsProvider config={analytics ?? null}>
             <ApiSessionBoundary>
               <TooltipProvider>
@@ -78,7 +90,7 @@ function RootDocument({ children }: { children: ReactNode }) {
               </TooltipProvider>
             </ApiSessionBoundary>
           </AnalyticsProvider>
-        </ClerkProvider>
+        </AuthProvider>
       </body>
     </html>
   );

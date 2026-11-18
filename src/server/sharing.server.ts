@@ -34,12 +34,10 @@ export async function shareDashboard(request: Extract<ApiRequest, { action: 'sha
       );
   } else {
     if (request.operation.kind === 'grant') {
-      const users = await platform.auth.directory.users({
-        emailAddress: [request.operation.userEmail],
-        limit: 2,
+      const [user] = await platform.auth.directory.users({
+        emails: [request.operation.userEmail],
       });
-      const user = users.data[0];
-      if (!user) throw new ApiError(404, 'user_not_found', 'No Clerk user has that email address.');
+      if (!user) throw new ApiError(404, 'user_not_found', 'No user has that email address.');
       const values = {
         dashboardId: request.dashboardId,
         clerkUserId: user.id,
@@ -57,11 +55,10 @@ export async function shareDashboard(request: Extract<ApiRequest, { action: 'sha
     } else {
       let userId = request.operation.userId;
       if (!userId && request.operation.userEmail) {
-        const users = await platform.auth.directory.users({
-          emailAddress: [request.operation.userEmail],
-          limit: 2,
+        const [user] = await platform.auth.directory.users({
+          emails: [request.operation.userEmail],
         });
-        userId = users.data[0]?.id;
+        userId = user?.id;
       }
       if (!userId)
         throw new ApiError(400, 'user_reference_required', 'Provide a user id or email to revoke.');
@@ -117,22 +114,16 @@ export async function dashboardCollaborators(dashboardIds: string[]) {
 async function resolveCollaborators<T extends { clerkUserId: string }>(grants: T[]) {
   const userIds = [...new Set(grants.map((grant) => grant.clerkUserId))];
   const userPages = await Promise.all(
-    chunk(userIds, 100).map((page) =>
-      platform.auth.directory.users({
-        userId: page,
-        limit: page.length,
-      }),
-    ),
+    chunk(userIds, 100).map((page) => platform.auth.directory.users({ userIds: page })),
   );
-  const userById = new Map(userPages.flatMap((page) => page.data).map((user) => [user.id, user]));
+  const userById = new Map(userPages.flat().map((user) => [user.id, user]));
   return grants.map((grant) => {
     const user = userById.get(grant.clerkUserId);
     return {
       ...grant,
-      imageUrl: user?.imageUrl,
-      userEmail: user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress,
-      displayName:
-        [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username || undefined,
+      imageUrl: user?.imageUrl ?? undefined,
+      userEmail: user?.email ?? undefined,
+      displayName: user?.name ?? undefined,
     };
   });
 }

@@ -7,11 +7,17 @@ const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
-    alias: {
-      // The suite drives the real service; only Clerk's network boundary is replaced.
-      '@clerk/tanstack-react-start/server': fromRoot('./tests/integration/doubles/clerk.ts'),
-      '@cloudflare/containers': fromRoot('./tests/integration/doubles/containers.ts'),
-    },
+    alias: [
+      // The suite drives the real service; only the auth adapter is replaced.
+      {
+        find: /^.*\/platform\/adapters\/clerk$/,
+        replacement: fromRoot('./tests/integration/doubles/auth.ts'),
+      },
+      {
+        find: '@cloudflare/containers',
+        replacement: fromRoot('./tests/integration/doubles/containers.ts'),
+      },
+    ],
   },
   plugins: [
     cloudflareTest({
@@ -36,7 +42,6 @@ export default defineConfig({
           APP_ENV: 'development',
           CLICKHOUSE_DATABASE: 'yresonance_development',
           QUERY_CACHE_NAME: 'yresonance-query-cache-test',
-          CLERK_SECRET_KEY: 'sk_test_integration',
           INTERNAL_R2_SIGNING_SECRET: 'test-internal-r2-signing-secret',
           UPLOAD_SIGNING_SECRET: 'test-upload-signing-secret',
           RESET_ADMIN_TOKEN: 'test-reset-admin-token',
@@ -44,6 +49,10 @@ export default defineConfig({
           GOOGLE_OAUTH_CLIENT_SECRET: 'test-google-secret',
           GOOGLE_OAUTH_REDIRECT_URI: 'https://yresonance.test/api/oauth/google/callback',
           GOOGLE_OAUTH_HOSTED_DOMAIN: 'example.test',
+          OIDC_ISSUER_URL: 'https://id.example.test/realms/acme',
+          OIDC_CLIENT_ID: 'test-oidc-client',
+          OIDC_CLIENT_SECRET: 'test-oidc-client-secret',
+          OIDC_SESSION_SECRET: 'test-oidc-session-secret',
         },
       },
     }),

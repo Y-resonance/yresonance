@@ -119,14 +119,14 @@ export async function requireOwnedGoogleConnection(session: SessionContext, conn
   if (!row) throw new ApiError(404, 'connection_not_found', 'Connection not found.');
 }
 
-// Clerk's SDK exposes no abort signal. Bound the wait for directory and membership reads.
-async function clerkLookup<T>(request: Promise<T>) {
+// Directory adapters expose no abort signal. Bound the wait for directory and membership reads.
+async function directoryLookup<T>(request: Promise<T>) {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       request,
       new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error('Clerk lookup timed out.')), 10_000);
+        timeout = setTimeout(() => reject(new Error('Directory lookup timed out.')), 10_000);
       }),
     ]);
   } finally {
@@ -148,13 +148,8 @@ async function connectionOwnerName(workspaceId: string, authorizationId: string)
     .limit(1);
   if (!owner) return undefined;
   try {
-    const users = await clerkLookup(
-      platform.auth.directory.users({ userId: [owner.userId], limit: 1 }),
-    );
-    const user = users.data.find((user) => user.id === owner.userId);
-    return (
-      [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username || undefined
-    );
+    const users = await directoryLookup(platform.auth.directory.users({ userIds: [owner.userId] }));
+    return users.find((user) => user.id === owner.userId)?.name ?? undefined;
   } catch {
     console.warn('yresonance.datasource_connection_owner', { workspaceId, result: 'unavailable' });
     return undefined;
@@ -548,23 +543,18 @@ export async function googleAccessToken(workspaceId: string, authorizationId: st
   const revision = row.updatedAt;
   let isMember: boolean;
   try {
-    const memberships = await clerkLookup(
+    const members = await directoryLookup(
       platform.auth.directory.memberships({
-        organizationId: workspace.clerkOrganizationId,
-        userId: [row.createdBy],
-        limit: 1,
+        orgId: workspace.clerkOrganizationId,
+        userIds: [row.createdBy],
       }),
     );
-    isMember = memberships.data.some(
-      (membership) => membership.publicUserData?.userId === row.createdBy,
+    isMember = members.includes(row.createdBy);
+  } catch {
+    throw new DatasourceError(
+      'datasource_connector_failed',
+      'Google connection membership could not be verified.',
     );
-  } catch (error) {
-    if (z.object({ status: z.literal(404) }).safeParse(error).success) isMember = false;
-    else
-      throw new DatasourceError(
-        'datasource_connector_failed',
-        'Google connection membership could not be verified.',
-      );
   }
   async function revoke(unchanged: SQL): Promise<never> {
     await db

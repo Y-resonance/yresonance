@@ -1,91 +1,51 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GetAccessButton, SignInAction } from './auth-actions';
 
-const clerk = vi.hoisted(() => ({ mode: 'public' as 'public' | 'waitlist' | 'restricted' }));
+const auth = vi.hoisted(() => ({
+  signUp: 'public' as 'public' | 'waitlist' | 'none',
+  signIn: vi.fn<(redirectUrl: string) => void>(),
+  getAccess: vi.fn<(redirectUrl: string) => void>(),
+}));
 
 vi.mock('@tanstack/react-router', () => ({
   useLocation: ({ select }: { select: (location: { href: string }) => unknown }) =>
     select({ href: '/datasources?tab=fields' }),
 }));
 
-vi.mock('@clerk/tanstack-react-start', () => ({
-  useClerk: () => ({ __internal_environment: { userSettings: { signUp: { mode: clerk.mode } } } }),
-  SignInButton: ({
-    children,
-    mode,
-    forceRedirectUrl,
-    signUpForceRedirectUrl,
-    withSignUp,
-  }: {
-    children: ReactNode;
-    mode: string;
-    forceRedirectUrl: string;
-    signUpForceRedirectUrl: string;
-    withSignUp: boolean;
-  }) => (
-    <span
-      data-mode={mode}
-      data-redirect={forceRedirectUrl}
-      data-switch-redirect={signUpForceRedirectUrl}
-      data-with-sign-up={withSignUp}
-    >
-      {children}
-    </span>
-  ),
-  SignUpButton: ({
-    children,
-    mode,
-    forceRedirectUrl,
-    signInForceRedirectUrl,
-  }: {
-    children: ReactNode;
-    mode: string;
-    forceRedirectUrl: string;
-    signInForceRedirectUrl: string;
-  }) => (
-    <span
-      data-mode={mode}
-      data-redirect={forceRedirectUrl}
-      data-switch-redirect={signInForceRedirectUrl}
-    >
-      {children}
-    </span>
-  ),
+vi.mock('#/platform/index.ui', () => ({
+  useAuthActions: () => ({ signIn: auth.signIn, getAccess: auth.getAccess }),
+  useAuthCapabilities: () => ({ signUp: auth.signUp }),
 }));
 
 describe('authentication actions', () => {
   beforeEach(() => {
-    clerk.mode = 'public';
+    auth.signUp = 'public';
+    vi.clearAllMocks();
   });
+
+  it('starts sign-in from its child and returns to the current URL', () => {
+    const action = SignInAction({ children: <button>Sign in</button> });
+    action.props.onClick?.();
+
+    expect(auth.signIn).toHaveBeenCalledWith('/datasources?tab=fields');
+  });
+
   it.each([
-    [
-      'sign in',
-      <SignInAction key="sign-in">
-        <button>Sign in</button>
-      </SignInAction>,
-    ],
-    ['sign up', <GetAccessButton key="sign-up" />],
-  ])('opens %s in a modal and returns every path through the current URL', (_, action) => {
-    const html = renderToStaticMarkup(action);
+    ['public', 'Create account'],
+    ['waitlist', 'Join waitlist'],
+  ] as const)('labels access for %s sign-up and returns to the current URL', (signUp, label) => {
+    auth.signUp = signUp;
+    const button = GetAccessButton({});
 
-    expect(html).toContain('data-mode="modal"');
-    expect(html).toContain('data-redirect="/datasources?tab=fields"');
-    expect(html).toContain('data-switch-redirect="/datasources?tab=fields"');
+    expect(renderToStaticMarkup(button)).toContain(label);
+    button?.props.onClick?.(undefined as never);
+    expect(auth.getAccess).toHaveBeenCalledWith('/datasources?tab=fields');
   });
 
-  it.each(['public', 'waitlist', 'restricted'] as const)(
-    'offers inline sign-up only when access is public (%s)',
-    (mode) => {
-      clerk.mode = mode;
-      const html = renderToStaticMarkup(
-        <SignInAction>
-          <button>Sign in</button>
-        </SignInAction>,
-      );
+  it('offers no access button when the provider has no sign-up', () => {
+    auth.signUp = 'none';
 
-      expect(html).toContain(`data-with-sign-up="${mode === 'public'}"`);
-    },
-  );
+    expect(renderToStaticMarkup(<GetAccessButton />)).toBe('');
+  });
 });
