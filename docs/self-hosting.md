@@ -4,8 +4,9 @@ yresonance is published as one npm package, `@yresonance-dev/core`. You install 
 project, choose your infrastructure in a config file, and build the app there. The hosted service
 in `cloud/` is built the same way.
 
-Today the package ships adapters for Cloudflare and Clerk only. Other infrastructure needs an
-adapter written in your project, see [Your own adapters](#your-own-adapters).
+Today the package ships adapters for Cloudflare, plus Clerk and OpenID Connect for sign-in. Other
+infrastructure needs an adapter written in your project, see
+[Your own adapters](#your-own-adapters).
 
 ## Project
 
@@ -31,7 +32,7 @@ project, and `.env` files are read from your project.
 ```ts
 // yresonance.config.ts
 import { defineConfig } from '@yresonance-dev/core/config';
-import { clerk } from '@yresonance-dev/core/adapters/clerk';
+import { oidc } from '@yresonance-dev/core/adapters/oidc';
 import { currentDatasources } from '@yresonance-dev/core/adapters/datasources';
 import { cache, images, queryEngine, storage } from './adapters';
 
@@ -40,7 +41,7 @@ export default defineConfig({
   storage,
   cache,
   images,
-  auth: clerk(),
+  auth: oidc(),
   datasources: currentDatasources(),
   queryEngine,
   background: { waitUntil: (promise) => void promise.catch(console.error) },
@@ -58,7 +59,7 @@ adapters; values such as URLs and secrets come from environment variables at run
 | `storage` | Data files and dashboard images | `r2` |
 | `cache` | Query results | `workers-kv` |
 | `images` | Read dimensions, resize | `cloudflare-images` |
-| `auth` | Request identity, user directory, request middleware | `clerk` |
+| `auth` | Request identity, user directory, request middleware, sign-in UI | `clerk`, `oidc` |
 | `datasources` | Datasource providers offered to editors | `datasources` |
 | `queryEngine` | Reach the DuckDB query server | `duckdb` (Cloudflare Containers) |
 | `background` | Work that outlives the response | `workers-background` |
@@ -92,9 +93,14 @@ export function redisCache(): Cache {
 }
 ```
 
-`PlatformConfig` in `@yresonance-dev/core/config` describes every slot. The auth slot's
-`middleware()` returns a TanStack Start request middleware, so an auth adapter also needs
-`@tanstack/react-start` as a dependency of your project.
+`PlatformConfig` in `@yresonance-dev/core/config` describes every slot.
+
+Auth has a second half that runs in the browser. For `auth: clerk()` and `auth: oidc()` the build
+finds it by that name. An auth adapter of your own supplies it as a file with a default export
+from `defineAuthUi` in `@yresonance-dev/core/ui`, named in the Vite config:
+`yresonance({ authUi: 'auth-ui.ts' })`. Its `middleware()` returns a TanStack Start request
+middleware, so your project also needs `@tanstack/react-start` as a dependency. See
+[authentication](authentication.md) for both contracts and for the OIDC settings.
 
 ## Build and run
 
@@ -124,8 +130,8 @@ Bun.serve({
 ```
 
 Settings that reach the browser are compiled in, so they must be set when you build. With Clerk
-that is `VITE_CLERK_PUBLISHABLE_KEY`. Server settings such as `DATABASE_URL`, `CLERK_SECRET_KEY`,
-`INTERNAL_R2_SIGNING_SECRET` and `UPLOAD_SIGNING_SECRET` are read at runtime.
+that is `VITE_CLERK_PUBLISHABLE_KEY`; OIDC has none. Server settings such as `DATABASE_URL`, the
+`OIDC_*` values, `INTERNAL_R2_SIGNING_SECRET` and `UPLOAD_SIGNING_SECRET` are read at runtime.
 
 ## Container image
 
@@ -135,7 +141,6 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY yresonance.config.ts vite.config.ts ./
-ARG VITE_CLERK_PUBLISHABLE_KEY
 RUN bunx --bun vite build
 
 FROM oven/bun:1.4.4-slim
