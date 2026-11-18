@@ -9,6 +9,8 @@
     "tests/**/*.tsx",
     "scripts/check-local-postgres.ts",
     "scripts/migrate.ts",
+    "scripts/build-package.ts",
+    "scripts/check-package.ts",
     "scripts/prepare-preview-example.ts",
     "scripts/benchmark-query-startup.ts",
     "scripts/benchmark-uncached-queries.ts",
@@ -19,6 +21,8 @@
     "playwright.config.ts",
     "playwright.ui.config.ts"
   ],
+  // A separate project, type-checked against the packed package by scripts/check-package.ts.
+  "exclude": ["tests/package"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

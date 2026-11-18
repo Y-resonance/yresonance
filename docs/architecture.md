@@ -114,8 +114,11 @@ Engine, Clerk request identity/directory/middleware, and the existing five datas
 The DuckDB adapter retains the URL-scheme choice between local HTTP and the Cloudflare container.
 A background-task adapter keeps analytics delivery alive after the response.
 
-Only `src/platform/index.server.ts` imports that config; application services consume its typed
-slots. Each adapter lives in its own file under `src/platform/adapters`, imported only by the
+Only `src/platform/index.server.ts` imports the config, as the module `yresonance:config`. The
+Vite plugin in `src/platform/vite.ts` resolves that module to the building project's config file
+and adds the app's build plugins; `cloud/vite.config.ts` uses it together with the Cloudflare
+plugin. Integration tests alias the module to `cloud/yresonance.config.ts`. Application services
+consume the typed slots. Each adapter lives in its own file under `src/platform/adapters`, imported only by the
 config. Bindings are read when an operation runs, never captured during module initialization.
 The static datasource catalog remains safe for client imports. Plain settings and secrets go
 through `src/platform/settings.ts`, which reads `process.env` lazily. Workers populate it with
@@ -131,5 +134,17 @@ The `cloud/` directory owns the composition and operations of our hosted service
 resources, preview provisioning and cleanup, environment-reset CLI, and legacy D1 cutover tools.
 Reusable adapters and the application stay in `src/`; database migrations and local development
 utilities stay shared. GitHub workflows remain in `.github/workflows` and call `cloud/scripts`.
-This is a deployment boundary within the same MIT-licensed repository, with no separate package or
-enterprise feature layer. A self-hosted build target can select its own composition when added.
+This is a deployment boundary within the same MIT-licensed repository, with no enterprise feature
+layer. `src/server.ts` is the shared request handler; `cloud/server.ts` is the Worker entry that
+adds the query engine Durable Objects.
+
+The repository is also the npm package `@yresonance-dev/core`, see [self-hosting](self-hosting.md).
+It ships `src/` as source, so the Vite plugin sets the Vite root to the package directory, which
+is under `node_modules` in a self-hoster's project, and sends output, env files and the Vite
+cache to that project. Two consequences are handled in the plugin: tsconfig paths do not apply
+under `node_modules`, so `#/` is an explicit alias, and the React plugin and compiler skip
+`node_modules` by default, so both are pointed at the package's `src/`.
+`scripts/build-package.ts` runs on `prepack` and adds what cannot ship as source: declarations
+for the exported modules with `#/` rewritten to relative paths, and the plugin compiled to
+JavaScript, because Node does not run TypeScript from `node_modules`. `bin/yresonance.js` applies
+the migrations in `drizzle/` with Drizzle's migrator, the same one the integration suite uses.

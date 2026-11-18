@@ -121,6 +121,21 @@ require `POSTGRES_PRODUCTION_URL` and `POSTGRES_PREVIEW_SHARED_URL` respectively
 See [the cutover runbook](postgres-cutover.md) for offline copying, row verification, maintenance,
 and rollback boundaries. Production migration/deployment is a separate authorized operation.
 
+## npm package
+
+`bun run test:package` packs `@yresonance-dev/core`, installs the tarball into a copy of
+`tests/package/` in a temporary directory, type-checks and builds that project under Node, applies
+migrations with the packaged command and requests data from the running app. It needs the local
+test database and refuses any database whose name does not end in `_test`. CI runs it as its own
+job. Run it after changing `package.json` exports or files, `src/platform/vite.ts`,
+`scripts/build-package.ts` or `bin/`.
+
+`package.json` stays at version `0.0.0`. Pushing a tag such as `v0.2.0` runs
+`.github/workflows/release.yml`, which repeats the package check, sets the version from the tag
+and publishes through npm trusted publishing. npm is configured to trust that workflow by file
+name, so renaming it breaks releases. The first version of a package has to be published by hand
+before npm allows that configuration.
+
 ## Query container HTTP checks
 
 `bunx vitest --run container/httpfs.test.ts` checks DuckDB's HEAD requests, byte-range responses,

@@ -26,3 +26,4 @@ before capturing or publishing evidence; it covers completion checks and product
 - Read [BigQuery setup](docs/bigquery.md) when changing the Google connection, BigQuery query limits, or their external configuration.
 - Read [ClickHouse setup](docs/clickhouse.md) when changing managed imports, external table access, preview databases, or freshness.
 - Read [preview environments and deployment](docs/preview-environments.md) when changing Cloudflare deployment or preview isolation. It includes build setup, cleanup, and recovery.
+- Read [self-hosting](docs/self-hosting.md) when changing the npm package, its exports, the Vite plugin, or the migrate command.

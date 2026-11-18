@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
     alias: {
+      'yresonance:config': fromRoot('./cloud/yresonance.config.ts'),
       // The suite drives the real service; only Clerk's network boundary is replaced.
       '@clerk/tanstack-react-start/server': fromRoot('./tests/integration/doubles/clerk.ts'),
       '@cloudflare/containers': fromRoot('./tests/integration/doubles/containers.ts'),

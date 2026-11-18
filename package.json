@@ -1,7 +1,46 @@
 {
-  "name": "yresonance",
-  "private": true,
+  "name": "@yresonance-dev/core",
+  "version": "0.0.0",
+  "description": "Self-hostable dashboard builder. Install it, write a yresonance.config.ts and build it for your own infrastructure.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Y-resonance/yresonance.git"
+  },
+  "bin": {
+    "yresonance": "./bin/yresonance.js"
+  },
+  "files": [
+    "bin",
+    "dist/platform",
+    "dist/types/src",
+    "drizzle",
+    "public",
+    "src",
+    ".generated/preview-example.json",
+    "tsr.config.json",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx"
+  ],
   "type": "module",
+  "exports": {
+    "./config": {
+      "types": "./dist/types/src/platform/config.d.ts",
+      "default": "./src/platform/config.ts"
+    },
+    "./adapters/*": {
+      "types": "./dist/types/src/platform/adapters/*.d.ts",
+      "default": "./src/platform/adapters/*.ts"
+    },
+    "./vite": {
+      "types": "./dist/types/src/platform/vite.d.ts",
+      "default": "./dist/platform/vite.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "bun run scripts/check-local-postgres.ts && bun run prepare:preview-example && vite dev",
     "build": "bun run prepare:preview-example && CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false vite build",
@@ -35,7 +74,10 @@
     "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run types:check && bun run test",
     "prepare:preview-example": "bun run scripts/prepare-preview-example.ts",
     "build:branch-preview": "bun run cloud/scripts/preview-resources.ts prepare && YRESONANCE_PREVIEW_CONFIG=cloud/.wrangler-branch.json bun run build",
-    "deploy:branch-preview": "wrangler preview --config dist/server/wrangler.json"
+    "deploy:branch-preview": "wrangler preview --config dist/server/wrangler.json",
+    "build:package": "bun run scripts/build-package.ts",
+    "prepack": "bun run build:package",
+    "test:package": "bun run scripts/check-package.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -53,6 +95,7 @@
     "@opentelemetry/resources": "^3.0.0",
     "@opentelemetry/sdk-logs": "^3.0.0",
     "@posthog/react": "^1.11.3",
+    "@tailwindcss/vite": "4.3.5",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-router-ssr-query": "1.167.3",
@@ -65,6 +108,7 @@
     "@tiptap/react": "^3.32.2",
     "@tiptap/starter-kit": "^3.32.2",
     "@uiw/react-codemirror": "^4.25.11",
+    "@vitejs/plugin-react": "6.3.0",
     "aws4fetch": "^1.0.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -72,6 +116,7 @@
     "drizzle-orm": "^0.45.2",
     "fast-xml-parser": "^5.11.2",
     "lucide-react": "^1.37.0",
+    "oxc-transform-react": "^0.158.0",
     "pg": "^8.16.3",
     "posthog-js": "^1.435.8",
     "posthog-node": "^5.55.0",
@@ -84,7 +129,9 @@
     "remark-breaks": "^4.0.0",
     "shadcn": "^4.19.0",
     "tailwind-merge": "^3.6.0",
+    "tailwindcss": "4.3.5",
     "tw-animate-css": "^1.4.0",
+    "vite-imagetools": "^12.0.1",
     "zod": "^4.5.2"
   },
   "devDependencies": {
@@ -94,23 +141,21 @@
     "@duckdb/node-api": "^1.5.5-r.4",
     "@playwright/test": "^1.58.2",
     "@posthog/rollup-plugin": "^1.6.1",
-    "@tailwindcss/vite": "4.3.5",
     "@types/bun": "^1.3.10",
     "@types/node": "26.6.6",
     "@types/pg": "^8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@vitejs/plugin-react": "6.3.0",
     "drizzle-kit": "^0.31.10",
-    "oxc-transform-react": "^0.158.0",
     "oxfmt": "0.79.0",
     "oxlint": "1.94.0",
-    "tailwindcss": "4.3.5",
     "typescript": "7.0.2",
     "vite": "8.3.8",
-    "vite-imagetools": "^12.0.1",
     "vitest": "5.1.0",
     "wrangler": "4.164.0"
+  },
+  "peerDependencies": {
+    "vite": ">=8.0.0"
   },
   "packageManager": "bun@1.4.4"
 }

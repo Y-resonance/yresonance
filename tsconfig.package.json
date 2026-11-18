@@ -1,0 +1,17 @@
+{
+  // Type declarations for the modules a self-hoster imports. See scripts/build-package.ts.
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*.d.ts",
+    "src/platform/config.ts",
+    "src/platform/vite.ts",
+    "src/platform/adapters/*.ts"
+  ],
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": ".",
+    "outDir": "./dist/types"
+  }
+}
