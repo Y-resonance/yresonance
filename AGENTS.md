@@ -22,6 +22,7 @@ before capturing or publishing evidence; it covers completion checks and product
 - Read [development tasks](docs/development.md) when working with local data files, landing assets, environment resets, D1 migration preflights, container HTTP checks, or telemetry.
 - Read [architecture](docs/architecture.md) when changing query execution, storage, authentication, or preview example seeding.
 - Read [product and architecture decisions](docs/decisions.md) before changing product behavior or architecture.
+- Read [authentication](docs/authentication.md) when changing auth adapters, the auth UI, or OIDC self-hosting.
 - Read [WebMCP usage](docs/webmcp-usage.md) when changing page tools, their contracts, or permissions.
 - Read [BigQuery setup](docs/bigquery.md) when changing the Google connection, BigQuery query limits, or their external configuration.
 - Read [ClickHouse setup](docs/clickhouse.md) when changing managed imports, external table access, preview databases, or freshness.

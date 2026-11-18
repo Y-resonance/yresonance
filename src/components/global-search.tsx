@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/tanstack-react-start';
+import { useAuth } from '#/platform/index.ui';
 import { useNavigate } from '@tanstack/react-router';
 import {
   ChevronLeftIcon,

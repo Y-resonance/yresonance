@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { database } from '#/server/database.server';
 import { dashboardGrants, dataSources, libraryMetrics, shareLinks } from '#/db/schema';
 import { yearToDateRange } from '#/domain/dates';
-import { setClerkDirectory, signOut } from './doubles/clerk';
+import { setDirectory, signOut } from './doubles/auth';
 import {
   addWidget,
   callService,
@@ -35,12 +35,12 @@ describe('dashboard grants', () => {
     const workspace = await signInToNewWorkspace();
     const dashboard = await createDashboard('Shared report');
     const colleagueId = newUserId();
-    setClerkDirectory([
-      { id: workspace.userId, emailAddress: 'owner@example.com', firstName: 'Owner' },
+    setDirectory([
+      { id: workspace.userId, email: 'owner@example.com', name: 'Owner' },
       {
         id: colleagueId,
-        emailAddress: 'colleague@example.com',
-        firstName: 'Colleague',
+        email: 'colleague@example.com',
+        name: 'Colleague',
         imageUrl: 'https://example.com/avatar.png',
       },
     ]);
@@ -178,7 +178,7 @@ describe('dashboard grants', () => {
     const widget = await addWidget(dashboard.id, scorecardDefinition(source));
 
     const viewerId = newUserId();
-    setClerkDirectory([{ id: viewerId, emailAddress: 'viewer@example.com' }]);
+    setDirectory([{ id: viewerId, email: 'viewer@example.com' }]);
     await callService({
       action: 'shareDashboard',
       dashboardId: dashboard.id,
@@ -220,7 +220,7 @@ describe('dashboard grants', () => {
     const widget = await addWidget(dashboard.id, scorecardDefinition(source));
 
     const editorId = newUserId();
-    setClerkDirectory([{ id: editorId, emailAddress: 'editor@example.com', firstName: 'Edith' }]);
+    setDirectory([{ id: editorId, email: 'editor@example.com', name: 'Edith' }]);
     const shared = (await callService({
       action: 'shareDashboard',
       dashboardId: dashboard.id,

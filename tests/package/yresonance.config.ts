@@ -38,18 +38,18 @@ export default defineConfig({
     dimensions: async () => undefined,
     resize: async (body) => new Response(body),
   },
-  // One fixed admin, so the check reaches the database without an identity provider.
+  // One fixed admin, so the check reaches the database without an identity provider. Its UI
+  // half is auth-ui.ts, named in vite.config.ts.
   auth: {
     requestIdentity: async () => ({
-      isAuthenticated: true,
       userId: 'user_package_check',
       orgId: 'org_package_check',
       orgSlug: 'package-check',
-      orgRole: 'org:admin',
+      isAdmin: true,
     }),
     directory: {
-      users: async () => ({ data: [] }),
-      memberships: async () => ({ data: [] }),
+      users: async () => [],
+      memberships: async () => [],
     },
     middleware: () => createMiddleware().server(({ next }) => next()),
   },

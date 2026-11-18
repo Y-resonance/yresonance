@@ -10,6 +10,7 @@ Code defines the data model and contracts: `src/domain/schema.ts`, `src/db/schem
 | [Decisions](decisions.md) | Changing product behavior or architecture; records reasons and deferred scope. |
 | [Architecture](architecture.md) | Changing query execution, storage, authentication, or preview seeding. |
 | [Development](development.md) | Working with local data, review evidence, landing assets, resets, migrations, container HTTP checks, or telemetry. |
+| [Authentication](authentication.md) | Changing auth adapters or the auth UI, or self-hosting with Keycloak or another OIDC provider. |
 | [WebMCP](webmcp-usage.md) | Changing page tools, their contracts, or permissions. |
 | [BigQuery](bigquery.md) | Configuring Google authorization or changing query limits. |
 | [ClickHouse](clickhouse.md) | Configuring managed/external tables, credentials, preview databases, or freshness. |

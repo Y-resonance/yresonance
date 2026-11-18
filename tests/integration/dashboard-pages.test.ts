@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { DashboardDocument, DashboardWidget } from '#/domain/schema';
-import { signOut, setClerkDirectory } from './doubles/clerk';
+import { signOut, setDirectory } from './doubles/auth';
 import { queryEngine } from './doubles/query-engine';
 import {
   addWidget,
@@ -221,7 +221,7 @@ describe('dashboard pages', () => {
       operation: { kind: 'createLink' },
     })) as { token: string };
     const viewerId = newUserId();
-    setClerkDirectory([{ id: viewerId, emailAddress: 'page-viewer@example.com' }]);
+    setDirectory([{ id: viewerId, email: 'page-viewer@example.com' }]);
     await callService({
       action: 'shareDashboard',
       dashboardId: dashboard.id,

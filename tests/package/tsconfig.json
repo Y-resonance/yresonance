@@ -1,5 +1,5 @@
 {
-  "include": ["yresonance.config.ts", "vite.config.ts"],
+  "include": ["yresonance.config.ts", "auth-ui.ts", "vite.config.ts"],
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -8,6 +8,7 @@
     "types": ["node"],
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   }
 }

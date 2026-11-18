@@ -6,26 +6,21 @@ import { AppShell } from './app-shell';
 // Search behavior has browser coverage; shell tests own navigation and responsive layout.
 vi.mock('./global-search', () => ({ GlobalSearch: () => null }));
 
-const clerk = vi.hoisted(() => ({
-  state: 'signed-in' as 'signed-in' | 'signed-out',
-  mode: 'public' as 'public' | 'restricted' | 'waitlist' | undefined,
+const auth = vi.hoisted(() => ({
+  isSignedIn: true,
+  signUp: 'public' as 'public' | 'waitlist' | 'none',
 }));
 const router = vi.hoisted(() => ({ pathname: '/' }));
 
-vi.mock('@clerk/tanstack-react-start', () => ({
-  Show: ({ when, children }: { when: string; children: ReactNode }) =>
-    when === clerk.state ? children : null,
-  UserButton: () => <span data-testid="user-button" />,
-  SignInButton: ({ children }: { children: ReactNode }) => children,
-  SignUpButton: ({ children }: { children: ReactNode }) => children,
-  useClerk: () => ({
-    __internal_environment: clerk.mode
-      ? { userSettings: { signUp: { mode: clerk.mode } } }
-      : undefined,
+vi.mock('#/platform/index.ui', () => ({
+  useAuth: () => ({
+    isLoaded: true,
+    isSignedIn: auth.isSignedIn,
+    orgId: 'org_1',
+    user: { name: 'Ada Lovelace', email: 'ada@example.com', imageUrl: null },
   }),
-  useAuth: () => ({ isLoaded: true, isSignedIn: true, orgId: 'org_1' }),
-  useUser: () => ({ isLoaded: true, user: {} }),
-  useOrganizationList: () => ({ isLoaded: true }),
+  useAuthActions: () => ({ signIn: () => {}, getAccess: () => {}, signOut: () => {} }),
+  useAuthCapabilities: () => ({ signUp: auth.signUp, workspaces: 'multiple', landing: true }),
 }));
 
 // Mirrors how the router merges activeProps and inactiveProps onto the anchor,
@@ -70,7 +65,7 @@ const header = (markup: string) => markup.slice(0, markup.indexOf('</header>'));
 
 describe('signed-in application shell', () => {
   beforeEach(() => {
-    clerk.state = 'signed-in';
+    auth.isSignedIn = true;
     router.pathname = '/';
   });
 
@@ -92,11 +87,19 @@ describe('signed-in application shell', () => {
     expect(menu.slice(0, menu.indexOf('>'))).toContain('sm:hidden');
   });
 
-  it('shows neither navigation nor menu button when signed out', () => {
-    clerk.state = 'signed-out';
+  it('offers the account menu instead of sign-in', () => {
+    const markup = header(renderToStaticMarkup(<AppShell>content</AppShell>));
+
+    expect(markup).toContain('aria-label="Account"');
+    expect(markup).not.toContain('Sign in');
+  });
+
+  it('shows neither navigation, menu button nor account menu when signed out', () => {
+    auth.isSignedIn = false;
     const markup = header(renderToStaticMarkup(<AppShell>content</AppShell>));
 
     expect(markup).not.toContain('aria-label="Menu"');
+    expect(markup).not.toContain('aria-label="Account"');
     expect(markup).not.toContain('href="/datasources"');
   });
 });
@@ -105,11 +108,10 @@ describe('signed-out access actions', () => {
   it.each([
     ['public', 'Create account'],
     ['waitlist', 'Join waitlist'],
-    ['restricted', null],
-    [undefined, null],
-  ] as const)('follows Clerk access mode %s', (mode, label) => {
-    clerk.state = 'signed-out';
-    clerk.mode = mode;
+    ['none', null],
+  ] as const)('follows the sign-up capability %s', (signUp, label) => {
+    auth.isSignedIn = false;
+    auth.signUp = signUp;
     const markup = header(renderToStaticMarkup(<AppShell>content</AppShell>));
 
     expect(markup).toContain('Sign in');
@@ -127,7 +129,7 @@ const navLinkFor = (markup: string, href: string) => {
 
 describe('active section marking', () => {
   beforeEach(() => {
-    clerk.state = 'signed-in';
+    auth.isSignedIn = true;
   });
 
   it('marks only the section the route belongs to', () => {

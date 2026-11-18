@@ -30,25 +30,18 @@ export default defineConfig(({ command, mode }) => ({
     sourcemap: uploadPostHogSourceMaps ? 'hidden' : false,
   },
   resolve: {
-    // UI tests replace Clerk at the module boundary. Never alias auth in a deployable build.
-    ...(command === 'serve' && mode === 'e2e-ui'
-      ? {
-          alias: [
+    // UI tests replace both halves of the auth adapter. Never replace auth in a deployable build.
+    alias:
+      command === 'serve' && mode === 'e2e-ui'
+        ? [
             {
-              find: /^@clerk\/tanstack-react-start\/server$/,
+              find: /^.*\/platform\/adapters\/clerk$/,
               replacement: fileURLToPath(
-                new URL('../tests/e2e/support/clerk-server.ts', import.meta.url),
+                new URL('../tests/e2e/support/auth-server.ts', import.meta.url),
               ),
             },
-            {
-              find: /^@clerk\/tanstack-react-start$/,
-              replacement: fileURLToPath(
-                new URL('../tests/e2e/support/clerk-ui.tsx', import.meta.url),
-              ),
-            },
-          ],
-        }
-      : {}),
+          ]
+        : [],
   },
   server: {
     port: devPort,
@@ -116,7 +109,11 @@ export default defineConfig(({ command, mode }) => ({
       }),
     }),
     // The same app build a self-hoster runs, here with the hosted service's config file.
-    yresonance({ config: 'cloud/yresonance.config.ts' }),
+    yresonance({
+      config: 'cloud/yresonance.config.ts',
+      authUi:
+        command === 'serve' && mode === 'e2e-ui' ? 'tests/e2e/support/auth-ui.tsx' : undefined,
+    }),
     ...(command === 'build' && uploadPostHogSourceMaps
       ? [
           posthog({

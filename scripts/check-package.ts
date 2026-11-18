@@ -39,6 +39,7 @@ try {
       },
       devDependencies: {
         '@types/node': manifest.devDependencies['@types/node'],
+        '@types/react': manifest.devDependencies['@types/react'],
         typescript: manifest.devDependencies.typescript,
       },
     }),
@@ -67,7 +68,10 @@ try {
   const body = await response.text();
   if (!response.ok || !z.object({ ok: z.literal(true) }).safeParse(JSON.parse(body)).success)
     throw new Error(`The packaged app answered ${response.status}: ${body}`);
-  console.log('The packaged app builds, migrates and serves API requests.');
+  const page = await fetch(`http://localhost:${port}/datasources`);
+  if (!page.ok || !(await page.text()).includes('<html'))
+    throw new Error(`The packaged app answered ${page.status} for a page.`);
+  console.log('The packaged app builds, migrates and serves pages and API requests.');
 } finally {
   app?.kill();
   await rm(project, { recursive: true, force: true });

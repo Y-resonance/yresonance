@@ -1,4 +1,3 @@
-import { useAuth } from '@clerk/tanstack-react-start';
 import {
   queryOptions,
   useInfiniteQuery,
@@ -15,6 +14,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
+import { useAuth } from '#/platform/index.ui';
 import { callApi } from './client';
 import type { ApiRequest, DatasourceCatalogPage } from './contracts';
 
@@ -75,7 +75,7 @@ export function apiQueryOptions<T>(
 function useApiScope() {
   const { sessionId, userId, orgId, isLoaded } = useAuth();
   return {
-    scope: JSON.stringify([sessionId ?? null, userId ?? null, orgId ?? null]),
+    scope: JSON.stringify([sessionId, userId, orgId]),
     ready: isLoaded,
   };
 }

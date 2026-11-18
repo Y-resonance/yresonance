@@ -4,7 +4,7 @@ import { Route as uploadRoute } from '#/routes/api.dashboards.$dashboardId.asset
 import { Route as assetRoute } from '#/routes/api.dashboards.$dashboardId.assets.$assetId';
 import type { ImageAsset } from '#/domain/image-assets';
 import type { DashboardDocument } from '#/domain/schema';
-import { setClerkDirectory, signOut } from './doubles/clerk';
+import { setDirectory, signOut } from './doubles/auth';
 import {
   addWidget,
   callService,
@@ -204,7 +204,7 @@ describe('dashboard image serving', () => {
   test('follows dashboard access for viewers, share links, removed collaborators and copies', async () => {
     const { workspace, dashboard, asset } = await dashboardWithImage();
     const viewerId = newUserId();
-    setClerkDirectory([{ id: viewerId, emailAddress: 'viewer@example.com' }]);
+    setDirectory([{ id: viewerId, email: 'viewer@example.com' }]);
     await callService({
       action: 'shareDashboard',
       dashboardId: dashboard.id,

@@ -4,6 +4,7 @@
   "include": [
     "src/**/*.d.ts",
     "src/platform/config.ts",
+    "src/platform/ui.ts",
     "src/platform/vite.ts",
     "src/platform/adapters/*.ts"
   ],

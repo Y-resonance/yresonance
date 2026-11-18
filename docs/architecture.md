@@ -8,7 +8,8 @@ access or R2 credentials.
 Editors register uploaded or existing CSV and Parquet files from tenant-scoped R2 prefixes.
 ClickHouse is also available for managed uploads and authorized external tables. See
 [ClickHouse setup and freshness](clickhouse.md) for server configuration. Auth is
-Clerk, with workspaces mapped to Clerk organizations. Application data lives in Postgres with
+an adapter: Clerk on hosted, with workspaces mapped to Clerk organizations, or OIDC with a single
+workspace on self-hosted installs. See [authentication](authentication.md). Application data lives in Postgres with
 Drizzle. Cloudflare reaches PlanetScale Postgres in Frankfurt through Hyperdrive, with query
 caching disabled. Local development uses the separately started Compose Postgres service.
 `database()` lazily creates one node-postgres client per AsyncLocalStorage invocation scope and
@@ -67,7 +68,7 @@ presigned storage URLs never reach the query container.
 Browser API reads and writes use TanStack Query through `src/api/query.tsx`. Query clients are
 created inside Start's router factory, so SSR requests never share a cache in a Worker isolate.
 The Router SSR integration owns the provider and hydration. HTML responses are private and
-uncacheable, as are authenticated API responses. Browser keys include the Clerk
+uncacheable, as are authenticated API responses. Browser keys include the auth
 session, user, and workspace; switching identity remounts the UI and cancels/removes the old cache.
 Authenticated API reads remain client-side. The analytics configuration server function uses the
 request's query client in the root loader.
@@ -114,11 +115,16 @@ Engine, Clerk request identity/directory/middleware, and the existing five datas
 The DuckDB adapter retains the URL-scheme choice between local HTTP and the Cloudflare container.
 A background-task adapter keeps analytics delivery alive after the response.
 
+The `auth` entry also selects the UI half of the auth adapter: the build resolves
+`virtual:auth-ui` to `src/platform/adapters/<name>-ui.tsx`, read only through
+`src/platform/index.ui.ts`.
+
 Only `src/platform/index.server.ts` imports the config, as the module `yresonance:config`. The
-Vite plugin in `src/platform/vite.ts` resolves that module to the building project's config file
-and adds the app's build plugins; `cloud/vite.config.ts` uses it together with the Cloudflare
-plugin. Integration tests alias the module to `cloud/yresonance.config.ts`. Application services
-consume the typed slots. Each adapter lives in its own file under `src/platform/adapters`, imported only by the
+Vite plugin in `src/platform/vite.ts` resolves that module and `virtual:auth-ui` from the
+building project's config file and adds the app's build plugins; `cloud/vite.config.ts` uses it
+together with the Cloudflare plugin. Integration tests alias the config module to
+`cloud/yresonance.config.ts`. Application services consume the typed slots. Each adapter lives
+in its own file under `src/platform/adapters`, imported only by the
 config. Bindings are read when an operation runs, never captured during module initialization.
 The static datasource catalog remains safe for client imports. Plain settings and secrets go
 through `src/platform/settings.ts`, which reads `process.env` lazily. Workers populate it with

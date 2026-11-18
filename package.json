@@ -32,6 +32,10 @@
       "types": "./dist/types/src/platform/adapters/*.d.ts",
       "default": "./src/platform/adapters/*.ts"
     },
+    "./ui": {
+      "types": "./dist/types/src/platform/ui.d.ts",
+      "default": "./src/platform/ui.ts"
+    },
     "./vite": {
       "types": "./dist/types/src/platform/vite.d.ts",
       "default": "./dist/platform/vite.js"
@@ -116,6 +120,7 @@
     "drizzle-orm": "^0.45.2",
     "fast-xml-parser": "^5.11.2",
     "lucide-react": "^1.37.0",
+    "openid-client": "^6.9.0",
     "oxc-transform-react": "^0.158.0",
     "pg": "^8.16.3",
     "posthog-js": "^1.435.8",
@@ -151,7 +156,7 @@
     "oxlint": "1.94.0",
     "typescript": "7.0.2",
     "vite": "8.3.8",
-    "vitest": "5.1.0",
+    "vitest": "5.1.1",
     "wrangler": "4.164.0"
   },
   "peerDependencies": {
