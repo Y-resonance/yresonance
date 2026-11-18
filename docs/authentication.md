@@ -88,10 +88,10 @@ Users, passwords and roles are managed in the provider, not in yresonance.
 - A rejected refresh signs the user out. An unreachable provider fails only that request.
   Parallel requests each refresh on their own, so a provider that rotates refresh tokens and
   rejects reuse (Keycloak's "Revoke Refresh Token") can sign a user out. Leave that option off.
-- Sign-out posts to `/auth/logout` and ends the application session. It also ends the provider
-  session when the provider advertises `end_session_endpoint`, as Keycloak does. Without that
-  endpoint the provider session stays, so the next page visit signs the user in again without a
-  prompt.
+- Sign-out posts to `/auth/logout` and ends the application session. It then sends the browser
+  to the provider's `end_session_endpoint` when the provider advertises one, as Keycloak does,
+  and its discovery document is reachable. Otherwise the provider session can stay, and the next
+  visit to a protected page may sign the user in again without a prompt.
 - Signed-out page visits are redirected to the login and return to the requested page.
   Unlisted share links (`/share/...`), the legal pages, health checks and API routes stay
   reachable; the API answers `401` on its own.
