@@ -8,7 +8,7 @@
     "url": "git+https://github.com/Y-resonance/yresonance.git"
   },
   "bin": {
-    "yresonance": "./bin/yresonance.js"
+    "yresonance": "bin/yresonance.js"
   },
   "files": [
     "bin",

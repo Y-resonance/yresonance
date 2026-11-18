@@ -1,7 +1,9 @@
 name: Release
 
-# Publishes @yresonance-dev/core to npm when a version tag such as v0.2.0 is pushed.
-# npm trusts this workflow file by name (trusted publishing), so there is no npm token.
+# Stages @yresonance-dev/core on npm when a version tag such as v0.2.0 is pushed. A staged
+# version is not installable until a maintainer approves it on npmjs.com or with
+# `npm stage approve`. npm trusts this workflow file by name (trusted publishing), so there is
+# no npm token, and it only allows this workflow to stage, not to publish directly.
 on:
   push:
     tags:
@@ -13,7 +15,7 @@ permissions:
 
 jobs:
   publish:
-    name: Publish to npm
+    name: Stage on npm
     # GitHub-hosted on purpose: npm trusted publishing does not accept other runners.
     runs-on: ubuntu-latest
     services:
@@ -44,4 +46,5 @@ jobs:
       # The tag is the version; package.json in the repository stays at 0.0.0.
       - run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
       # Bun cannot publish through trusted publishing. `prepack` builds the package files.
-      - run: npm publish
+      # Needs npm 11.15 or newer, which the Node version above bundles.
+      - run: npm stage publish
