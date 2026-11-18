@@ -90,7 +90,7 @@ Users, passwords and roles are managed in the provider, not in yresonance.
   rejects reuse (Keycloak's "Revoke Refresh Token") can sign a user out. Leave that option off.
 - Sign-out posts to `/auth/logout` and ends the application session. It then sends the browser
   to the provider's `end_session_endpoint` when the provider advertises one, as Keycloak does,
-  and its discovery document is reachable. Otherwise the provider session can stay, and the next
+  and its discovery metadata is available, cached or freshly fetched. Otherwise the provider session can stay, and the next
   visit to a protected page may sign the user in again without a prompt.
 - Signed-out page visits are redirected to the login and return to the requested page.
   Unlisted share links (`/share/...`), the legal pages, health checks and API routes stay
