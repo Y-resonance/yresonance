@@ -279,6 +279,31 @@ describe('OIDC session lifetime', () => {
     expect(location.searchParams.get('id_token_hint')).toBeTruthy();
     expect(await identity(visitor, '/api/yresonance')).toMatchObject({ userId: null });
   });
+
+  test('refuses a sign-out posted from another site', async () => {
+    const { visitor } = await signIn(identityProvider({ sub: uniqueSub() }));
+
+    const logout = await visitor.request('/auth/logout', {
+      method: 'POST',
+      headers: { origin: app, 'sec-fetch-site': 'cross-site' },
+    });
+
+    expect('response' in logout && logout.response.status).toBe(405);
+    expect(await identity(visitor)).toMatchObject({ userId: expect.any(String) });
+  });
+
+  // Referrer-Policy: no-referrer makes the browser send "Origin: null" on a same-origin form post.
+  test('signs out when the browser withholds the origin of a same-origin post', async () => {
+    const { visitor } = await signIn(identityProvider({ sub: uniqueSub() }));
+
+    const logout = await visitor.request('/auth/logout', {
+      method: 'POST',
+      headers: { origin: 'null', 'sec-fetch-site': 'same-origin' },
+    });
+
+    expect('response' in logout && logout.response.status).toBe(303);
+    expect(await identity(visitor, '/api/yresonance')).toMatchObject({ userId: null });
+  });
 });
 
 describe('OIDC signed-out visitors', () => {

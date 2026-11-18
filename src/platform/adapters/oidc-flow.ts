@@ -299,12 +299,14 @@ async function callback(request: Request) {
 
 async function logout(request: Request) {
   const url = new URL(request.url);
-  // Sign-out is a form post, so another site cannot end the session with a link.
-  if (
-    request.method !== 'POST' ||
-    request.headers.get('origin') !== url.origin ||
-    request.headers.get('sec-fetch-site') === 'cross-site'
-  )
+  // Sign-out is a same-origin form post, so another site cannot end the session. The browser's
+  // Sec-Fetch-Site decides, because Origin is "null" under Referrer-Policy: no-referrer. Origin
+  // covers clients that do not send it.
+  const fetchSite = request.headers.get('sec-fetch-site');
+  const sameOrigin = fetchSite
+    ? fetchSite === 'same-origin'
+    : request.headers.get('origin') === url.origin;
+  if (request.method !== 'POST' || !sameOrigin)
     return new Response('Sign out from the application.', { status: 405 });
   const session = await unseal(readCookie(request, SESSION_COOKIE), 'session', sessionSchema);
   let location = '/';

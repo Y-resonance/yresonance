@@ -10,6 +10,7 @@ export default defineConfig({
     include: [
       'src/**/*.test.ts',
       'src/**/*.test.tsx',
+      'dev/**/*.test.ts',
       'container/**/*.test.ts',
       'scripts/**/*.test.ts',
       'cloud/scripts/**/*.test.ts',
