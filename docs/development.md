@@ -132,9 +132,14 @@ job. Run it after changing `package.json` exports or files, `src/platform/vite.t
 
 `package.json` stays at version `0.0.0`. Pushing a tag such as `v0.2.0` runs
 `.github/workflows/release.yml`, which repeats the package check, sets the version from the tag
-and publishes through npm trusted publishing. npm is configured to trust that workflow by file
-name, so renaming it breaks releases. The first version of a package has to be published by hand
-before npm allows that configuration.
+and stages it on npm through trusted publishing. A staged version is not installable yet. A
+maintainer approves it with 2FA under "Staged Packages" on npmjs.com, or with `npm stage list` and
+`npm stage approve <stage-id>`. `npm stage reject <stage-id>` discards it.
+
+npm is configured to trust that workflow by file name, so renaming it breaks releases. The trusted
+publisher only allows staging, so the workflow cannot publish directly. A prerelease tag such as
+`v0.2.0-beta.1` needs `--tag` added to the staging command, because npm refuses to put a
+prerelease on `latest`.
 
 ## Query container HTTP checks
 
