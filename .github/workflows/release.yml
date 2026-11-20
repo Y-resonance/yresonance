@@ -31,7 +31,7 @@ jobs:
           --health-cmd "pg_isready -U yresonance"
           --health-interval 2s --health-timeout 3s --health-retries 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
