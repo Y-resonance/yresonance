@@ -162,5 +162,5 @@
   "peerDependencies": {
     "vite": ">=8.0.0"
   },
-  "packageManager": "bun@1.4.4"
+  "packageManager": "bun@1.4.5"
 }
